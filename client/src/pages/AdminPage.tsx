@@ -2,7 +2,18 @@ import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useSlides } from "../contexts/SlideContext";
 import { useToast } from "../contexts/ToastContext";
-import { Slide, ImageSlide, VideoSlide, SLIDE_TYPES, ImageSlideData, VideoSlideData, NewsSlide, EventSlide, TextSlide, CountdownSlide } from "../types";
+import {
+    Slide,
+    ImageSlide,
+    VideoSlide,
+    SLIDE_TYPES,
+    ImageSlideData,
+    VideoSlideData,
+    NewsSlide,
+    EventSlide,
+    NewsSlideData,
+    EventSlideData
+} from "../types";
 
 /** Configuration for the backend API URL */
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || "http://localhost:5000";
@@ -24,14 +35,7 @@ interface FormErrors {
     registrationLink?: string;
     textAlign?: string;
     fontSize?: string;
-}
-
-/** Interface for slide type card properties */
-interface SlideTypeCard {
-    type: typeof SLIDE_TYPES[keyof typeof SLIDE_TYPES];
-    title: string;
-    description: string;
-    icon: React.ReactNode;
+    backgroundImage?: string;
 }
 
 /** Props for the edit modal component */
@@ -42,20 +46,6 @@ interface EditModalProps {
     onSave: (slide: Slide) => void;
 }
 
-/** Props for the slide preview component */
-interface SlidePreviewProps {
-    slide: ImageSlide;
-    onEdit: (slide: ImageSlide) => void;
-    onDelete: (id: string) => void;
-    onToggleActive: (id: string, active: boolean) => void;
-}
-
-/** Type for the image upload response */
-interface ImageUploadResponse {
-    url: string;
-    success: boolean;
-    error?: string;
-}
 
 /** Type for slide tabs */
 type SlideTab = {
@@ -71,13 +61,6 @@ const SLIDE_TABS: SlideTab[] = [
     { id: "news-tab", type: SLIDE_TYPES.NEWS, label: "News Slides" },
     { id: "event-tab", type: SLIDE_TYPES.EVENT, label: "Event Slides" }
 ];
-
-/** Function to get the API URL based on environment */
-const getApiUrl = (): string => {
-    return process.env.NODE_ENV === "development"
-        ? `${BACKEND_URL}/api/upload`
-        : "/api/upload";
-};
 
 /** Function to upload a file to the server */
 const uploadFile = async (file: File): Promise<string> => {
@@ -97,80 +80,6 @@ const uploadFile = async (file: File): Promise<string> => {
     return `${BACKEND_URL}${data.url}`;
 };
 
-/** Available slide type cards */
-const SLIDE_TYPE_CARDS: SlideTypeCard[] = [
-    {
-        type: SLIDE_TYPES.IMAGE,
-        title: "Image Slider",
-        description: "Create a slideshow with images and optional captions",
-        icon: (
-            <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-            </svg>
-        ),
-    },
-    {
-        type: SLIDE_TYPES.VIDEO,
-        title: "Video Slider",
-        description: "Create a slideshow with videos and optional captions",
-        icon: (
-            <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
-            </svg>
-        ),
-    },
-    {
-        type: SLIDE_TYPES.NEWS,
-        title: "News Slider",
-        description: "Create news announcements with title, content, and optional image",
-        icon: (
-            <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9.5a2 2 0 00-.59-1.42L15.5 4.5" />
-            </svg>
-        ),
-    },
-    {
-        type: SLIDE_TYPES.EVENT,
-        title: "Event Slider",
-        description: "Create event announcements with details and registration links",
-        icon: (
-            <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-            </svg>
-        ),
-    }
-];
-
-/** Type guard for ImageSlide */
-const isImageSlide = (slide: ImageSlide | VideoSlide): slide is ImageSlide => {
-    return slide.type === SLIDE_TYPES.IMAGE;
-};
-
-/** Type guard for VideoSlide */
-const isVideoSlide = (slide: ImageSlide | VideoSlide): slide is VideoSlide => {
-    return slide.type === SLIDE_TYPES.VIDEO;
-};
-
-/** Function to update slide caption */
-const updateSlideCaption = (slide: ImageSlide | VideoSlide, caption: string): ImageSlide | VideoSlide => {
-    if (isImageSlide(slide)) {
-        return {
-            ...slide,
-            data: {
-                ...slide.data,
-                caption,
-            },
-        };
-    } else {
-        return {
-            ...slide,
-            data: {
-                ...slide.data,
-                caption,
-            },
-        };
-    }
-};
 
 const EditModal: React.FC<EditModalProps> = ({ isOpen, onClose, slide, onSave }) => {
     const { addToast } = useToast();
@@ -178,14 +87,12 @@ const EditModal: React.FC<EditModalProps> = ({ isOpen, onClose, slide, onSave })
     const [isUploading, setIsUploading] = useState<boolean>(false);
     const [errors, setErrors] = useState<FormErrors>({});
 
-    // Initialize or update editedSlide when the slide prop changes
     useEffect(() => {
         if (slide) {
             setEditedSlide(slide);
         }
     }, [slide]);
 
-    // Reset state when modal closes
     useEffect(() => {
         if (!isOpen) {
             setErrors({});
@@ -200,7 +107,6 @@ const EditModal: React.FC<EditModalProps> = ({ isOpen, onClose, slide, onSave })
         const isVideo = file.type.startsWith("video/");
         const isImage = file.type.startsWith("image/");
 
-        // Validate file type based on slide type
         if (editedSlide.type === SLIDE_TYPES.IMAGE && !isImage) {
             addToast("Please upload an image file", "error");
             return;
@@ -210,8 +116,7 @@ const EditModal: React.FC<EditModalProps> = ({ isOpen, onClose, slide, onSave })
             return;
         }
 
-        // Update file size limit to 100MB
-        const maxSize = 100 * 1024 * 1024; // 100MB in bytes
+        const maxSize = 100 * 1024 * 1024; // 100MB
         if (file.size > maxSize) {
             addToast("File size should be less than 100MB", "error");
             return;
@@ -221,7 +126,6 @@ const EditModal: React.FC<EditModalProps> = ({ isOpen, onClose, slide, onSave })
         setErrors((prev) => ({ ...prev, imageUrl: undefined, videoUrl: undefined }));
 
         try {
-            // Upload file to server
             const fileUrl = await uploadFile(file);
 
             if (editedSlide.type === SLIDE_TYPES.IMAGE) {
@@ -232,7 +136,7 @@ const EditModal: React.FC<EditModalProps> = ({ isOpen, onClose, slide, onSave })
                         imageUrl: fileUrl,
                     } as ImageSlideData,
                 } as ImageSlide);
-            } else {
+            } else if (editedSlide.type === SLIDE_TYPES.VIDEO) {
                 setEditedSlide({
                     ...editedSlide,
                     data: {
@@ -240,6 +144,22 @@ const EditModal: React.FC<EditModalProps> = ({ isOpen, onClose, slide, onSave })
                         videoUrl: fileUrl,
                     } as VideoSlideData,
                 } as VideoSlide);
+            } else if (editedSlide.type === SLIDE_TYPES.NEWS) {
+                setEditedSlide({
+                    ...editedSlide,
+                    data: {
+                        ...editedSlide.data,
+                        imageUrl: fileUrl,
+                    } as NewsSlideData,
+                } as NewsSlide);
+            } else if (editedSlide.type === SLIDE_TYPES.EVENT) {
+                setEditedSlide({
+                    ...editedSlide,
+                    data: {
+                        ...editedSlide.data,
+                        imageUrl: fileUrl,
+                    } as EventSlideData,
+                } as EventSlide);
             }
 
             addToast(`${isVideo ? "Video" : "Image"} uploaded successfully`, "success");
@@ -255,64 +175,6 @@ const EditModal: React.FC<EditModalProps> = ({ isOpen, onClose, slide, onSave })
         }
     };
 
-    const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        if (!editedSlide) return;
-        setEditedSlide({
-            ...editedSlide,
-            name: e.target.value,
-        });
-    };
-
-    const handleCaptionChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        if (!editedSlide) return;
-
-        if (editedSlide.type === SLIDE_TYPES.IMAGE) {
-            setEditedSlide({
-                ...editedSlide,
-                data: {
-                    ...editedSlide.data,
-                    caption: e.target.value,
-                } as ImageSlideData,
-            } as ImageSlide);
-        } else {
-            setEditedSlide({
-                ...editedSlide,
-                data: {
-                    ...editedSlide.data,
-                    caption: e.target.value,
-                } as VideoSlideData,
-            } as VideoSlide);
-        }
-    };
-
-    const handleDurationChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        if (!editedSlide) return;
-        const duration = Math.max(1, Math.min(60, Number(e.target.value)));
-        setEditedSlide({
-            ...editedSlide,
-            duration,
-        });
-    };
-
-    const handleActiveChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        if (!editedSlide) return;
-        setEditedSlide({
-            ...editedSlide,
-            active: e.target.checked,
-        });
-    };
-
-    const handleVideoSettingChange = (setting: "autoplay" | "muted" | "loop", value: boolean) => {
-        if (!editedSlide || editedSlide.type !== SLIDE_TYPES.VIDEO) return;
-        setEditedSlide({
-            ...editedSlide,
-            data: {
-                ...editedSlide.data,
-                [setting]: value,
-            },
-        } as VideoSlide);
-    };
-
     const validateForm = (): boolean => {
         const newErrors: FormErrors = {};
 
@@ -325,6 +187,16 @@ const EditModal: React.FC<EditModalProps> = ({ isOpen, onClose, slide, onSave })
                 newErrors.imageUrl = "Image is required";
             } else if (editedSlide.type === SLIDE_TYPES.VIDEO && !(editedSlide as VideoSlide).data.videoUrl) {
                 newErrors.videoUrl = "Video is required";
+            } else if (editedSlide.type === SLIDE_TYPES.NEWS) {
+                const newsSlide = editedSlide as NewsSlide;
+                if (!newsSlide.data.title?.trim()) newErrors.title = "Title is required";
+                if (!newsSlide.data.details?.trim()) newErrors.content = "Details are required";
+                if (!newsSlide.data.backgroundImage) newErrors.backgroundImage = "Background image is required";
+            } else if (editedSlide.type === SLIDE_TYPES.EVENT) {
+                const eventSlide = editedSlide as EventSlide;
+                if (!eventSlide.data.title?.trim()) newErrors.title = "Title is required";
+                if (!eventSlide.data.description?.trim()) newErrors.description = "Description is required";
+                if (!eventSlide.data.date) newErrors.date = "Date is required";
             }
 
             if (editedSlide.duration < 1 || editedSlide.duration > 60) {
@@ -360,23 +232,14 @@ const EditModal: React.FC<EditModalProps> = ({ isOpen, onClose, slide, onSave })
                         onClick={onClose}
                         className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
                     >
-                        <svg
-                            className="w-6 h-6"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                        >
-                            <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth="2"
-                                d="M6 18L18 6M6 6l12 12"
-                            />
+                        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
                         </svg>
                     </button>
                 </div>
 
                 <div className="space-y-4">
+                    {/* Common fields */}
                     <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">
                             Slide Name *
@@ -384,131 +247,84 @@ const EditModal: React.FC<EditModalProps> = ({ isOpen, onClose, slide, onSave })
                         <input
                             type="text"
                             value={editedSlide.name}
-                            onChange={handleNameChange}
-                            className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 ${errors.name ? "border-red-500" : "border-gray-300"
-                                }`}
+                            onChange={(e) => setEditedSlide({ ...editedSlide, name: e.target.value })}
+                            className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 ${errors.name ? "border-red-500" : "border-gray-300"}`}
                         />
-                        {errors.name && (
-                            <p className="mt-1 text-sm text-red-500">{errors.name}</p>
-                        )}
+                        {errors.name && <p className="mt-1 text-sm text-red-500">{errors.name}</p>}
                     </div>
 
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Upload {editedSlide.type === SLIDE_TYPES.IMAGE ? "Image" : editedSlide.type === SLIDE_TYPES.VIDEO ? "Video" : "News" : "Event"} *
-                        </label>
-                        <input
-                            type="file"
-                            accept={editedSlide.type === SLIDE_TYPES.IMAGE ? "image/*" : editedSlide.type === SLIDE_TYPES.VIDEO ? "video/*" : "image/*"}
-                            onChange={handleFileInput}
-                            className={`w-full px-3 py-2 border rounded-lg ${errors.imageUrl || errors.videoUrl ? "border-red-500" : "border-gray-300"
-                                }`}
-                            disabled={isUploading}
+                    {/* Type-specific fields */}
+                    {editedSlide.type === SLIDE_TYPES.NEWS && (
+                        <NewsSlideFields
+                            slide={editedSlide as NewsSlide}
+                            onUpdate={setEditedSlide}
+                            errors={errors}
                         />
-                        {(errors.imageUrl || errors.videoUrl) && (
-                            <p className="mt-1 text-sm text-red-500">
-                                {errors.imageUrl || errors.videoUrl}
-                            </p>
-                        )}
-                    </div>
-
-                    {/* Preview */}
-                    {editedSlide.type === SLIDE_TYPES.IMAGE && (editedSlide as ImageSlide).data.imageUrl && (
-                        <div className="relative aspect-video rounded-lg overflow-hidden bg-gray-100">
-                            <img
-                                src={(editedSlide as ImageSlide).data.imageUrl}
-                                alt="Preview"
-                                className="w-full h-full object-contain"
-                            />
-                        </div>
                     )}
 
-                    {editedSlide.type === SLIDE_TYPES.VIDEO && (editedSlide as VideoSlide).data.videoUrl && (
-                        <div className="relative aspect-video rounded-lg overflow-hidden bg-gray-100">
-                            <video
-                                src={(editedSlide as VideoSlide).data.videoUrl}
-                                controls
-                                className="w-full h-full"
-                            />
-                        </div>
-                    )}
-
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Caption
-                        </label>
-                        <input
-                            type="text"
-                            value={editedSlide.data.caption || ""}
-                            onChange={handleCaptionChange}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                    {editedSlide.type === SLIDE_TYPES.EVENT && (
+                        <EventSlideFields
+                            slide={editedSlide as EventSlide}
+                            onUpdate={setEditedSlide}
+                            errors={errors}
                         />
-                    </div>
-
-                    {editedSlide.type === SLIDE_TYPES.VIDEO && (
-                        <div className="space-y-2">
-                            <label className="flex items-center space-x-2">
-                                <input
-                                    type="checkbox"
-                                    checked={(editedSlide as VideoSlide).data.autoplay}
-                                    onChange={(e) => handleVideoSettingChange("autoplay", e.target.checked)}
-                                    className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                                />
-                                <span className="text-sm font-medium text-gray-700">Autoplay</span>
-                            </label>
-                            <label className="flex items-center space-x-2">
-                                <input
-                                    type="checkbox"
-                                    checked={(editedSlide as VideoSlide).data.muted}
-                                    onChange={(e) => handleVideoSettingChange("muted", e.target.checked)}
-                                    className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                                />
-                                <span className="text-sm font-medium text-gray-700">Muted</span>
-                            </label>
-                            <label className="flex items-center space-x-2">
-                                <input
-                                    type="checkbox"
-                                    checked={(editedSlide as VideoSlide).data.loop}
-                                    onChange={(e) => handleVideoSettingChange("loop", e.target.checked)}
-                                    className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                                />
-                                <span className="text-sm font-medium text-gray-700">Loop</span>
-                            </label>
-                        </div>
                     )}
 
-                    {editedSlide.type === SLIDE_TYPES.IMAGE && (
+                    {/* Image/Video upload field */}
+                    {(editedSlide.type === SLIDE_TYPES.IMAGE || editedSlide.type === SLIDE_TYPES.VIDEO || editedSlide.type === SLIDE_TYPES.NEWS || editedSlide.type === SLIDE_TYPES.EVENT) && (
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">
-                                Duration (seconds) *
+                                Upload {(() => {
+                                    if (editedSlide.type === SLIDE_TYPES.IMAGE) return "Image";
+                                    if (editedSlide.type === SLIDE_TYPES.VIDEO) return "Video";
+                                    if (editedSlide.type === SLIDE_TYPES.NEWS) return "News";
+                                    if (editedSlide.type === SLIDE_TYPES.EVENT) return "Event";
+                                    return "File";
+                                })()} *
                             </label>
                             <input
-                                type="number"
-                                value={editedSlide.duration}
-                                onChange={handleDurationChange}
-                                min="1"
-                                max="60"
-                                className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 ${errors.duration ? "border-red-500" : "border-gray-300"
-                                    }`}
+                                type="file"
+                                accept={editedSlide.type === SLIDE_TYPES.VIDEO ? "video/*" : "image/*"}
+                                onChange={handleFileInput}
+                                className={`w-full px-3 py-2 border rounded-lg ${errors.imageUrl || errors.videoUrl ? "border-red-500" : "border-gray-300"}`}
+                                disabled={isUploading}
                             />
-                            {errors.duration && (
-                                <p className="mt-1 text-sm text-red-500">{errors.duration}</p>
+                            {(errors.imageUrl || errors.videoUrl) && (
+                                <p className="mt-1 text-sm text-red-500">{errors.imageUrl || errors.videoUrl}</p>
                             )}
                         </div>
                     )}
 
+                    {/* Duration field */}
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                            Duration (seconds) *
+                        </label>
+                        <input
+                            type="number"
+                            value={editedSlide.duration}
+                            onChange={(e) => setEditedSlide({ ...editedSlide, duration: Math.max(1, Math.min(60, Number(e.target.value))) })}
+                            min="1"
+                            max="60"
+                            className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 ${errors.duration ? "border-red-500" : "border-gray-300"}`}
+                        />
+                        {errors.duration && <p className="mt-1 text-sm text-red-500">{errors.duration}</p>}
+                    </div>
+
+                    {/* Active toggle */}
                     <div>
                         <label className="flex items-center space-x-2">
                             <input
                                 type="checkbox"
                                 checked={editedSlide.active}
-                                onChange={handleActiveChange}
+                                onChange={(e) => setEditedSlide({ ...editedSlide, active: e.target.checked })}
                                 className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
                             />
                             <span className="text-sm font-medium text-gray-700">Active</span>
                         </label>
                     </div>
 
+                    {/* Action buttons */}
                     <div className="flex justify-end space-x-3 mt-6">
                         <button
                             onClick={onClose}
@@ -519,10 +335,7 @@ const EditModal: React.FC<EditModalProps> = ({ isOpen, onClose, slide, onSave })
                         <button
                             onClick={handleSave}
                             disabled={isUploading}
-                            className={`
-                                px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg
-                                ${isUploading ? "opacity-50 cursor-not-allowed" : "hover:bg-blue-700"}
-                            `}
+                            className={`px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg ${isUploading ? "opacity-50 cursor-not-allowed" : "hover:bg-blue-700"}`}
                         >
                             {isUploading ? "Uploading..." : "Save Changes"}
                         </button>
@@ -610,12 +423,12 @@ const AdminPage: React.FC = () => {
                         duration: 10,
                         data: {
                             title: "",
-                            content: "",
-                            date: new Date().toISOString().split("T")[0],
-                            source: "",
-                            imageUrl: "",
-                            textAlign: "left",
-                            fontSize: "text-base"
+                            details: "",
+                            backgroundImage: "",
+                            overlayOpacity: 0.5,
+                            textColor: "#FFFFFF",
+                            textSize: "large",
+                            textAlignment: "center"
                         },
                         dataSource: "manual" as const,
                     } as NewsSlide;
@@ -649,11 +462,6 @@ const AdminPage: React.FC = () => {
         setIsModalOpen(true);
     };
 
-    const handleEditSlide = (slide: Slide) => {
-        setSelectedSlide(slide);
-        setIsModalOpen(true);
-    };
-
     const handleSaveSlide = async (updatedSlide: Slide) => {
         try {
             if (selectedSlide?.id) {
@@ -667,19 +475,6 @@ const AdminPage: React.FC = () => {
             setSelectedSlide(null);
         } catch (error) {
             addToast(error instanceof Error ? error.message : "Failed to save slide", "error");
-        }
-    };
-
-    const handleDeleteSlide = async (id: string) => {
-        setIsDeleting(true);
-        try {
-            await deleteSlide(id);
-            addToast("Slide deleted successfully", "success");
-            setDeleteConfirmId(null);
-        } catch (error) {
-            addToast(error instanceof Error ? error.message : "Failed to delete slide", "error");
-        } finally {
-            setIsDeleting(false);
         }
     };
 
@@ -864,7 +659,7 @@ const SlideCard: React.FC<SlideCardProps> = ({ slide, onEdit, onDelete, onToggle
             case SLIDE_TYPES.VIDEO:
                 return (slide as VideoSlide).data.videoUrl;
             case SLIDE_TYPES.NEWS:
-                return (slide as NewsSlide).data.imageUrl;
+                return (slide as NewsSlide).data.backgroundImage;
             case SLIDE_TYPES.EVENT:
                 return (slide as EventSlide).data.imageUrl;
             default:
@@ -891,7 +686,7 @@ const SlideCard: React.FC<SlideCardProps> = ({ slide, onEdit, onDelete, onToggle
         switch (slide.type) {
             case SLIDE_TYPES.NEWS:
                 const newsSlide = slide as NewsSlide;
-                return `${newsSlide.data.content.substring(0, 100)}${newsSlide.data.content.length > 100 ? "..." : ""}`;
+                return `${newsSlide.data.details.substring(0, 100)}${newsSlide.data.details.length > 100 ? "..." : ""}`;
             case SLIDE_TYPES.EVENT:
                 const eventSlide = slide as EventSlide;
                 return `${eventSlide.data.description.substring(0, 100)}${eventSlide.data.description.length > 100 ? "..." : ""}`;
@@ -1007,7 +802,7 @@ interface SlideFieldsProps<T extends Slide> {
 /** News slide fields component */
 const NewsSlideFields: React.FC<SlideFieldsProps<NewsSlide>> = ({ slide, onUpdate, errors }) => {
     return (
-        <>
+        <div className="space-y-4">
             <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                     Title *
@@ -1015,75 +810,93 @@ const NewsSlideFields: React.FC<SlideFieldsProps<NewsSlide>> = ({ slide, onUpdat
                 <input
                     type="text"
                     value={slide.data.title}
-                    onChange={(e) => onUpdate({ ...slide, data: { ...slide.data, title: e.target.value } })}
+                    onChange={(e) => onUpdate({
+                        ...slide,
+                        data: { ...slide.data, title: e.target.value }
+                    })}
                     className={`w-full px-3 py-2 border rounded-lg ${errors.title ? "border-red-500" : "border-gray-300"}`}
-                    placeholder="Enter news title"
+                    placeholder="Enter announcement title"
                 />
+                {errors.title && <p className="mt-1 text-sm text-red-500">{errors.title}</p>}
             </div>
 
             <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Content *
+                    Details *
                 </label>
                 <textarea
-                    value={slide.data.content}
-                    onChange={(e) => onUpdate({ ...slide, data: { ...slide.data, content: e.target.value } })}
+                    value={slide.data.details}
+                    onChange={(e) => onUpdate({
+                        ...slide,
+                        data: { ...slide.data, details: e.target.value }
+                    })}
                     className={`w-full px-3 py-2 border rounded-lg ${errors.content ? "border-red-500" : "border-gray-300"}`}
                     rows={4}
-                    placeholder="Enter news content"
+                    placeholder="Enter announcement details"
                 />
+                {errors.content && <p className="mt-1 text-sm text-red-500">{errors.content}</p>}
             </div>
 
             <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Date *
+                    Background Image *
                 </label>
-                <input
-                    type="date"
-                    value={slide.data.date}
-                    onChange={(e) => onUpdate({ ...slide, data: { ...slide.data, date: e.target.value } })}
-                    className={`w-full px-3 py-2 border rounded-lg ${errors.date ? "border-red-500" : "border-gray-300"}`}
-                />
-            </div>
-
-            <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Source
-                </label>
-                <input
-                    type="text"
-                    value={slide.data.source || ""}
-                    onChange={(e) => onUpdate({ ...slide, data: { ...slide.data, source: e.target.value } })}
-                    className="w-full px-3 py-2 border rounded-lg border-gray-300"
-                    placeholder="Enter news source"
-                />
-            </div>
-
-            <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Image
-                </label>
-                <input
-                    type="file"
-                    accept="image/*"
-                    onChange={(e) => {
-                        const file = e.target.files?.[0];
-                        if (file) {
-                            // Handle file upload
-                        }
-                    }}
-                    className="w-full px-3 py-2 border rounded-lg border-gray-300"
-                />
+                <div className="flex items-center space-x-2">
+                    <input
+                        type="file"
+                        accept="image/*"
+                        onChange={async (e) => {
+                            const file = e.target.files?.[0];
+                            if (file) {
+                                try {
+                                    const fileUrl = await uploadFile(file);
+                                    onUpdate({
+                                        ...slide,
+                                        data: { ...slide.data, backgroundImage: fileUrl }
+                                    });
+                                } catch (error) {
+                                    console.error("Upload error:", error);
+                                }
+                            }
+                        }}
+                        className={`w-full px-3 py-2 border rounded-lg ${errors.backgroundImage ? "border-red-500" : "border-gray-300"}`}
+                    />
+                </div>
+                {errors.backgroundImage && <p className="mt-1 text-sm text-red-500">{errors.backgroundImage}</p>}
             </div>
 
             <div className="grid grid-cols-2 gap-4">
                 <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Text Size
+                    </label>
+                    <select
+                        value={slide.data.textSize || "large"}
+                        onChange={(e) => onUpdate({
+                            ...slide,
+                            data: { ...slide.data, textSize: e.target.value as NewsSlideData["textSize"] }
+                        })}
+                        className="w-full px-3 py-2 border rounded-lg border-gray-300"
+                    >
+                        <option value="small">Small</option>
+                        <option value="medium">Medium</option>
+                        <option value="large">Large</option>
+                        <option value="xl">Extra Large</option>
+                        <option value="2xl">2X Large</option>
+                        <option value="3xl">3X Large</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
                         Text Alignment
                     </label>
                     <select
-                        value={slide.data.textAlign || "left"}
-                        onChange={(e) => onUpdate({ ...slide, data: { ...slide.data, textAlign: e.target.value as "left" | "center" | "right" } })}
+                        value={slide.data.textAlignment || "center"}
+                        onChange={(e) => onUpdate({
+                            ...slide,
+                            data: { ...slide.data, textAlignment: e.target.value as "left" | "center" | "right" }
+                        })}
                         className="w-full px-3 py-2 border rounded-lg border-gray-300"
                     >
                         <option value="left">Left</option>
@@ -1091,24 +904,44 @@ const NewsSlideFields: React.FC<SlideFieldsProps<NewsSlide>> = ({ slide, onUpdat
                         <option value="right">Right</option>
                     </select>
                 </div>
+            </div>
 
-                <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Font Size
-                    </label>
-                    <select
-                        value={slide.data.fontSize || "text-base"}
-                        onChange={(e) => onUpdate({ ...slide, data: { ...slide.data, fontSize: e.target.value } })}
-                        className="w-full px-3 py-2 border rounded-lg border-gray-300"
-                    >
-                        <option value="text-sm">Small</option>
-                        <option value="text-base">Medium</option>
-                        <option value="text-lg">Large</option>
-                        <option value="text-xl">Extra Large</option>
-                    </select>
+            <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Overlay Opacity
+                </label>
+                <input
+                    type="range"
+                    min="0"
+                    max="100"
+                    value={(slide.data.overlayOpacity || 0.5) * 100}
+                    onChange={(e) => onUpdate({
+                        ...slide,
+                        data: { ...slide.data, overlayOpacity: Number(e.target.value) / 100 }
+                    })}
+                    className="w-full"
+                />
+                <div className="flex justify-between text-xs text-gray-500">
+                    <span>Transparent</span>
+                    <span>Opaque</span>
                 </div>
             </div>
-        </>
+
+            <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Text Color
+                </label>
+                <input
+                    type="color"
+                    value={slide.data.textColor || "#FFFFFF"}
+                    onChange={(e) => onUpdate({
+                        ...slide,
+                        data: { ...slide.data, textColor: e.target.value }
+                    })}
+                    className="w-full h-10 px-1 py-1 border rounded-lg border-gray-300"
+                />
+            </div>
+        </div>
     );
 };
 

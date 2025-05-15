@@ -69,24 +69,18 @@ export const SettingsProvider: React.FC<SettingsProviderProps> = ({ children }) 
     useEffect(() => {
         try {
             localStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
-
-            // Apply theme if it has changed
+            // Apply theme
             document.documentElement.setAttribute('data-theme', settings.theme.theme);
         } catch (error) {
             console.error('Error saving settings:', error);
         }
     }, [settings]);
 
-    // Set DaisyUI theme globally
-    useEffect(() => {
-        document.documentElement.setAttribute('data-theme', settings.theme.theme);
-    }, [settings.theme.theme]);
-
     /**
      * Update settings
      */
     const updateSettings = (newSettings: Partial<AppSettings>) => {
-        setSettings(prevSettings => ({
+        setSettings((prevSettings: AppSettings) => ({
             ...prevSettings,
             ...newSettings
         }));
@@ -96,7 +90,7 @@ export const SettingsProvider: React.FC<SettingsProviderProps> = ({ children }) 
      * Update theme settings
      */
     const updateTheme = (newTheme: Partial<ThemeSettings>) => {
-        setSettings(prevSettings => ({
+        setSettings((prevSettings: AppSettings) => ({
             ...prevSettings,
             theme: {
                 ...prevSettings.theme,

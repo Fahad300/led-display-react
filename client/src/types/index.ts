@@ -5,7 +5,9 @@ export const SLIDE_TYPES = {
     IMAGE: 'image-slide',
     TEXT: 'text-slide',
     COUNTDOWN: 'countdown-slide',
-    VIDEO: 'video-slide'
+    VIDEO: 'video-slide',
+    NEWS: 'news-slide',
+    EVENT: 'event-slide'
 } as const;
 
 /**
@@ -96,9 +98,53 @@ export interface CountdownSlide extends BaseSlide {
 }
 
 /**
+ * News slide data
+ */
+export interface NewsSlideData {
+    title: string;
+    details: string;
+    backgroundImage: string;
+    overlayOpacity?: number; // 0 to 1, for text readability over background
+    textColor?: string;
+    textSize?: "small" | "medium" | "large" | "xl" | "2xl" | "3xl";
+    textAlignment?: "left" | "center" | "right";
+}
+
+/**
+ * News slide type
+ */
+export interface NewsSlide extends BaseSlide {
+    type: typeof SLIDE_TYPES.NEWS;
+    data: NewsSlideData;
+}
+
+/**
+ * Event slide data
+ */
+export interface EventSlideData {
+    title: string;
+    description: string;
+    date: string;
+    time?: string;
+    location?: string;
+    imageUrl?: string;
+    registrationLink?: string;
+    textAlign?: 'left' | 'center' | 'right';
+    fontSize?: string;
+}
+
+/**
+ * Event slide type
+ */
+export interface EventSlide extends BaseSlide {
+    type: typeof SLIDE_TYPES.EVENT;
+    data: EventSlideData;
+}
+
+/**
  * Union type of all slide types
  */
-export type Slide = ImageSlide | TextSlide | CountdownSlide | VideoSlide;
+export type Slide = ImageSlide | TextSlide | CountdownSlide | VideoSlide | NewsSlide | EventSlide;
 
 /**
  * Toast notification types
@@ -113,4 +159,23 @@ export interface Toast {
     message: string;
     type: ToastType;
     duration?: number;
+}
+
+/**
+ * Theme settings interface
+ */
+export interface ThemeSettings {
+    theme: string;
+    primaryColor: string;
+    secondaryColor: string;
+}
+
+/**
+ * Application settings interface
+ */
+export interface AppSettings {
+    theme: ThemeSettings;
+    slideTransitionSpeed: number;
+    slideShowAutoPlay: boolean;
+    defaultSlideDuration: number;
 }

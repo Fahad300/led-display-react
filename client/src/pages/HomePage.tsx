@@ -13,13 +13,13 @@ import {
     DragEndEvent
 } from "@dnd-kit/core";
 import {
-    arrayMove,
     SortableContext,
     sortableKeyboardCoordinates,
     verticalListSortingStrategy,
     useSortable
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
+import ReactConfetti from "react-confetti";
 
 // Add these types at the top of the file after the imports
 interface FullscreenDocument extends Document {
@@ -149,32 +149,6 @@ const calculateTimeLeft = (targetDate: string): TimeLeft => {
     return { days: 0, hours: 0, minutes: 0, seconds: 0 };
 };
 
-/**
- * Custom hook for countdown functionality
- */
-const useCountdown = (targetDate: string): TimeLeft => {
-    const [timeLeft, setTimeLeft] = useState<TimeLeft>(calculateTimeLeft(targetDate));
-
-    useEffect(() => {
-        const timer = setInterval(() => {
-            setTimeLeft(calculateTimeLeft(targetDate));
-        }, 1000);
-
-        return () => clearInterval(timer);
-    }, [targetDate]);
-
-    return timeLeft;
-};
-
-const THEMES = [
-    { value: "persivia", label: "Persivia" },
-    { value: "cupcake", label: "Cupcake" },
-    { value: "synthwave", label: "Synthwave" },
-    { value: "corporate", label: "Corporate" },
-    { value: "light", label: "Light" },
-    { value: "dark", label: "Dark" },
-    { value: "system", label: "System Default" },
-];
 
 /**
  * Get the icon for a slide type
@@ -660,51 +634,321 @@ const VideoSlideComponent: React.FC<{ slide: VideoSlide }> = ({ slide }) => {
 };
 
 /**
- * Render news slide
+ * Animated Text Component for character-by-character animation
  */
-const renderNewsSlide = (slide: NewsSlide) => {
-    const { title, content, date, source, imageUrl, textAlign = 'left', fontSize = 'text-base' } = slide.data;
+const AnimatedCharacters: React.FC<{ text: string; className?: string; style?: React.CSSProperties }> = ({
+    text,
+    className = "",
+    style = {}
+}) => {
+    const letters = Array.from(text);
+
+    const containerVariants = {
+        hidden: { opacity: 0 },
+        visible: (i = 1) => ({
+            opacity: 1,
+            transition: { staggerChildren: 0.03, delayChildren: 0.2 * i }
+        })
+    };
+
+    const childVariants = {
+        visible: {
+            opacity: 1,
+            y: 0,
+            scale: 1,
+            transition: {
+                type: "spring",
+                damping: 12,
+                stiffness: 200
+            }
+        },
+        hidden: {
+            opacity: 0,
+            y: 20,
+            scale: 0.5
+        }
+    };
 
     return (
-        <div className="flex flex-col items-center justify-center h-full bg-base-200 p-8">
-            <div className={`w-full max-w-4xl mx-auto ${textAlign === 'left' ? 'text-left' : textAlign === 'right' ? 'text-right' : 'text-center'}`}>
-                {imageUrl && (
-                    <div className="mb-6 rounded-lg overflow-hidden">
-                        <img
-                            src={imageUrl}
-                            alt={title}
-                            className="w-full h-64 object-cover"
-                            onError={(e) => {
-                                const target = e.target as HTMLImageElement;
-                                target.onerror = null;
-                                target.parentElement!.innerHTML = `
-                                    <div class="flex flex-col items-center justify-center h-64 bg-base-300">
-                                        <svg class="w-16 h-16 text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                                        </svg>
-                                        <p class="text-gray-500">Failed to load image</p>
-                                    </div>
-                                `;
-                            }}
-                        />
-                    </div>
-                )}
+        <motion.span
+            style={{ display: "inline-block", ...style }}
+            variants={containerVariants}
+            initial="hidden"
+            animate="visible"
+            className={className}
+        >
+            {letters.map((letter, index) => (
+                <motion.span
+                    key={index}
+                    style={{ display: "inline-block", whiteSpace: "pre" }}
+                    variants={childVariants}
+                >
+                    {letter}
+                </motion.span>
+            ))}
+        </motion.span>
+    );
+};
 
-                <div className="space-y-4">
-                    <h2 className="text-3xl font-bold">{title}</h2>
-                    <div className="flex items-center gap-4 text-sm text-gray-500">
-                        <time dateTime={date}>{new Date(date).toLocaleDateString()}</time>
-                        {source && (
-                            <>
-                                <span>•</span>
-                                <span>{source}</span>
-                            </>
-                        )}
-                    </div>
-                    <div className={`${fontSize} whitespace-pre-wrap`}>{content}</div>
-                </div>
-            </div>
-        </div>
+/**
+ * Enhanced Animated Title Component with color and position animations
+ */
+const AnimatedTitle: React.FC<{
+    text: string;
+    className?: string;
+    baseColor: string;
+}> = ({ text, className = "", baseColor }) => {
+    const letters = Array.from(text);
+    const colors = [
+        baseColor,
+        "#FFD700", // Gold
+        "#FF69B4", // Hot Pink
+        "#00FFFF", // Cyan
+        baseColor
+    ];
+
+    const containerVariants = {
+        animate: {
+            transition: {
+                staggerChildren: 0.1,
+                repeat: Infinity,
+                repeatType: "reverse" as const,
+                duration: 8
+            }
+        }
+    };
+
+    const letterVariants = {
+        animate: {
+            y: [0, -20, 0, 20, 0],
+            x: [0, 10, 0, -10, 0],
+            color: colors,
+            textShadow: [
+                "0 0 20px rgba(255,255,255,0.5)",
+                "0 0 60px rgba(255,255,255,0.3)",
+                "0 0 20px rgba(255,255,255,0.5)"
+            ],
+            transition: {
+                duration: 4,
+                repeat: Infinity,
+                repeatType: "reverse" as const,
+                ease: "easeInOut"
+            }
+        }
+    };
+
+    return (
+        <motion.div
+            className={`inline-block ${className}`}
+            variants={containerVariants}
+            animate="animate"
+        >
+            {letters.map((letter, index) => (
+                <motion.span
+                    key={index}
+                    className="inline-block"
+                    variants={letterVariants}
+                    style={{ display: "inline-block", whiteSpace: "pre" }}
+                >
+                    {letter}
+                </motion.span>
+            ))}
+        </motion.div>
+    );
+};
+
+/**
+ * News Slide Component
+ */
+const NewsSlideComponent: React.FC<{ slide: NewsSlide }> = ({ slide }) => {
+    const [windowSize, setWindowSize] = useState({
+        width: window.innerWidth,
+        height: window.innerHeight
+    });
+
+    useEffect(() => {
+        const handleResize = () => {
+            setWindowSize({
+                width: window.innerWidth,
+                height: window.innerHeight
+            });
+        };
+
+        window.addEventListener("resize", handleResize);
+        return () => window.removeEventListener("resize", handleResize);
+    }, []);
+
+    const {
+        title,
+        details,
+        backgroundImage,
+        overlayOpacity = 0.5,
+        textColor = "#FFFFFF",
+        textSize = "large",
+        textAlignment = "center"
+    } = slide.data;
+
+    // Enhanced text size mapping for fullscreen
+    const getTitleSize = () => {
+        switch (textSize) {
+            case "small": return "text-4xl md:text-5xl";
+            case "medium": return "text-5xl md:text-6xl";
+            case "large": return "text-6xl md:text-7xl";
+            case "xl": return "text-7xl md:text-8xl";
+            case "2xl": return "text-8xl md:text-9xl";
+            default: return "text-7xl md:text-8xl";
+        }
+    };
+
+    const getDetailsSize = () => {
+        switch (textSize) {
+            case "small": return "text-2xl md:text-3xl";
+            case "medium": return "text-3xl md:text-4xl";
+            case "large": return "text-4xl md:text-5xl";
+            case "xl": return "text-5xl md:text-6xl";
+            case "2xl": return "text-6xl md:text-7xl";
+            default: return "text-4xl md:text-5xl";
+        }
+    };
+
+    // Enhanced animation variants with corrected easing
+    const containerVariants = {
+        hidden: { opacity: 0, scale: 0.95 },
+        visible: {
+            opacity: 1,
+            scale: 1,
+            transition: {
+                duration: 0.8,
+                ease: "easeOut",
+                staggerChildren: 0.3
+            }
+        },
+        exit: {
+            opacity: 0,
+            scale: 0.95,
+            transition: {
+                duration: 0.5,
+                ease: "easeInOut"
+            }
+        }
+    };
+
+    const textContainerVariants = {
+        hidden: { opacity: 0, y: 50 },
+        visible: {
+            opacity: 1,
+            y: 0,
+            transition: {
+                duration: 1,
+                ease: "easeOut",
+                staggerChildren: 0.2
+            }
+        }
+    };
+
+    return (
+        <motion.div
+            className="relative w-full h-full flex items-center justify-center overflow-hidden"
+            variants={containerVariants}
+            initial="hidden"
+            animate="visible"
+            exit="exit"
+        >
+            {/* React Confetti Effect */}
+            <ReactConfetti
+                width={windowSize.width}
+                height={windowSize.height}
+                numberOfPieces={50}
+                recycle={true}
+                colors={["#ff0000", "#00ff00", "#0000ff", "#ffff00", "#ff00ff", "#00ffff"]}
+                opacity={0.7}
+                gravity={0.1}
+            />
+
+            {backgroundImage && (
+                <motion.div
+                    className="absolute inset-0 w-full h-full"
+                    initial={{ scale: 1.2, opacity: 0 }}
+                    animate={{
+                        scale: 1,
+                        opacity: 1,
+                        transition: { duration: 1.5, ease: "easeOut" }
+                    }}
+                >
+                    <img
+                        src={backgroundImage}
+                        alt={title}
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                            const target = e.target as HTMLImageElement;
+                            target.onerror = null;
+                            target.parentElement!.innerHTML = `
+                                <div class="flex flex-col items-center justify-center h-full bg-base-300">
+                                    <svg class="w-24 h-24 text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                    </svg>
+                                    <p class="text-gray-500 text-2xl">Failed to load image</p>
+                                </div>
+                            `;
+                        }}
+                    />
+                    <motion.div
+                        className="absolute inset-0 bg-gradient-to-b from-black/70 via-black/50 to-black/70"
+                        initial={{ opacity: 0 }}
+                        animate={{
+                            opacity: overlayOpacity,
+                            transition: { duration: 1 }
+                        }}
+                    />
+                </motion.div>
+            )}
+
+            <motion.div
+                className={`relative w-full max-w-[90%] mx-auto px-8 py-16 ${textAlignment === "left"
+                    ? "text-left"
+                    : textAlignment === "right"
+                        ? "text-right"
+                        : "text-center"
+                    }`}
+                variants={textContainerVariants}
+            >
+                <motion.div className="space-y-12">
+                    <motion.div
+                        className={`font-bold tracking-tight ${getTitleSize()}`}
+                    >
+                        <AnimatedTitle
+                            text={title}
+                            baseColor={textColor}
+                            className="leading-tight"
+                        />
+                    </motion.div>
+
+                    <motion.div
+                        className={`space-y-8 ${getDetailsSize()}`}
+                        style={{ color: textColor }}
+                    >
+                        {details.split('\n').map((paragraph, index) => (
+                            <motion.p
+                                key={index}
+                                initial={{ opacity: 0, x: -30 }}
+                                animate={{
+                                    opacity: 1,
+                                    x: 0,
+                                    transition: {
+                                        delay: 1 + (index * 0.2),
+                                        duration: 0.8,
+                                        ease: "easeOut"
+                                    }
+                                }}
+                                className="leading-tight"
+                            >
+                                {paragraph}
+                            </motion.p>
+                        ))}
+                    </motion.div>
+                </motion.div>
+            </motion.div>
+        </motion.div>
     );
 };
 
@@ -977,7 +1221,7 @@ const HomePage: React.FC = () => {
                 }
                 return <div>Invalid video slide</div>;
             case SLIDE_TYPES.NEWS:
-                return renderNewsSlide(slide as NewsSlide);
+                return <NewsSlideComponent slide={slide as NewsSlide} />;
             case SLIDE_TYPES.EVENT:
                 return renderEventSlide(slide as EventSlide);
             default:
