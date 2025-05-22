@@ -1,0 +1,126 @@
+{"level":"info","message":"Server running on port 5000","timestamp":"2025-05-21T14:42:12.864Z"}
+{"level":"info","message":"Database connection initialized","timestamp":"2025-05-21T14:42:12.907Z"}
+{"level":"info","message":"Server running on port 5000","timestamp":"2025-05-21T14:47:21.615Z"}
+{"level":"info","message":"Database connection initialized","timestamp":"2025-05-21T14:47:21.633Z"}
+{"level":"info","message":"Server running on port 5000","timestamp":"2025-05-21T14:51:12.516Z"}
+{"level":"info","message":"Database connection initialized","timestamp":"2025-05-21T14:51:12.537Z"}
+{"level":"error","message":"Login failed: Invalid credentials","timestamp":"2025-05-21T14:51:45.422Z"}
+{"level":"info","message":"Server running on port 5000","timestamp":"2025-05-21T14:52:27.387Z"}
+{"level":"info","message":"Database connection initialized","timestamp":"2025-05-21T14:52:27.418Z"}
+{"level":"info","message":"Server running on port 5000","timestamp":"2025-05-21T14:52:40.078Z"}
+{"level":"info","message":"Database connection initialized","timestamp":"2025-05-21T14:52:40.107Z"}
+{"level":"info","message":"Server running on port 5000","timestamp":"2025-05-21T14:55:03.197Z"}
+{"level":"info","message":"Database connection initialized","timestamp":"2025-05-21T14:55:03.238Z"}
+{"level":"info","message":"Login attempt for username: test","timestamp":"2025-05-21T14:56:45.348Z"}
+{"level":"info","message":"Login successful for user: test","timestamp":"2025-05-21T14:56:45.446Z"}
+{"level":"info","message":"Login attempt for username: test","timestamp":"2025-05-21T15:08:56.409Z"}
+{"level":"info","message":"Login successful for user: test","timestamp":"2025-05-21T15:08:56.486Z"}
+{"level":"info","message":"Server running on port 5000","timestamp":"2025-05-21T15:11:30.757Z"}
+{"level":"info","message":"Database connection initialized","timestamp":"2025-05-21T15:11:30.787Z"}
+{"level":"info","message":"Server running on port 5000","timestamp":"2025-05-21T15:11:37.207Z"}
+{"level":"info","message":"Database connection initialized","timestamp":"2025-05-21T15:11:37.233Z"}
+{"level":"info","message":"Server running on port 5000","timestamp":"2025-05-21T15:11:46.332Z"}
+{"level":"info","message":"Database connection initialized","timestamp":"2025-05-21T15:11:46.367Z"}
+{"level":"info","message":"Server running on port 5000","timestamp":"2025-05-21T15:11:49.304Z"}
+{"level":"info","message":"Database connection initialized","timestamp":"2025-05-21T15:11:49.332Z"}
+{"level":"info","message":"Server running on port 5000","timestamp":"2025-05-21T15:14:42.367Z"}
+{"level":"info","message":"Database connection initialized","timestamp":"2025-05-21T15:14:42.396Z"}
+{"level":"info","message":"Server running on port 5000","timestamp":"2025-05-21T15:15:07.320Z"}
+{"level":"info","message":"Database connection initialized","timestamp":"2025-05-21T15:15:07.346Z"}
+{"level":"info","message":"Server running on port 5000","timestamp":"2025-05-21T15:15:25.744Z"}
+{"level":"info","message":"Database connection initialized","timestamp":"2025-05-21T15:15:25.771Z"}
+{"level":"info","message":"Server running on port 5000","timestamp":"2025-05-21T15:19:33.331Z"}
+{"level":"info","message":"Database connection initialized","timestamp":"2025-05-21T15:19:33.356Z"}
+{"level":"info","message":"Server running on port 5000","timestamp":"2025-05-21T15:19:47.036Z"}
+{"level":"info","message":"Database connection initialized","timestamp":"2025-05-21T15:19:47.067Z"}
+{"level":"info","message":"Server running on port 5000","timestamp":"2025-05-21T15:26:49.415Z"}
+{"level":"info","message":"Database connection initialized","timestamp":"2025-05-21T15:26:49.446Z"}
+{"level":"info","message":"Server running on port 5000","timestamp":"2025-05-21T15:28:31.113Z"}
+{"level":"info","message":"Database connection initialized","timestamp":"2025-05-21T15:28:31.143Z"}
+{"level":"info","message":"Server running on port 5000","timestamp":"2025-05-21T15:28:42.904Z"}
+{"level":"info","message":"Database connection initialized","timestamp":"2025-05-21T15:28:42.933Z"}
+{"level":"info","message":"Server running on port 5000","timestamp":"2025-05-21T15:29:00.222Z"}
+{"level":"info","message":"Database connection initialized","timestamp":"2025-05-21T15:29:00.253Z"}
+{"level":"info","message":"Server running on port 5000","timestamp":"2025-05-21T15:29:08.770Z"}
+{"level":"info","message":"Database connection initialized","timestamp":"2025-05-21T15:29:08.826Z"}
+{"level":"info","message":"Server running on port 5000","timestamp":"2025-05-21T15:29:42.538Z"}
+{"level":"info","message":"Database connection initialized","timestamp":"2025-05-21T15:29:42.566Z"}
+{"level":"info","message":"Server running on port 5000","timestamp":"2025-05-21T15:30:36.520Z"}
+{"level":"info","message":"Database connection initialized","timestamp":"2025-05-21T15:30:36.550Z"}
+{"level":"info","message":"Server running on port 5000","timestamp":"2025-05-21T15:30:49.800Z"}
+{"level":"info","message":"Database connection initialized","timestamp":"2025-05-21T15:30:49.832Z"}
+{"level":"info","message":"Server running on port 5000","timestamp":"2025-05-21T15:31:49.224Z"}
+{"level":"info","message":"Database connection initialized","timestamp":"2025-05-21T15:31:49.254Z"}
+{"level":"info","message":"Server running on port 5000","timestamp":"2025-05-21T15:33:07.236Z"}
+{"level":"info","message":"Database connection initialized","timestamp":"2025-05-21T15:33:07.268Z"}
+{"level":"info","message":"Server running on port 5000","timestamp":"2025-05-21T15:33:19.497Z"}
+{"level":"info","message":"Database connection initialized","timestamp":"2025-05-21T15:33:19.527Z"}
+{"level":"info","message":"Server running on port 5000","timestamp":"2025-05-21T15:34:24.374Z"}
+{"level":"info","message":"Database connection initialized","timestamp":"2025-05-21T15:34:24.405Z"}
+{"level":"info","message":"Server running on port 5000","timestamp":"2025-05-21T15:34:31.382Z"}
+{"level":"info","message":"Database connection initialized","timestamp":"2025-05-21T15:34:31.411Z"}
+{"level":"info","message":"Server running on port 5000","timestamp":"2025-05-21T15:34:52.536Z"}
+{"level":"info","message":"Database connection initialized","timestamp":"2025-05-21T15:34:52.565Z"}
+{"level":"info","message":"Server running on port 5000","timestamp":"2025-05-21T15:37:00.833Z"}
+{"level":"info","message":"Database connection initialized","timestamp":"2025-05-21T15:37:00.861Z"}
+{"level":"info","message":"Server running on port 5000","timestamp":"2025-05-21T15:37:15.447Z"}
+{"level":"info","message":"Database connection initialized","timestamp":"2025-05-21T15:37:15.477Z"}
+{"level":"info","message":"Server running on port 5000","timestamp":"2025-05-21T15:38:22.862Z"}
+{"level":"info","message":"Database connection initialized","timestamp":"2025-05-21T15:38:22.893Z"}
+{"level":"info","message":"Server running on port 5000","timestamp":"2025-05-21T15:39:33.412Z"}
+{"level":"info","message":"Database connection initialized","timestamp":"2025-05-21T15:39:33.441Z"}
+{"level":"info","message":"Server running on port 5000","timestamp":"2025-05-21T15:40:01.513Z"}
+{"level":"info","message":"Database connection initialized","timestamp":"2025-05-21T15:40:01.546Z"}
+{"level":"info","message":"Server running on port 5000","timestamp":"2025-05-21T15:42:16.832Z"}
+{"level":"info","message":"Visit http://localhost:5000 to see the server status page","timestamp":"2025-05-21T15:42:16.834Z"}
+{"level":"info","message":"Database connection initialized","timestamp":"2025-05-21T15:42:16.858Z"}
+{"level":"info","message":"Server running on port 5000","timestamp":"2025-05-21T15:42:24.320Z"}
+{"level":"info","message":"Visit http://localhost:5000 to see the server status page","timestamp":"2025-05-21T15:42:24.323Z"}
+{"level":"info","message":"Database connection initialized","timestamp":"2025-05-21T15:42:24.346Z"}
+{"level":"info","message":"Deleted file: 26796-359604154-1747824565612.mp4","timestamp":"2025-05-21T15:51:03.617Z"}
+{"level":"info","message":"Deleted file: 26796-359604154-1747832041103.mp4","timestamp":"2025-05-21T15:51:03.619Z"}
+{"level":"info","message":"Deleted file: 26796-359604154-1747832169906.mp4","timestamp":"2025-05-21T15:51:03.622Z"}
+{"level":"info","message":"Deleted file: 26796-359604154-1747832192435.mp4","timestamp":"2025-05-21T15:51:03.623Z"}
+{"level":"info","message":"Deleted file: 26796-359604154-1747832405488.mp4","timestamp":"2025-05-21T15:51:03.625Z"}
+{"level":"info","message":"Deleted file: 6020105-1747305264408.jpg","timestamp":"2025-05-21T15:51:03.626Z"}
+{"level":"info","message":"Deleted file: 6020105-1747305581706.jpg","timestamp":"2025-05-21T15:51:03.627Z"}
+{"level":"info","message":"Deleted file: 6020105-1747305746384.jpg","timestamp":"2025-05-21T15:51:03.628Z"}
+{"level":"info","message":"Deleted file: 6020105-1747324201126.jpg","timestamp":"2025-05-21T15:51:03.629Z"}
+{"level":"info","message":"Deleted file: 6020105-1747653511028.jpg","timestamp":"2025-05-21T15:51:03.630Z"}
+{"level":"info","message":"Deleted file: 6020105-1747656832411.jpg","timestamp":"2025-05-21T15:51:03.631Z"}
+{"level":"info","message":"Deleted file: 6020105-1747665255538.jpg","timestamp":"2025-05-21T15:51:03.632Z"}
+{"level":"info","message":"Deleted file: back-school-concept-with-copy-space-1747730387002.jpg","timestamp":"2025-05-21T15:51:03.633Z"}
+{"level":"info","message":"Deleted file: female-default-1747665332390.jpg","timestamp":"2025-05-21T15:51:03.633Z"}
+{"level":"info","message":"Deleted file: minimalist-3d-dartboard-1747305850531.jpg","timestamp":"2025-05-21T15:51:03.635Z"}
+{"level":"info","message":"Deleted file: minimalist-3d-dartboard-1747323320272.jpg","timestamp":"2025-05-21T15:51:03.636Z"}
+{"level":"info","message":"Deleted file: minimalist-3d-dartboard-1747408125701.jpg","timestamp":"2025-05-21T15:51:03.637Z"}
+{"level":"info","message":"Deleted file: minimalist-3d-dartboard-1747820624766.jpg","timestamp":"2025-05-21T15:51:03.638Z"}
+{"level":"info","message":"Deleted file: rugby-sport-environment-filed-1747824606868.jpg","timestamp":"2025-05-21T15:51:03.641Z"}
+{"level":"info","message":"Deleted file: Untitled design-1747320011124.mp4","timestamp":"2025-05-21T15:51:03.642Z"}
+{"level":"info","message":"Deleted file: world-cup-cricket-player-background-1747319949189.jpg","timestamp":"2025-05-21T15:51:03.643Z"}
+{"level":"info","message":"All files purged successfully","timestamp":"2025-05-21T15:51:03.643Z"}
+{"level":"info","message":"Server running on port 5000","timestamp":"2025-05-22T11:11:13.076Z"}
+{"level":"info","message":"Visit http://localhost:5000 to see the server status page","timestamp":"2025-05-22T11:11:13.079Z"}
+{"level":"info","message":"Database connection initialized","timestamp":"2025-05-22T11:11:13.117Z"}
+{"level":"info","message":"Login attempt for username: test","timestamp":"2025-05-22T11:44:16.541Z"}
+{"level":"info","message":"Login successful for user: test","timestamp":"2025-05-22T11:44:16.635Z"}
+{"level":"info","message":"All files purged successfully","timestamp":"2025-05-22T11:47:56.096Z"}
+{"level":"info","message":"All files purged successfully","timestamp":"2025-05-22T11:48:02.540Z"}
+{"level":"info","message":"Database connection established","timestamp":"2025-05-22T12:47:29.849Z"}
+{"level":"info","message":"Server running on port 5000","timestamp":"2025-05-22T12:47:29.855Z"}
+{"level":"info","message":"Upload directory: D:\\led-soliton\\led-display-react\\server\\uploads","timestamp":"2025-05-22T12:47:29.855Z"}
+{"level":"info","message":"Database connection established","timestamp":"2025-05-22T12:47:34.899Z"}
+{"level":"info","message":"Database connection established","timestamp":"2025-05-22T12:53:57.709Z"}
+{"level":"info","message":"Server running on port 5000","timestamp":"2025-05-22T12:53:57.715Z"}
+{"level":"info","message":"Upload directory: D:\\led-soliton\\led-display-react\\server\\uploads","timestamp":"2025-05-22T12:53:57.715Z"}
+{"level":"info","message":"File uploaded successfully: 1747918461683-655955594.jpg","timestamp":"2025-05-22T12:54:21.760Z"}
+{"level":"info","message":"File uploaded successfully: 1747918502173-693082942.mp4","timestamp":"2025-05-22T12:55:02.378Z"}
+{"level":"info","message":"File uploaded successfully: 1747918880995-237675567.jpg","timestamp":"2025-05-22T13:01:21.267Z"}
+{"level":"info","message":"Attempting to serve file from: D:\\led-soliton\\led-display-react\\server\\public\\index.html","timestamp":"2025-05-22T13:14:00.169Z"}
+{"level":"info","message":"Attempting to serve file from: D:\\led-soliton\\led-display-react\\server\\public\\index.html","timestamp":"2025-05-22T13:14:00.299Z"}
+{"level":"info","message":"Database connection established","timestamp":"2025-05-22T14:19:02.811Z"}
+{"level":"info","message":"Server running on port 5000","timestamp":"2025-05-22T14:19:02.816Z"}
+{"level":"info","message":"Upload directory: D:\\led-soliton\\led-display-react\\server\\uploads","timestamp":"2025-05-22T14:19:02.817Z"}
+{"level":"info","message":"Attempting to serve file from: D:\\led-soliton\\led-display-react\\server\\public\\index.html","timestamp":"2025-05-22T14:19:11.495Z"}
+{"level":"info","message":"Attempting to serve file from: D:\\led-soliton\\led-display-react\\server\\public\\index.html","timestamp":"2025-05-22T14:19:11.636Z"}
+{"level":"info","message":"Attempting to serve file from: D:\\led-soliton\\led-display-react\\server\\public\\index.html","timestamp":"2025-05-22T14:19:11.753Z"}
