@@ -1,5 +1,9 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { useToast } from "../contexts/ToastContext";
+<<<<<<< HEAD
+=======
+import { motion, AnimatePresence } from "framer-motion";
+>>>>>>> 93c8675a0ee735051cf859b0c291871b18acaa7b
 
 /** Configuration for the backend API URL */
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || "http://localhost:5000";

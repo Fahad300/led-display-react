@@ -2,7 +2,11 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useSlides } from '../contexts/SlideContext';
 import { Slide, SLIDE_TYPES, ImageSlide as ImageSlideType, TextSlide as TextSlideType, CountdownSlide, VideoSlide as VideoSlideType, NewsSlide, EventSlide as EventSlideType } from '../types';
 import { EventSlide, ImageSlide, TextSlide, VideoSlide } from '../components/slides';
+<<<<<<< HEAD
 import { motion } from 'framer-motion';
+=======
+import { motion, AnimatePresence } from 'framer-motion';
+>>>>>>> 93c8675a0ee735051cf859b0c291871b18acaa7b
 import {
     DndContext,
     closestCenter,
@@ -61,6 +65,10 @@ const TRANSITION_EFFECTS = [
     { value: "cards", label: "Cards" }
 ] as const;
 
+<<<<<<< HEAD
+=======
+type TransitionEffect = typeof TRANSITION_EFFECTS[number]["value"];
+>>>>>>> 93c8675a0ee735051cf859b0c291871b18acaa7b
 
 /**
  * Calculate time left for a target date

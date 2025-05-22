@@ -69,7 +69,12 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
             >
                 <div className="flex items-center gap-2">
                     <Link to="/" className="flex items-center gap-2 font-bold text-lg text-white hover:text-persivia-light-teal transition-colors">
+<<<<<<< HEAD
                         <img src="images/logo-persivia.svg" alt="persivia" style={{ width: '150px' }} />
+=======
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-7 w-7 text-persivia-light-teal" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                        LED Display
+>>>>>>> 93c8675a0ee735051cf859b0c291871b18acaa7b
                     </Link>
                 </div>
                 <div className="flex items-center gap-4">
@@ -78,7 +83,11 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
                             <Link to="/" className={`px-3 py-1 rounded text-sm font-medium text-white hover:bg-persivia-blue hover:text-persivia-light-teal transition-colors ${isActive('/') ? 'bg-persivia-blue' : ''}`}>Display</Link>
                             <Link to="/admin" className={`px-3 py-1 rounded text-sm font-medium text-white hover:bg-persivia-blue hover:text-persivia-light-teal transition-colors ${isActive('/admin') ? 'bg-persivia-blue' : ''}`}>Admin</Link>
                             <Link to="/media" className={`px-3 py-1 rounded text-sm font-medium text-white hover:bg-persivia-blue hover:text-persivia-light-teal transition-colors ${isActive('/media') ? 'bg-persivia-blue' : ''}`}>Media</Link>
+<<<<<<< HEAD
 
+=======
+                            
+>>>>>>> 93c8675a0ee735051cf859b0c291871b18acaa7b
                             {/* User Avatar and Dropdown */}
                             <div className="relative" ref={dropdownRef}>
                                 <button
@@ -90,7 +99,11 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
                                     <div className="w-8 h-8 rounded-full bg-persivia-blue flex items-center justify-center text-white font-medium text-sm">
                                         {getUserInitials()}
                                     </div>
+<<<<<<< HEAD
                                     <span className="text-sm text-white">{user?.username}</span>
+=======
+                                    <span className="text-sm text-persivia-light-teal">{user?.username}</span>
+>>>>>>> 93c8675a0ee735051cf859b0c291871b18acaa7b
                                     <svg
                                         className={`w-4 h-4 text-persivia-light-teal transition-transform ${isDropdownOpen ? "rotate-180" : ""}`}
                                         fill="none"
