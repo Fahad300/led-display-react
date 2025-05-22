@@ -1,0 +1,260 @@
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700&family=Lato:wght@300;400;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  margin: 0;
+  font-family: 'Lato', 'Montserrat', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+code {
+  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
+    monospace;
+}
+
+/* Custom CSS for the LED Display application */
+.admin-page .storage-usage {
+  height: 8px;
+  width: 100%;
+  background-color: #e2e8f0;
+  border-radius: 4px;
+  overflow: hidden;
+  margin-bottom: 4px;
+}
+
+.admin-page .storage-usage-bar {
+  height: 100%;
+  background-color: var(--primary);
+  transition: width 0.5s ease-in-out;
+}
+
+.admin-page .storage-usage-text {
+  font-size: 0.75rem;
+  color: #64748b;
+}
+
+.admin-page .thumbnail-container {
+  transition: all 0.2s;
+}
+
+.admin-page .thumbnail-container:hover {
+  transform: translateY(-2px);
+}
+
+.input:focus,
+.input:focus-within {
+  --input-color: var(--color-accent) !important;
+  outline: 0px solid var(--color-accent) !important;
+}
+
+input#slideImageFile {
+  padding-top: 5px !important;
+}
+
+/* Toast animations */
+@keyframes slide-up {
+  from {
+    transform: translateY(1rem);
+    opacity: 0;
+  }
+
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes fade-out {
+  from {
+    opacity: 1;
+  }
+
+  to {
+    opacity: 0;
+  }
+}
+
+.animate-slide-up {
+  animation: slide-up 0.3s ease forwards;
+}
+
+.animate-fade-out {
+  animation: fade-out 0.3s ease forwards;
+}
+
+/* Slide animations */
+@keyframes slide-in {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes slide-out {
+  from {
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  to {
+    opacity: 0;
+    transform: scale(1.05);
+  }
+}
+
+.animate-in {
+  animation: slide-in 0.3s ease-out forwards;
+}
+
+.animate-out {
+  animation: slide-out 0.3s ease-in forwards;
+}
+
+/* Slideshow animations */
+.slideshow-container {
+  width: 100%;
+  height: 100%;
+  position: relative;
+  perspective: 1000px;
+  transform: translate3d(0, 0, 0);
+  will-change: transform;
+  overflow: hidden;
+}
+
+.slideshow-slide {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transform-style: preserve-3d;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  will-change: transform, opacity;
+  transform: translate3d(0, 0, 0);
+  -webkit-transform: translate3d(0, 0, 0);
+}
+
+/* Navigation buttons */
+.slideshow-nav-button {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 10;
+  background-color: rgba(255, 255, 255, 0.8);
+  color: var(--persivia-blue);
+  padding: 1rem;
+  border-radius: 50%;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  will-change: transform, background-color;
+  cursor: pointer;
+  border: none;
+  outline: none;
+}
+
+.slideshow-nav-button:hover {
+  background-color: rgba(255, 255, 255, 0.9);
+  transform: translateY(-50%) scale(1.1);
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+}
+
+.slideshow-nav-button.prev {
+  left: 1rem;
+}
+
+.slideshow-nav-button.next {
+  right: 1rem;
+}
+
+/* Pagination dots */
+.slideshow-pagination {
+  position: absolute;
+  bottom: 1rem;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 10;
+  display: flex;
+  gap: 0.5rem;
+}
+
+.slideshow-pagination-dot {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+  background-color: var(--persivia-blue);
+  opacity: 0.5;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  cursor: pointer;
+  border: none;
+  outline: none;
+  padding: 0;
+}
+
+.slideshow-pagination-dot:hover {
+  opacity: 0.75;
+}
+
+.slideshow-pagination-dot.active {
+  opacity: 1;
+  transform: scale(1.25);
+}
+
+/* Hardware acceleration classes */
+.gpu {
+  transform: translate3d(0, 0, 0);
+  backface-visibility: hidden;
+  perspective: 1000;
+  -webkit-transform: translate3d(0, 0, 0);
+  -webkit-backface-visibility: hidden;
+  -webkit-perspective: 1000;
+}
+
+.gpu-child>* {
+  transform: translate3d(0, 0, 0);
+  backface-visibility: hidden;
+  perspective: 1000;
+  -webkit-transform: translate3d(0, 0, 0);
+  -webkit-backface-visibility: hidden;
+  -webkit-perspective: 1000;
+}
+
+/* CSS Variables for theme colors */
+:root {
+  --persivia-blue: rgb(19, 77, 103);
+  --persivia-teal: rgb(0, 128, 128);
+  --persivia-light-blue: rgb(100, 149, 237);
+  --persivia-light-teal: rgb(64, 224, 208);
+}
+
+@keyframes gradientBG {
+
+  0%,
+  100% {
+    background-position: 0% 50%;
+  }
+
+  50% {
+    background-position: 100% 50%;
+  }
+}
+
+.animated-gradient-bg {
+  background: linear-gradient(120deg, var(--persivia-blue) 0%, var(--persivia-light-blue) 40%, var(--persivia-light-teal) 70%, var(--persivia-teal) 100%);
+  background-size: 200% 200%;
+  animation: gradientBG 12s ease-in-out infinite;
+  opacity: 0.95;
+}
