@@ -19,7 +19,7 @@ export const employees: Employee[] = [
     {
         id: "EMP001",
         name: "John Smith",
-        dob: "1985-05-22",
+        dob: "1985-05-24",
         designation: "Senior Software Engineer",
         teamName: "Frontend Development",
         picture: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8MTF8fHByb2ZpbGUlMjBwaG90b3xlbnwwfHwwfHx8MA%3D%3D",
@@ -29,7 +29,7 @@ export const employees: Employee[] = [
     {
         id: "EMP002",
         name: "Sarah Johnson",
-        dob: "1990-05-21",
+        dob: "1990-05-23",
         designation: "Product Manager",
         teamName: "Product Management",
         picture: "",

@@ -1,12 +1,8 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useSlides } from '../contexts/SlideContext';
-import { Slide, SLIDE_TYPES, ImageSlide as ImageSlideType, TextSlide as TextSlideType, CountdownSlide, VideoSlide as VideoSlideType, NewsSlide, EventSlide as EventSlideType } from '../types';
-import { EventSlide, ImageSlide, TextSlide, VideoSlide } from '../components/slides';
-<<<<<<< HEAD
+import { Slide, SLIDE_TYPES, ImageSlide as ImageSlideType, VideoSlide as VideoSlideType, NewsSlide, EventSlide as EventSlideType } from '../types';
+import { EventSlide, ImageSlide } from '../components/slides';
 import { motion } from 'framer-motion';
-=======
-import { motion, AnimatePresence } from 'framer-motion';
->>>>>>> 93c8675a0ee735051cf859b0c291871b18acaa7b
 import {
     DndContext,
     closestCenter,
@@ -40,14 +36,7 @@ import "swiper/css/pagination";
 import { faCompress, faExpand } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { useDisplaySettings } from "../contexts/DisplaySettingsContext";
-
-// Type for countdown time values
-interface TimeLeft {
-    days: number;
-    hours: number;
-    minutes: number;
-    seconds: number;
-}
+import { VideoSlide } from "../components/slides/VideoSlide";
 
 // Type for reordering result
 interface ReorderResult {
@@ -65,29 +54,6 @@ const TRANSITION_EFFECTS = [
     { value: "cards", label: "Cards" }
 ] as const;
 
-<<<<<<< HEAD
-=======
-type TransitionEffect = typeof TRANSITION_EFFECTS[number]["value"];
->>>>>>> 93c8675a0ee735051cf859b0c291871b18acaa7b
-
-/**
- * Calculate time left for a target date
- */
-const calculateTimeLeft = (targetDate: string): TimeLeft => {
-    const difference = new Date(targetDate).getTime() - new Date().getTime();
-
-    if (difference > 0) {
-        return {
-            days: Math.floor(difference / (1000 * 60 * 60 * 24)),
-            hours: Math.floor((difference / (1000 * 60 * 60)) % 24),
-            minutes: Math.floor((difference / 1000 / 60) % 60),
-            seconds: Math.floor((difference / 1000) % 60)
-        };
-    }
-
-    return { days: 0, hours: 0, minutes: 0, seconds: 0 };
-};
-
 /**
  * Get the icon for a slide type
  */
@@ -99,16 +65,22 @@ const getSlideTypeIcon = (type: string): React.ReactElement | null => {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                 </svg>
             );
-        case SLIDE_TYPES.TEXT:
+        case SLIDE_TYPES.VIDEO:
             return (
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16m-7 6h7" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
                 </svg>
             );
-        case SLIDE_TYPES.COUNTDOWN:
+        case SLIDE_TYPES.NEWS:
             return (
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z" />
+                </svg>
+            );
+        case SLIDE_TYPES.EVENT:
+            return (
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                 </svg>
             );
         default:
@@ -161,28 +133,21 @@ const SlidePreview: React.FC<{ slide: Slide }> = ({ slide }) => {
                         )}
                     </div>
                 );
-            case SLIDE_TYPES.TEXT:
-                const textSlide = slide as TextSlideType;
+            case SLIDE_TYPES.NEWS:
+                const newsSlide = slide as NewsSlide;
                 return (
-                    <div className="w-full h-24 bg-persivia-light-gray rounded-lg p-2 overflow-hidden">
-                        <div className="text-xs text-persivia-blue font-medium line-clamp-2">
-                            {textSlide.data.title}
-                        </div>
-                        <div className="text-xs text-persivia-gray mt-1 line-clamp-3">
-                            {textSlide.data.content}
-                        </div>
-                    </div>
-                );
-            case SLIDE_TYPES.COUNTDOWN:
-                const countdownSlide = slide as CountdownSlide;
-                return (
-                    <div className="w-full h-24 bg-persivia-light-gray rounded-lg p-2 overflow-hidden">
-                        <div className="text-xs text-persivia-blue font-medium line-clamp-2">
-                            {countdownSlide.data.title}
-                        </div>
-                        <div className="text-xs text-persivia-gray mt-1 line-clamp-2">
-                            {countdownSlide.data.message}
-                        </div>
+                    <div className="w-full h-24 relative rounded-lg overflow-hidden bg-persivia-light-gray">
+                        {newsSlide.data.backgroundImage ? (
+                            <img
+                                src={newsSlide.data.backgroundImage}
+                                alt={newsSlide.data.title}
+                                className="w-full h-full object-cover"
+                            />
+                        ) : (
+                            <div className="flex items-center justify-center h-full">
+                                <span className="text-persivia-gray">No image</span>
+                            </div>
+                        )}
                     </div>
                 );
             default:
@@ -263,17 +228,30 @@ const SortableSlideCard: React.FC<{
                 <div className="flex-1">
                     <div className="flex items-center justify-between mb-2">
                         <h3 className="font-semibold text-persivia-blue">{getDisplayName()}</h3>
-                        <button
-                            type="button"
-                            role="switch"
-                            aria-checked={slide.active}
-                            onClick={() => onToggleActive(slide.id)}
-                            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${slide.active ? "bg-persivia-teal" : "bg-slate-200"}`}
-                        >
-                            <span
-                                className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${slide.active ? "translate-x-5" : "translate-x-1"}`}
-                            />
-                        </button>
+                        {slide.type === SLIDE_TYPES.EVENT ? (
+                            <button
+                                type="button"
+                                className="relative inline-flex h-6 w-11 items-center rounded-full bg-slate-200 cursor-not-allowed"
+                                title="Event slides are automatically activated on birthdays."
+                                disabled
+                            >
+                                <span
+                                    className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${slide.active ? "translate-x-5" : "translate-x-1"}`}
+                                />
+                            </button>
+                        ) : (
+                            <button
+                                type="button"
+                                role="switch"
+                                aria-checked={slide.active}
+                                onClick={() => onToggleActive(slide.id)}
+                                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${slide.active ? "bg-persivia-teal" : "bg-slate-200"}`}
+                            >
+                                <span
+                                    className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${slide.active ? "translate-x-5" : "translate-x-1"}`}
+                                />
+                            </button>
+                        )}
                     </div>
 
                     {/* Slide Info */}
@@ -869,38 +847,23 @@ const HomePage: React.FC = () => {
     const { settings, updateSettings } = useDisplaySettings();
     const [orderedSlides, setOrderedSlides] = useState<Slide[]>([]);
     const [activeSlides, setActiveSlides] = useState<Slide[]>([]);
-    const [birthdayEmployees, setBirthdayEmployees] = useState<typeof employees>([]);
     const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
     const slidesContainerRef = useRef<HTMLDivElement>(null);
     const [dateTime, setDateTime] = useState<string>("");
 
-    // Function to check for today's birthdays
-    const checkBirthdays = () => {
-        const today = new Date();
-        return employees.filter(employee => {
-            const dob = new Date(employee.dob);
-            return dob.getMonth() === today.getMonth() && dob.getDate() === today.getDate();
-        });
-    };
-
-    // Check for birthdays periodically
-    useEffect(() => {
-        // Initial check
-        setBirthdayEmployees(checkBirthdays());
-        // Periodic check every minute
-        const interval = setInterval(() => {
-            setBirthdayEmployees(checkBirthdays());
-        }, 60 * 1000);
-        return () => clearInterval(interval);
-    }, []);
-
-    // Process active slides to adjust EVENT slide duration
-    const processedActiveSlides = activeSlides.map(slide => {
+    // Process active slides to adjust EVENT slide duration and active state
+    const processedActiveSlides = orderedSlides.map(slide => {
         if (slide.type === SLIDE_TYPES.EVENT) {
-            return {
-                ...slide,
-                duration: birthdayEmployees.length > 0 ? slide.duration : 0 // Set duration to 0 if no birthdays
-            };
+            const today = new Date();
+            const hasBirthdays = employees.some(employee => {
+                const dob = new Date(employee.dob);
+                return dob.getMonth() === today.getMonth() && dob.getDate() === today.getDate();
+            });
+            if (hasBirthdays) {
+                return { ...slide, duration: 10, active: true };
+            } else {
+                return { ...slide, duration: 0, active: false };
+            }
         }
         return slide;
     });
@@ -910,9 +873,9 @@ const HomePage: React.FC = () => {
         setOrderedSlides(slides);
     }, [slides]);
 
-    // Update active slides when ordered slides change
+    // Update active slides when processedActiveSlides change
     useEffect(() => {
-        setActiveSlides(orderedSlides.filter(slide => slide.active));
+        setActiveSlides(processedActiveSlides.filter(slide => slide.active));
     }, [orderedSlides]);
 
     // Handle slide reordering
@@ -992,62 +955,17 @@ const HomePage: React.FC = () => {
      */
     const renderSlideContent = (slide: Slide) => {
         switch (slide.type) {
-            case SLIDE_TYPES.EVENT:
-                const eventSlide = <EventSlide duration={slide.duration} />;
-                return eventSlide || null;
             case SLIDE_TYPES.IMAGE:
                 return <ImageSlide slide={slide as ImageSlideType} />;
-            case SLIDE_TYPES.TEXT:
-                return <TextSlide slide={slide as TextSlideType} />;
             case SLIDE_TYPES.VIDEO:
                 return <VideoSlide slide={slide as VideoSlideType} />;
-            case SLIDE_TYPES.COUNTDOWN:
-                return renderCountdownSlide(slide as CountdownSlide, calculateTimeLeft((slide as CountdownSlide).data.targetDate));
             case SLIDE_TYPES.NEWS:
                 return <NewsSlideComponent slide={slide as NewsSlide} />;
+            case SLIDE_TYPES.EVENT:
+                return <EventSlide slide={slide as EventSlideType} />;
             default:
-                return (
-                    <div className="flex items-center justify-center h-full">
-                        <p className="text-xl text-slate-500">Unknown slide type</p>
-                    </div>
-                );
+                return null;
         }
-    };
-
-    /**
-     * Render countdown slide
-     */
-    const renderCountdownSlide = (slide: CountdownSlide, timeLeft: TimeLeft = { days: 0, hours: 0, minutes: 0, seconds: 0 }) => {
-        const { title, message } = slide.data;
-
-        return (
-            <div className="flex flex-col items-center justify-center h-full bg-base-200 p-8">
-                <div className="text-center w-full max-w-4xl mx-auto">
-                    {title && <h2 className="text-3xl font-bold mb-6">{title}</h2>}
-
-                    <div className="grid grid-cols-4 gap-4 mb-8">
-                        <div className="bg-base-100 p-4 rounded-lg shadow">
-                            <div className="text-4xl font-bold">{timeLeft.days}</div>
-                            <div className="text-sm text-slate-500">Days</div>
-                        </div>
-                        <div className="bg-base-100 p-4 rounded-lg shadow">
-                            <div className="text-4xl font-bold">{timeLeft.hours}</div>
-                            <div className="text-sm text-slate-500">Hours</div>
-                        </div>
-                        <div className="bg-base-100 p-4 rounded-lg shadow">
-                            <div className="text-4xl font-bold">{timeLeft.minutes}</div>
-                            <div className="text-sm text-slate-500">Minutes</div>
-                        </div>
-                        <div className="bg-base-100 p-4 rounded-lg shadow">
-                            <div className="text-4xl font-bold">{timeLeft.seconds}</div>
-                            <div className="text-sm text-slate-500">Seconds</div>
-                        </div>
-                    </div>
-
-                    {message && <p className="text-xl">{message}</p>}
-                </div>
-            </div>
-        );
     };
 
     // Update settings handlers
@@ -1163,7 +1081,7 @@ const HomePage: React.FC = () => {
                         )}
                         <div className={`absolute inset-[1px] bg-persivia-white rounded-lg overflow-hidden ${isFullscreen ? "rounded-none" : ""}`}>
                             <SwiperSlideshow
-                                slides={processedActiveSlides}
+                                slides={processedActiveSlides.filter(slide => slide.active)}
                                 renderSlideContent={renderSlideContent}
                                 onSlideChange={(index) => {
                                     // Handle slide change if needed

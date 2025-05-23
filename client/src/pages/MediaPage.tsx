@@ -1,9 +1,6 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { useToast } from "../contexts/ToastContext";
-<<<<<<< HEAD
-=======
-import { motion, AnimatePresence } from "framer-motion";
->>>>>>> 93c8675a0ee735051cf859b0c291871b18acaa7b
+import MediaModal from "../components/MediaModal";
 
 /** Configuration for the backend API URL */
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || "http://localhost:5000";
@@ -16,6 +13,12 @@ interface MediaFile {
     lastModified: string;
 }
 
+interface SelectedMedia {
+    url: string;
+    type: string;
+    name: string;
+}
+
 const MediaPage: React.FC = () => {
     const { addToast } = useToast();
     const [files, setFiles] = useState<MediaFile[]>([]);
@@ -26,6 +29,7 @@ const MediaPage: React.FC = () => {
     const [searchTerm, setSearchTerm] = useState("");
     const [sortBy, setSortBy] = useState<"name" | "size" | "date">("date");
     const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
+    const [selectedMedia, setSelectedMedia] = useState<SelectedMedia | null>(null);
 
     // Fetch media files
     const fetchFiles = useCallback(async () => {
@@ -51,6 +55,9 @@ const MediaPage: React.FC = () => {
             if (!data.files) {
                 throw new Error("Invalid response format: files array is missing");
             }
+
+            // Log the files data for debugging
+            console.log("Received files:", data.files);
 
             setFiles(data.files);
         } catch (error) {
@@ -208,6 +215,15 @@ const MediaPage: React.FC = () => {
             }
         });
 
+    const handleMediaPreview = (file: MediaFile) => {
+        console.log("Previewing media:", file); // Debug log
+        setSelectedMedia({
+            url: file.url,
+            type: file.type,
+            name: file.name
+        });
+    };
+
     return (
         <div className="container mx-auto px-4 py-8">
             <div className="flex justify-between items-center mb-8">
@@ -319,20 +335,28 @@ const MediaPage: React.FC = () => {
                                         }}
                                         className="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
                                     />
-                                    <div className="flex-shrink-0">
+                                    <div className="flex items-center space-x-4">
                                         {file.type.startsWith("image/") ? (
                                             <img
                                                 src={file.url}
                                                 alt={file.name}
-                                                className="h-12 w-12 object-cover rounded"
+                                                className="h-12 w-12 object-cover rounded cursor-pointer"
+                                                onClick={() => handleMediaPreview(file)}
+                                                onError={(e) => {
+                                                    console.error("Error loading image:", file.url);
+                                                    e.currentTarget.src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%23999999'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z'%3E%3C/path%3E%3C/svg%3E";
+                                                }}
                                             />
-                                        ) : (
-                                            <div className="h-12 w-12 bg-gray-100 rounded flex items-center justify-center">
+                                        ) : file.type.startsWith("video/") ? (
+                                            <div
+                                                className="h-12 w-12 bg-gray-100 rounded flex items-center justify-center cursor-pointer"
+                                                onClick={() => handleMediaPreview(file)}
+                                            >
                                                 <svg className="h-6 w-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 4v16M17 4v16M3 8h4m10 0h4M3 12h18M3 16h4m10 0h4M4 20h16a1 1 0 001-1V5a1 1 0 00-1-1H4a1 1 0 00-1 1v14a1 1 0 001 1z" />
                                                 </svg>
                                             </div>
-                                        )}
+                                        ) : null}
                                     </div>
                                     <div>
                                         <p className="text-sm font-medium text-gray-900">{file.name}</p>
@@ -342,17 +366,16 @@ const MediaPage: React.FC = () => {
                                     </div>
                                 </div>
                                 <div className="flex items-center space-x-2">
-                                    <a
-                                        href={file.url}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
+                                    <button
+                                        onClick={() => handleMediaPreview(file)}
                                         className="p-2 text-gray-400 hover:text-gray-500"
+                                        aria-label={`Preview ${file.name}`}
                                     >
                                         <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                                         </svg>
-                                    </a>
+                                    </button>
                                     <button
                                         onClick={() => {
                                             if (window.confirm(`Are you sure you want to delete ${file.name}?`)) {
@@ -360,6 +383,7 @@ const MediaPage: React.FC = () => {
                                             }
                                         }}
                                         className="p-2 text-gray-400 hover:text-red-500"
+                                        aria-label={`Delete ${file.name}`}
                                     >
                                         <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
@@ -371,6 +395,15 @@ const MediaPage: React.FC = () => {
                     </div>
                 )}
             </div>
+
+            {/* Media Modal */}
+            <MediaModal
+                isOpen={selectedMedia !== null}
+                onClose={() => setSelectedMedia(null)}
+                mediaUrl={selectedMedia?.url || ""}
+                mediaType={selectedMedia?.type || ""}
+                mediaName={selectedMedia?.name || ""}
+            />
 
             {/* Bulk Actions */}
             {selectedFiles.length > 0 && (

@@ -104,10 +104,14 @@ const EditModal: React.FC<EditModalProps> = ({ isOpen, onClose, slide, onSave })
     const [editedSlide, setEditedSlide] = useState<Slide | null>(null);
     const [isUploading, setIsUploading] = useState<boolean>(false);
     const [errors, setErrors] = useState<FormErrors>({});
+    const [pendingFile, setPendingFile] = useState<File | null>(null);
+    const [pendingPreviewUrl, setPendingPreviewUrl] = useState<string | null>(null);
 
     useEffect(() => {
         if (slide) {
             setEditedSlide(slide);
+            setPendingFile(null);
+            setPendingPreviewUrl(null);
         }
     }, [slide]);
 
@@ -115,10 +119,12 @@ const EditModal: React.FC<EditModalProps> = ({ isOpen, onClose, slide, onSave })
         if (!isOpen) {
             setErrors({});
             setIsUploading(false);
+            setPendingFile(null);
+            setPendingPreviewUrl(null);
         }
     }, [isOpen]);
 
-    const handleFileInput = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleFileInput = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (!file || !editedSlide) return;
 
@@ -140,82 +146,9 @@ const EditModal: React.FC<EditModalProps> = ({ isOpen, onClose, slide, onSave })
             return;
         }
 
-        setIsUploading(true);
+        setPendingFile(file);
+        setPendingPreviewUrl(URL.createObjectURL(file));
         setErrors((prev) => ({ ...prev, imageUrl: undefined, videoUrl: undefined }));
-
-        try {
-            const fileUrl = await uploadFile(file);
-
-            if (editedSlide.type === SLIDE_TYPES.VIDEO) {
-                // Create a video element to get the duration
-                const video = document.createElement("video");
-                video.src = fileUrl;
-
-                // Wait for metadata to load to get duration
-                await new Promise((resolve, reject) => {
-                    video.onloadedmetadata = () => resolve(null);
-                    video.onerror = () => reject(new Error("Failed to load video metadata"));
-                });
-
-                // Set the duration to the video length in seconds, rounded up
-                const duration = Math.ceil(video.duration);
-
-                setEditedSlide({
-                    ...editedSlide,
-                    duration,
-                    data: {
-                        ...editedSlide.data,
-                        videoUrl: fileUrl,
-                    } as VideoSlideData,
-                } as VideoSlide);
-            } else if (editedSlide.type === SLIDE_TYPES.IMAGE) {
-                // Verify image loads successfully
-                await new Promise((resolve, reject) => {
-                    const img = new Image();
-                    img.onload = () => resolve(null);
-                    img.onerror = () => reject(new Error("Failed to load image"));
-                    img.src = fileUrl;
-                });
-
-                setEditedSlide({
-                    ...editedSlide,
-                    data: {
-                        ...editedSlide.data,
-                        imageUrl: fileUrl,
-                    } as ImageSlideData,
-                } as ImageSlide);
-            } else if (editedSlide.type === SLIDE_TYPES.EVENT) {
-                // Verify image loads successfully
-                await new Promise((resolve, reject) => {
-                    const img = new Image();
-                    img.onload = () => resolve(null);
-                    img.onerror = () => reject(new Error("Failed to load image"));
-                    img.src = fileUrl;
-                });
-
-                setEditedSlide({
-                    ...editedSlide,
-                    data: {
-                        ...editedSlide.data,
-                        imageUrl: fileUrl,
-                    } as EventSlideData,
-                } as EventSlide);
-            }
-
-            addToast(`${isVideo ? "Video" : "Image"} uploaded successfully`, "success");
-        } catch (error) {
-            console.error("Upload error:", error);
-            const errorMessage = error instanceof Error ? error.message : "Failed to upload file";
-            addToast(errorMessage, "error");
-            setErrors((prev) => ({
-                ...prev,
-                [editedSlide.type === SLIDE_TYPES.IMAGE ? "imageUrl" : "videoUrl"]: errorMessage,
-            }));
-        } finally {
-            setIsUploading(false);
-            // Reset the file input
-            e.target.value = "";
-        }
     };
 
     const validateForm = (): boolean => {
@@ -226,9 +159,9 @@ const EditModal: React.FC<EditModalProps> = ({ isOpen, onClose, slide, onSave })
         }
 
         if (editedSlide) {
-            if (editedSlide.type === SLIDE_TYPES.IMAGE && !(editedSlide as ImageSlide).data.imageUrl) {
+            if (editedSlide.type === SLIDE_TYPES.IMAGE && !((pendingFile || (editedSlide as ImageSlide).data.imageUrl))) {
                 newErrors.imageUrl = "Image is required";
-            } else if (editedSlide.type === SLIDE_TYPES.VIDEO && !(editedSlide as VideoSlide).data.videoUrl) {
+            } else if (editedSlide.type === SLIDE_TYPES.VIDEO && !((pendingFile || (editedSlide as VideoSlide).data.videoUrl))) {
                 newErrors.videoUrl = "Video is required";
             } else if (editedSlide.type === SLIDE_TYPES.NEWS) {
                 const newsSlide = editedSlide as NewsSlide;
@@ -242,7 +175,11 @@ const EditModal: React.FC<EditModalProps> = ({ isOpen, onClose, slide, onSave })
                 if (!eventSlide.data.date) newErrors.date = "Date is required";
             }
 
-            if (editedSlide.duration < 1 || editedSlide.duration > 60) {
+            // Only enforce 1-60s for non-video slides
+            if (
+                editedSlide.type !== SLIDE_TYPES.VIDEO &&
+                (editedSlide.duration < 1 || editedSlide.duration > 60)
+            ) {
                 newErrors.duration = "Duration must be between 1 and 60 seconds";
             }
         }
@@ -251,10 +188,51 @@ const EditModal: React.FC<EditModalProps> = ({ isOpen, onClose, slide, onSave })
         return Object.keys(newErrors).length === 0;
     };
 
-    const handleSave = () => {
+    const handleSave = async () => {
         if (!editedSlide || !validateForm()) return;
-        onSave(editedSlide);
-        onClose();
+        setIsUploading(true);
+        let updatedSlide = { ...editedSlide };
+        try {
+            if (pendingFile) {
+                const fileUrl = await uploadFile(pendingFile);
+                if (editedSlide.type === SLIDE_TYPES.IMAGE) {
+                    updatedSlide = {
+                        ...editedSlide,
+                        data: {
+                            ...editedSlide.data,
+                            imageUrl: fileUrl,
+                        } as ImageSlideData,
+                    } as ImageSlide;
+                } else if (editedSlide.type === SLIDE_TYPES.VIDEO) {
+                    // For video, get duration
+                    const video = document.createElement("video");
+                    video.src = fileUrl;
+                    await new Promise((resolve, reject) => {
+                        video.onloadedmetadata = () => resolve(null);
+                        video.onerror = () => reject(new Error("Failed to load video metadata"));
+                    });
+                    const duration = Math.ceil(video.duration);
+                    updatedSlide = {
+                        ...editedSlide,
+                        duration,
+                        data: {
+                            ...editedSlide.data,
+                            videoUrl: fileUrl,
+                        } as VideoSlideData,
+                    } as VideoSlide;
+                }
+            }
+            onSave(updatedSlide);
+            onClose();
+        } catch (error) {
+            console.error("Upload error:", error);
+            const errorMessage = error instanceof Error ? error.message : "Failed to upload file";
+            addToast(errorMessage, "error");
+        } finally {
+            setIsUploading(false);
+            setPendingFile(null);
+            setPendingPreviewUrl(null);
+        }
     };
 
     if (!isOpen || !editedSlide) return null;
@@ -334,6 +312,25 @@ const EditModal: React.FC<EditModalProps> = ({ isOpen, onClose, slide, onSave })
                             {(errors.imageUrl || errors.videoUrl) && (
                                 <p className="mt-1 text-sm text-red-500">{errors.imageUrl || errors.videoUrl}</p>
                             )}
+                            {/* Preview logic: show pendingPreviewUrl if exists, else show existing url */}
+                            {editedSlide.type === SLIDE_TYPES.IMAGE && (pendingPreviewUrl || (editedSlide.data as ImageSlideData).imageUrl) && (
+                                <div className="mt-2 flex justify-center">
+                                    <img
+                                        src={pendingPreviewUrl || (editedSlide.data as ImageSlideData).imageUrl}
+                                        alt="Preview"
+                                        className="max-h-48 rounded shadow"
+                                    />
+                                </div>
+                            )}
+                            {editedSlide.type === SLIDE_TYPES.VIDEO && (pendingPreviewUrl || (editedSlide.data as VideoSlideData).videoUrl) && (
+                                <div className="mt-2 flex justify-center">
+                                    <video
+                                        src={pendingPreviewUrl || (editedSlide.data as VideoSlideData).videoUrl}
+                                        controls
+                                        className="max-h-48 rounded shadow"
+                                    />
+                                </div>
+                            )}
                         </div>
                     )}
 
@@ -352,6 +349,11 @@ const EditModal: React.FC<EditModalProps> = ({ isOpen, onClose, slide, onSave })
                             className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 ${errors.duration ? "border-red-500" : "border-gray-300"}`}
                         />
                         {errors.duration && <p className="mt-1 text-sm text-red-500">{errors.duration}</p>}
+                        {editedSlide.type === SLIDE_TYPES.VIDEO && (
+                            <p className="mt-1 text-sm text-gray-500">
+                                Duration is set automatically to the video's length and cannot be changed.
+                            </p>
+                        )}
                     </div>
 
                     {/* Active toggle */}
@@ -398,10 +400,6 @@ const getSlideTypeLabel = (type: typeof SLIDE_TYPES[keyof typeof SLIDE_TYPES]) =
             return "Video";
         case SLIDE_TYPES.NEWS:
             return "News";
-        case SLIDE_TYPES.TEXT:
-            return "Text";
-        case SLIDE_TYPES.COUNTDOWN:
-            return "Countdown";
         default:
             return "Unknown";
     }

@@ -4,6 +4,7 @@ import ReactConfetti from "react-confetti";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faUserTie, faUsers } from "@fortawesome/free-solid-svg-icons";
 import { employees } from "../../data/employees";
+import { EventSlide as EventSlideType } from "../../types";
 
 const wishMessages = [
     "Wishing you a fantastic year ahead!",
@@ -149,6 +150,18 @@ const BirthdaySlide: React.FC<{ employees: typeof employees }> = ({ employees })
  * EventSlide
  * Renders the BirthdaySlide if there are birthdays today
  */
-export const EventSlide: React.FC<{ duration: number }> = ({ duration }) => {
+export const EventSlide: React.FC<{ slide: EventSlideType }> = ({ slide }) => {
+    // Check if there are any birthdays today
+    const today = new Date();
+    const hasBirthdays = employees.some(employee => {
+        const dob = new Date(employee.dob);
+        return dob.getMonth() === today.getMonth() && dob.getDate() === today.getDate();
+    });
+
+    // If no birthdays, return null to prevent rendering
+    if (!hasBirthdays) {
+        return null;
+    }
+
     return <BirthdaySlide employees={employees} />;
 }; 

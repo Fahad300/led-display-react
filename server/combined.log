@@ -1,0 +1,65 @@
+{"level":"info","message":"Database connection established","timestamp":"2025-05-22T15:34:16.786Z"}
+{"level":"info","message":"Server running on port 5000","timestamp":"2025-05-22T15:34:16.790Z"}
+{"level":"info","message":"Upload directory: D:\\led-soliton\\led-display-react\\server\\uploads","timestamp":"2025-05-22T15:34:16.791Z"}
+{"level":"info","message":"File uploaded successfully: 1747987924495-367984244.jpg","timestamp":"2025-05-23T08:12:04.590Z"}
+{"level":"info","message":"Database connection established","timestamp":"2025-05-23T08:22:46.611Z"}
+{"level":"info","message":"Server running on port 5000","timestamp":"2025-05-23T08:22:46.615Z"}
+{"level":"info","message":"Upload directory: D:\\led-soliton\\led-display-react\\server\\uploads","timestamp":"2025-05-23T08:22:46.616Z"}
+{"level":"info","message":"Deleted file: 1747918461683-655955594.jpg","timestamp":"2025-05-23T08:24:03.200Z"}
+{"level":"info","message":"Deleted file: 1747918502173-693082942.mp4","timestamp":"2025-05-23T08:24:03.202Z"}
+{"level":"info","message":"Deleted file: 1747918880995-237675567.jpg","timestamp":"2025-05-23T08:24:03.204Z"}
+{"level":"info","message":"Deleted file: 1747987924495-367984244.jpg","timestamp":"2025-05-23T08:24:03.207Z"}
+{"level":"info","message":"All files purged successfully","timestamp":"2025-05-23T08:24:03.208Z"}
+{"level":"info","message":"File uploaded successfully: 1747990869451-747690010.jpg","timestamp":"2025-05-23T09:01:09.518Z"}
+{"level":"info","message":"Database connection established","timestamp":"2025-05-23T09:06:31.205Z"}
+{"level":"info","message":"Server running on port 5000","timestamp":"2025-05-23T09:06:31.214Z"}
+{"level":"info","message":"Upload directory: D:\\led-soliton\\led-display-react\\server\\uploads","timestamp":"2025-05-23T09:06:31.215Z"}
+{"level":"info","message":"Database connection established","timestamp":"2025-05-23T09:12:07.071Z"}
+{"level":"info","message":"Server running on port 5000","timestamp":"2025-05-23T09:12:07.081Z"}
+{"level":"info","message":"Upload directory: D:\\led-soliton\\led-display-react\\server\\uploads","timestamp":"2025-05-23T09:12:07.082Z"}
+{"level":"info","message":"Login attempt for username: test","timestamp":"2025-05-23T09:41:14.309Z"}
+{"level":"info","message":"Login successful for user: test","timestamp":"2025-05-23T09:41:14.370Z"}
+{"level":"info","message":"File uploaded successfully: 1748003775245-430546782.jpg","timestamp":"2025-05-23T12:36:15.312Z"}
+{"level":"info","message":"Deleted file: 1747990869451-747690010.jpg","timestamp":"2025-05-23T12:36:41.195Z"}
+{"level":"info","message":"Deleted file: 1748003775245-430546782.jpg","timestamp":"2025-05-23T12:36:41.198Z"}
+{"level":"info","message":"All files purged successfully","timestamp":"2025-05-23T12:36:41.199Z"}
+{"level":"info","message":"File uploaded successfully: 1748005451813-22258462.jpg","timestamp":"2025-05-23T13:04:11.856Z"}
+{"level":"info","message":"File uploaded successfully: 1748005464461-186345132.jpg","timestamp":"2025-05-23T13:04:24.521Z"}
+{"level":"info","message":"File uploaded successfully: 1748005475478-766660444.jpg","timestamp":"2025-05-23T13:04:35.526Z"}
+{"level":"info","message":"File uploaded successfully: 1748005491478-497543881.jpg","timestamp":"2025-05-23T13:04:51.513Z"}
+{"level":"info","message":"File uploaded successfully: 1748005502429-394934042.jpg","timestamp":"2025-05-23T13:05:02.477Z"}
+{"level":"info","message":"File uploaded successfully: 1748005654406-953515760.jpg","timestamp":"2025-05-23T13:07:34.433Z"}
+{"level":"info","message":"File uploaded successfully: 1748006342132-605276233.jpg","timestamp":"2025-05-23T13:19:02.196Z"}
+{"level":"info","message":"File uploaded successfully: 1748006748092-310084001.jpg","timestamp":"2025-05-23T13:25:48.119Z"}
+{"level":"info","message":"File uploaded successfully: 1748006969351-942802685.jpg","timestamp":"2025-05-23T13:29:29.376Z"}
+{"level":"info","message":"File uploaded successfully: 1748008114118-110176639.jpg","timestamp":"2025-05-23T13:48:34.157Z"}
+{"level":"info","message":"Deleted file: 1748005451813-22258462.jpg","timestamp":"2025-05-23T13:48:51.184Z"}
+{"level":"info","message":"Deleted file: 1748005464461-186345132.jpg","timestamp":"2025-05-23T13:48:51.188Z"}
+{"level":"info","message":"Deleted file: 1748005475478-766660444.jpg","timestamp":"2025-05-23T13:48:51.191Z"}
+{"level":"info","message":"Deleted file: 1748005491478-497543881.jpg","timestamp":"2025-05-23T13:48:51.195Z"}
+{"level":"info","message":"Deleted file: 1748005502429-394934042.jpg","timestamp":"2025-05-23T13:48:51.198Z"}
+{"level":"info","message":"Deleted file: 1748005654406-953515760.jpg","timestamp":"2025-05-23T13:48:51.201Z"}
+{"level":"info","message":"Deleted file: 1748006342132-605276233.jpg","timestamp":"2025-05-23T13:48:51.204Z"}
+{"level":"info","message":"Deleted file: 1748006748092-310084001.jpg","timestamp":"2025-05-23T13:48:51.207Z"}
+{"level":"info","message":"Deleted file: 1748006969351-942802685.jpg","timestamp":"2025-05-23T13:48:51.210Z"}
+{"level":"info","message":"Deleted file: 1748008114118-110176639.jpg","timestamp":"2025-05-23T13:48:51.212Z"}
+{"level":"info","message":"All files purged successfully","timestamp":"2025-05-23T13:48:51.213Z"}
+{"level":"info","message":"File uploaded successfully: 1748010018935-329416004.jpg","timestamp":"2025-05-23T14:20:18.961Z"}
+{"level":"info","message":"File uploaded successfully: 1748010034623-789695324.mp4","timestamp":"2025-05-23T14:20:34.744Z"}
+{"level":"info","message":"File uploaded successfully: 1748010076097-31264494.jpg","timestamp":"2025-05-23T14:21:16.232Z"}
+{"level":"info","message":"File uploaded successfully: 1748010420525-112341627.jpg","timestamp":"2025-05-23T14:27:00.561Z"}
+{"level":"info","message":"File uploaded successfully: 1748010447300-330974370.jpg","timestamp":"2025-05-23T14:27:27.330Z"}
+{"level":"info","message":"File uploaded successfully: 1748011045275-993035282.jpg","timestamp":"2025-05-23T14:37:25.317Z"}
+{"level":"info","message":"File uploaded successfully: 1748011271054-731573113.jpg","timestamp":"2025-05-23T14:41:11.076Z"}
+{"level":"info","message":"File uploaded successfully: 1748011655809-44148243.jpg","timestamp":"2025-05-23T14:47:35.830Z"}
+{"level":"info","message":"Deleted file: 1748010018935-329416004.jpg","timestamp":"2025-05-23T14:47:44.506Z"}
+{"level":"info","message":"Deleted file: 1748010034623-789695324.mp4","timestamp":"2025-05-23T14:47:44.509Z"}
+{"level":"info","message":"Deleted file: 1748010076097-31264494.jpg","timestamp":"2025-05-23T14:47:44.513Z"}
+{"level":"info","message":"Deleted file: 1748010420525-112341627.jpg","timestamp":"2025-05-23T14:47:44.519Z"}
+{"level":"info","message":"Deleted file: 1748010447300-330974370.jpg","timestamp":"2025-05-23T14:47:44.522Z"}
+{"level":"info","message":"Deleted file: 1748011045275-993035282.jpg","timestamp":"2025-05-23T14:47:44.525Z"}
+{"level":"info","message":"Deleted file: 1748011271054-731573113.jpg","timestamp":"2025-05-23T14:47:44.528Z"}
+{"level":"info","message":"Deleted file: 1748011655809-44148243.jpg","timestamp":"2025-05-23T14:47:44.530Z"}
+{"level":"info","message":"All files purged successfully","timestamp":"2025-05-23T14:47:44.530Z"}
+{"level":"info","message":"File uploaded successfully: 1748011697946-174071623.jpg","timestamp":"2025-05-23T14:48:17.984Z"}
+{"level":"info","message":"File uploaded successfully: 1748011999755-817883010.mp4","timestamp":"2025-05-23T14:53:19.770Z"}

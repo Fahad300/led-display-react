@@ -7,6 +7,7 @@ import { logger } from "./logger";
  */
 export class FileManager {
     private static uploadDir = path.join(__dirname, "../../uploads");
+    private static backendUrl = process.env.BACKEND_URL || "http://localhost:5000";
 
     /**
      * Purges unused files from the uploads directory
@@ -140,7 +141,7 @@ export class FileManager {
                 const filePath = path.join(this.uploadDir, file);
                 const stats = fs.statSync(filePath);
                 const mimeType = this.getMimeType(file);
-                const url = `/uploads/${file}`;
+                const url = `${this.backendUrl}/uploads/${file}`;
 
                 return {
                     name: file,

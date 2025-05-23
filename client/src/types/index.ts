@@ -3,8 +3,6 @@
  */
 export const SLIDE_TYPES = {
     IMAGE: 'image-slide',
-    TEXT: 'text-slide',
-    COUNTDOWN: 'countdown-slide',
     VIDEO: 'video-slide',
     NEWS: 'news-slide',
     EVENT: 'event-slide'
@@ -63,41 +61,6 @@ export interface VideoSlide extends BaseSlide {
 }
 
 /**
- * Text slide data
- */
-export interface TextSlideData {
-    title?: string;
-    content: string;
-    textAlign?: 'left' | 'center' | 'right';
-    fontSize?: string;
-}
-
-/**
- * Text slide type
- */
-export interface TextSlide extends BaseSlide {
-    type: typeof SLIDE_TYPES.TEXT;
-    data: TextSlideData;
-}
-
-/**
- * Countdown slide data
- */
-export interface CountdownSlideData {
-    targetDate: string;
-    title?: string;
-    message?: string;
-}
-
-/**
- * Countdown slide type
- */
-export interface CountdownSlide extends BaseSlide {
-    type: typeof SLIDE_TYPES.COUNTDOWN;
-    data: CountdownSlideData;
-}
-
-/**
  * News slide data
  */
 export interface NewsSlideData {
@@ -146,7 +109,7 @@ export interface EventSlide extends BaseSlide {
 /**
  * Union type of all slide types
  */
-export type Slide = ImageSlide | TextSlide | CountdownSlide | VideoSlide | NewsSlide | EventSlide;
+export type Slide = ImageSlide | VideoSlide | NewsSlide | EventSlide;
 
 /**
  * Toast notification types
