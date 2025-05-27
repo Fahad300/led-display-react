@@ -832,6 +832,17 @@ const NewsSlideComponent: React.FC<{ slide: NewsSlide }> = ({ slide }) => {
                                 {paragraph}
                             </motion.p>
                         ))}
+                        {/* Show newsImage below details if present */}
+                        {slide.data.newsImage && (
+                            <div className="mt-8 flex justify-center">
+                                <img
+                                    src={slide.data.newsImage}
+                                    alt="News"
+                                    className="max-h-64 rounded-lg shadow"
+                                    style={{ objectFit: "contain" }}
+                                />
+                            </div>
+                        )}
                     </motion.div>
                 </motion.div>
             </motion.div>

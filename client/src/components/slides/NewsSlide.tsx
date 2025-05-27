@@ -13,6 +13,7 @@ interface NewsSlideProps {
  */
 export const NewsSlide: React.FC<NewsSlideProps> = ({ slide, onUpdate }) => {
     const [isMediaSelectorOpen, setIsMediaSelectorOpen] = useState(false);
+    const [isNewsImageSelectorOpen, setIsNewsImageSelectorOpen] = useState(false);
 
     const handleBackgroundSelect = (url: string) => {
         onUpdate({
@@ -20,6 +21,16 @@ export const NewsSlide: React.FC<NewsSlideProps> = ({ slide, onUpdate }) => {
             data: {
                 ...slide.data,
                 backgroundImage: url
+            }
+        });
+    };
+
+    const handleNewsImageSelect = (url: string) => {
+        onUpdate({
+            ...slide,
+            data: {
+                ...slide.data,
+                newsImage: url
             }
         });
     };
@@ -89,11 +100,11 @@ export const NewsSlide: React.FC<NewsSlideProps> = ({ slide, onUpdate }) => {
                             }
                         })}
                         className={`w-full bg-transparent border-none focus:ring-0 text-white placeholder-gray-300 ${slide.data.textSize === "small" ? "text-5xl md:text-6xl" :
-                                slide.data.textSize === "medium" ? "text-6xl md:text-7xl" :
-                                    slide.data.textSize === "large" ? "text-7xl md:text-8xl" :
-                                        slide.data.textSize === "xl" ? "text-8xl md:text-9xl" :
-                                            slide.data.textSize === "2xl" ? "text-9xl md:text-[10rem]" :
-                                                "text-7xl md:text-8xl"
+                            slide.data.textSize === "medium" ? "text-6xl md:text-7xl" :
+                                slide.data.textSize === "large" ? "text-7xl md:text-8xl" :
+                                    slide.data.textSize === "xl" ? "text-8xl md:text-9xl" :
+                                        slide.data.textSize === "2xl" ? "text-9xl md:text-[10rem]" :
+                                            "text-7xl md:text-8xl"
                             }`}
                         placeholder="Enter title..."
                     />
@@ -107,25 +118,52 @@ export const NewsSlide: React.FC<NewsSlideProps> = ({ slide, onUpdate }) => {
                             }
                         })}
                         className={`w-full bg-transparent border-none focus:ring-0 text-white placeholder-gray-300 mt-4 ${slide.data.textSize === "small" ? "text-xl md:text-2xl" :
-                                slide.data.textSize === "medium" ? "text-2xl md:text-3xl" :
-                                    slide.data.textSize === "large" ? "text-3xl md:text-4xl" :
-                                        slide.data.textSize === "xl" ? "text-4xl md:text-5xl" :
-                                            slide.data.textSize === "2xl" ? "text-5xl md:text-6xl" :
-                                                "text-3xl md:text-4xl"
+                            slide.data.textSize === "medium" ? "text-2xl md:text-3xl" :
+                                slide.data.textSize === "large" ? "text-3xl md:text-4xl" :
+                                    slide.data.textSize === "xl" ? "text-4xl md:text-5xl" :
+                                        slide.data.textSize === "2xl" ? "text-5xl md:text-6xl" :
+                                            "text-3xl md:text-4xl"
                             }`}
                         placeholder="Enter details..."
                         rows={4}
                     />
+                    {/* Debug output for newsImage */}
+                    <div className="text-xs text-red-500">
+                        NewsImage debug: {JSON.stringify(slide.data.newsImage)}
+                    </div>
+                    {slide.data.newsImage && (
+                        <div className="mt-6 flex justify-center">
+                            <img
+                                src={slide.data.newsImage}
+                                alt="News"
+                                className="max-h-64 rounded-lg shadow"
+                                style={{ objectFit: "contain" }}
+                            />
+                        </div>
+                    )}
                 </div>
-                <button
-                    type="button"
-                    onClick={() => setIsMediaSelectorOpen(true)}
-                    className="absolute top-2 right-2 p-2 bg-white rounded-full shadow hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
-                >
-                    <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                    </svg>
-                </button>
+                <div className="absolute top-2 right-2 flex gap-2">
+                    <button
+                        type="button"
+                        onClick={() => setIsMediaSelectorOpen(true)}
+                        className="p-2 bg-white rounded-full shadow hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                        aria-label="Change background image"
+                    >
+                        <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                        </svg>
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => setIsNewsImageSelectorOpen(true)}
+                        className="p-2 bg-white rounded-full shadow hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                        aria-label="Change news image"
+                    >
+                        <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                        </svg>
+                    </button>
+                </div>
             </div>
 
             <MediaSelector
@@ -134,6 +172,14 @@ export const NewsSlide: React.FC<NewsSlideProps> = ({ slide, onUpdate }) => {
                 onSelect={handleBackgroundSelect}
                 acceptedTypes={["image"]}
                 title="Select Background Image"
+            />
+
+            <MediaSelector
+                isOpen={isNewsImageSelectorOpen}
+                onClose={() => setIsNewsImageSelectorOpen(false)}
+                onSelect={handleNewsImageSelect}
+                acceptedTypes={["image"]}
+                title="Select News Image"
             />
         </>
     );

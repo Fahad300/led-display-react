@@ -71,6 +71,7 @@ export interface NewsSlideData {
     textColor?: string;
     textSize?: "small" | "medium" | "large" | "xl" | "2xl" | "3xl";
     textAlignment?: "left" | "center" | "right";
+    newsImage?: string;
 }
 
 /**

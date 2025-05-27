@@ -464,6 +464,7 @@ const AdminPage: React.FC = () => {
                             title: "",
                             details: "",
                             backgroundImage: "",
+                            newsImage: "",
                             overlayOpacity: 0.5,
                             textColor: "#FFFFFF",
                             textSize: "large",
@@ -482,6 +483,7 @@ const AdminPage: React.FC = () => {
     };
 
     const handleSaveSlide = (updatedSlide: Slide) => {
+        console.log("Saving slide with newsImage:", updatedSlide.type === SLIDE_TYPES.NEWS ? (updatedSlide as NewsSlide).data.newsImage : undefined);
         try {
             if (selectedSlide?.id) {
                 updateSlide(updatedSlide);
@@ -678,8 +680,10 @@ const SlideCard: React.FC<SlideCardProps> = ({ slide, onEdit, onDelete, onToggle
                 return (slide as ImageSlide).data.imageUrl;
             case SLIDE_TYPES.VIDEO:
                 return (slide as VideoSlide).data.videoUrl;
-            case SLIDE_TYPES.NEWS:
-                return (slide as NewsSlide).data.backgroundImage;
+            case SLIDE_TYPES.NEWS: {
+                const news = slide as NewsSlide;
+                return news.data.newsImage || news.data.backgroundImage;
+            }
             default:
                 return "";
         }
@@ -867,6 +871,22 @@ interface SlideFieldsProps<T extends Slide> {
 
 /** News slide fields component */
 const NewsSlideFields: React.FC<SlideFieldsProps<NewsSlide>> = ({ slide, onUpdate, errors }) => {
+    const handleNewsImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (file) {
+            try {
+                const fileUrl = await uploadFile(file);
+                console.log("Setting newsImage to", fileUrl);
+                onUpdate({
+                    ...slide,
+                    data: { ...slide.data, newsImage: fileUrl }
+                });
+            } catch (error) {
+                console.error("Error uploading news image:", error);
+            }
+        }
+    };
+
     return (
         <div className="space-y-4">
             <div>
@@ -932,6 +952,27 @@ const NewsSlideFields: React.FC<SlideFieldsProps<NewsSlide>> = ({ slide, onUpdat
                         <img
                             src={slide.data.backgroundImage}
                             alt="Background preview"
+                            className="w-full h-32 object-cover rounded-lg"
+                        />
+                    </div>
+                )}
+            </div>
+
+            <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                    News Image
+                </label>
+                <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleNewsImageChange}
+                    className="w-full px-3 py-2 border rounded-lg border-gray-300"
+                />
+                {slide.data.newsImage && (
+                    <div className="mt-2">
+                        <img
+                            src={slide.data.newsImage}
+                            alt="News preview"
                             className="w-full h-32 object-cover rounded-lg"
                         />
                     </div>

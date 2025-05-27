@@ -63,3 +63,18 @@
 {"level":"info","message":"All files purged successfully","timestamp":"2025-05-23T14:47:44.530Z"}
 {"level":"info","message":"File uploaded successfully: 1748011697946-174071623.jpg","timestamp":"2025-05-23T14:48:17.984Z"}
 {"level":"info","message":"File uploaded successfully: 1748011999755-817883010.mp4","timestamp":"2025-05-23T14:53:19.770Z"}
+{"level":"info","message":"Database connection established","timestamp":"2025-05-27T07:46:16.970Z"}
+{"level":"info","message":"Server running on port 5000","timestamp":"2025-05-27T07:46:16.976Z"}
+{"level":"info","message":"Upload directory: D:\\led-soliton\\led-display-react\\server\\uploads","timestamp":"2025-05-27T07:46:16.976Z"}
+{"level":"info","message":"Attempting to serve file from: D:\\led-soliton\\led-display-react\\server\\public\\index.html","timestamp":"2025-05-27T07:46:36.265Z"}
+{"level":"info","message":"Login attempt for username: test","timestamp":"2025-05-27T07:47:17.152Z"}
+{"level":"info","message":"Login successful for user: test","timestamp":"2025-05-27T07:47:17.238Z"}
+{"level":"info","message":"Database connection established","timestamp":"2025-05-27T08:08:47.019Z"}
+{"level":"info","message":"Server running on port 5000","timestamp":"2025-05-27T08:08:47.025Z"}
+{"level":"info","message":"Upload directory: D:\\led-soliton\\led-display-react\\server\\uploads","timestamp":"2025-05-27T08:08:47.026Z"}
+{"level":"info","message":"File uploaded successfully: 1748333391886-216111200.jpg","timestamp":"2025-05-27T08:09:52.044Z"}
+{"level":"info","message":"File uploaded successfully: 1748334625658-862127236.jpg","timestamp":"2025-05-27T08:30:25.712Z"}
+{"level":"info","message":"File uploaded successfully: 1748334631253-680346402.jpg","timestamp":"2025-05-27T08:30:31.324Z"}
+{"level":"info","message":"File uploaded successfully: 1748335310881-78999210.jpg","timestamp":"2025-05-27T08:41:50.897Z"}
+{"level":"info","message":"File uploaded successfully: 1748336489194-993871005.jpg","timestamp":"2025-05-27T09:01:29.237Z"}
+{"level":"info","message":"File uploaded successfully: 1748336494492-153779721.jpg","timestamp":"2025-05-27T09:01:34.509Z"}
