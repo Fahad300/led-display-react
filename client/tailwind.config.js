@@ -103,9 +103,18 @@ module.exports = {
                         'background-position': 'right center'
                     },
                 },
+                'spin-slow': {
+                    '0%': {
+                        transform: 'rotate(0deg)',
+                    },
+                    '100%': {
+                        transform: 'rotate(360deg)',
+                    },
+                },
             },
             animation: {
                 'gradient': 'gradient 8s ease infinite',
+                'spin-slow': 'spin-slow 8s linear infinite',
             },
         },
     },

@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
-import { Slide, ImageSlide, SLIDE_TYPES } from '../types';
+import { Slide, ImageSlide, SLIDE_TYPES, CurrentEscalationsSlide, DataSource } from '../types';
 import { createDemoImage } from '../utils/createDemoImages';
+import { currentEscalations } from '../data/currentEscalations';
 
 // Local storage key for slides
 const STORAGE_KEY = 'led-display-templates-config';
@@ -71,6 +72,27 @@ const getDemoImageSlide = (): ImageSlide => {
 };
 
 /**
+ * Get a current escalations slide
+ */
+const getCurrentEscalationsSlide = (): CurrentEscalationsSlide | null => {
+    if (!currentEscalations || currentEscalations.length === 0) return null;
+    return {
+        id: "current-escalations-1",
+        name: "Current Escalations",
+        type: SLIDE_TYPES.CURRENT_ESCALATIONS,
+        dataSource: "manual" as DataSource,
+        duration: 10,
+        active: true,
+        data: {
+            escalations: currentEscalations.map(escalation => ({
+                ...escalation,
+                currentStatus: escalation.curtentStatus
+            }))
+        }
+    };
+};
+
+/**
  * Provider component that wraps the app and provides the slide context
  */
 export const SlideProvider: React.FC<SlideProviderProps> = ({ children }) => {
@@ -91,13 +113,20 @@ export const SlideProvider: React.FC<SlideProviderProps> = ({ children }) => {
                 Object.values(SLIDE_TYPES).includes(slide.type)
             ) as Slide[];
 
-            if (validSlides.length === 0) {
+            // Inject currentEscalations slide if data exists and not already present
+            const escalationsSlide = getCurrentEscalationsSlide();
+            const hasEscalationsSlide = validSlides.some(s => s.type === SLIDE_TYPES.CURRENT_ESCALATIONS);
+            let slidesWithEscalations = validSlides;
+            if (escalationsSlide && !hasEscalationsSlide) {
+                slidesWithEscalations = [...validSlides, escalationsSlide];
+            }
+            if (slidesWithEscalations.length === 0) {
                 // Add a demo slide if no slides exist
                 const demoSlide = getDemoImageSlide();
                 setSlides([demoSlide]);
                 saveSlides([demoSlide]);
             } else {
-                setSlides(validSlides);
+                setSlides(slidesWithEscalations);
             }
         } catch (error) {
             console.error("Error loading slides:", error);

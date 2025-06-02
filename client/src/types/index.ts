@@ -5,7 +5,8 @@ export const SLIDE_TYPES = {
     IMAGE: 'image-slide',
     VIDEO: 'video-slide',
     NEWS: 'news-slide',
-    EVENT: 'event-slide'
+    EVENT: 'event-slide',
+    CURRENT_ESCALATIONS: 'current-escalations-slide',
 } as const;
 
 /**
@@ -108,9 +109,32 @@ export interface EventSlide extends BaseSlide {
 }
 
 /**
+ * Current escalations slide data
+ */
+export interface CurrentEscalationsSlideData {
+    escalations: Array<{
+        ticketCategory: string;
+        teamName: string;
+        clientName: string;
+        ticketSummary: string;
+        averageResponseTime: string;
+        ticketStatus: string;
+        currentStatus: string;
+    }>;
+}
+
+/**
+ * Current escalations slide type
+ */
+export interface CurrentEscalationsSlide extends BaseSlide {
+    type: typeof SLIDE_TYPES.CURRENT_ESCALATIONS;
+    data: CurrentEscalationsSlideData;
+}
+
+/**
  * Union type of all slide types
  */
-export type Slide = ImageSlide | VideoSlide | NewsSlide | EventSlide;
+export type Slide = ImageSlide | VideoSlide | NewsSlide | EventSlide | CurrentEscalationsSlide;
 
 /**
  * Toast notification types

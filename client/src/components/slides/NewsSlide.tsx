@@ -136,8 +136,7 @@ export const NewsSlide: React.FC<NewsSlideProps> = ({ slide, onUpdate }) => {
                             <img
                                 src={slide.data.newsImage}
                                 alt="News"
-                                className="max-h-64 rounded-lg shadow"
-                                style={{ objectFit: "contain" }}
+                                className="w-48 h-48 rounded-full object-cover"
                             />
                         </div>
                     )}

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useSlides } from '../contexts/SlideContext';
 import { Slide, SLIDE_TYPES, ImageSlide as ImageSlideType, VideoSlide as VideoSlideType, NewsSlide, EventSlide as EventSlideType } from '../types';
-import { EventSlide, ImageSlide } from '../components/slides';
+import { EventSlide, ImageSlide, CurrentEscalationsSlideComponent } from "../components/slides";
 import { motion } from 'framer-motion';
 import {
     DndContext,
@@ -33,7 +33,7 @@ import "swiper/css/effect-flip";
 import "swiper/css/effect-cards";
 import "swiper/css/navigation";
 import "swiper/css/pagination";
-import { faCompress, faExpand } from '@fortawesome/free-solid-svg-icons';
+import { faCompress, faExpand, faTicket } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { useDisplaySettings } from "../contexts/DisplaySettingsContext";
 import { VideoSlide } from "../components/slides/VideoSlide";
@@ -82,6 +82,10 @@ const getSlideTypeIcon = (type: string): React.ReactElement | null => {
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                 </svg>
+            );
+        case SLIDE_TYPES.CURRENT_ESCALATIONS:
+            return (
+                <FontAwesomeIcon icon={faTicket} />
             );
         default:
             return null;
@@ -202,6 +206,9 @@ const SortableSlideCard: React.FC<{
         if (slide.type === SLIDE_TYPES.EVENT) {
             return "automated";
         }
+        if (slide.type === SLIDE_TYPES.CURRENT_ESCALATIONS) {
+            return "automated";
+        }
         return slide.dataSource;
     };
 
@@ -312,7 +319,7 @@ const SlideManagementColumn: React.FC<{
     };
 
     return (
-        <div className="w-[450px] min-w-[400px] max-w-[500px] bg-persivia-white shadow-lg flex flex-col p-6 border-r border-persivia-light-gray">
+        <div className="w-[450px] min-w-[400px] max-w-[500px] h-[calc(100vh-68px)] bg-persivia-white shadow-lg flex flex-col p-6 border-r border-persivia-light-gray pb-30">
             <h2 className="text-2xl font-bold text-center mb-6 text-persivia-blue">Slide Management</h2>
             <DndContext
                 sensors={sensors}
@@ -835,12 +842,20 @@ const NewsSlideComponent: React.FC<{ slide: NewsSlide }> = ({ slide }) => {
                         {/* Show newsImage below details if present */}
                         {slide.data.newsImage && (
                             <div className="mt-8 flex justify-center">
-                                <img
-                                    src={slide.data.newsImage}
-                                    alt="News"
-                                    className="max-h-64 rounded-lg shadow"
-                                    style={{ objectFit: "contain" }}
-                                />
+                                <div className="relative w-48 h-48 z-0">
+                                    {/* Animated conic-gradient border */}
+                                    <div className="animated-conic-border"></div>
+                                    {/* Inner white border for clean edge */}
+                                    <div className="absolute inset-[4px] rounded-full bg-white"></div>
+                                    {/* Image container */}
+                                    <div className="absolute inset-[8px] rounded-full overflow-hidden">
+                                        <img
+                                            src={slide.data.newsImage}
+                                            alt="News"
+                                            className="w-full h-full object-cover"
+                                        />
+                                    </div>
+                                </div>
                             </div>
                         )}
                     </motion.div>
@@ -974,6 +989,8 @@ const HomePage: React.FC = () => {
                 return <NewsSlideComponent slide={slide as NewsSlide} />;
             case SLIDE_TYPES.EVENT:
                 return <EventSlide slide={slide as EventSlideType} />;
+            case SLIDE_TYPES.CURRENT_ESCALATIONS:
+                return <CurrentEscalationsSlideComponent slide={slide} />;
             default:
                 return null;
         }
@@ -1021,7 +1038,7 @@ const HomePage: React.FC = () => {
             />
 
             {/* Slide Display - Middle Column */}
-            <main className="flex-1 overflow-auto p-6 flex flex-col bg-persivia-white">
+            <main className="flex-1 p-6 flex flex-col bg-persivia-white">
                 <div className="flex items-center justify-between mb-6">
                     <h2 className="text-2xl font-bold text-center text-persivia-blue">LED Preview</h2>
                     <button

@@ -256,5 +256,75 @@ input#slideImageFile {
   background: linear-gradient(120deg, var(--persivia-blue) 0%, var(--persivia-light-blue) 40%, var(--persivia-light-teal) 70%, var(--persivia-teal) 100%);
   background-size: 200% 200%;
   animation: gradientBG 12s ease-in-out infinite;
-  opacity: 0.95;
+  opacity: 1;
+}
+
+.animated-card {
+  margin: 0 auto;
+  padding: 2em;
+  width: 300px;
+  background: #1c1f2b;
+  text-align: center;
+  border-radius: 10px;
+  position: relative;
+}
+
+@property --angle {
+  syntax: "<angle>";
+  initial-value: 0deg;
+  inherits: false;
+}
+
+.animated-card::after,
+.animated-card::before {
+  content: '';
+  position: absolute;
+  height: 100%;
+  width: 100%;
+  background-image: conic-gradient(from var(--angle), #ff4545, #00ff99, #006aff, #ff0095, #ff4545);
+  top: 50%;
+  left: 50%;
+  translate: -50% -50%;
+  z-index: -1;
+  padding: 3px;
+  border-radius: 10px;
+  animation: 3s spin linear infinite;
+}
+
+.animated-card::before {
+  filter: blur(1.5rem);
+  opacity: 0.5;
+}
+
+@keyframes spin {
+  from {
+    --angle: 0deg;
+  }
+
+  to {
+    --angle: 360deg;
+  }
+}
+
+/* Animated conic-gradient border for news image */
+.animated-conic-border {
+  position: absolute;
+  inset: 0;
+  border-radius: 9999px;
+  background: conic-gradient(from 0deg,
+      #15CC93,
+      #134D67,
+      #8CE6C9,
+      #FFD700,
+      #FF69B4,
+      #00FFFF,
+      #15CC93);
+  animation: spin-conic 3s linear infinite;
+  z-index: -1;
+}
+
+@keyframes spin-conic {
+  100% {
+    transform: rotate(360deg);
+  }
 }
