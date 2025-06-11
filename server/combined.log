@@ -99,3 +99,24 @@
 {"level":"info","message":"Attempting to serve file from: D:\\led-soliton\\led-display-react\\server\\public\\index.html","timestamp":"2025-06-02T09:33:54.659Z"}
 {"level":"info","message":"Login attempt for username: test","timestamp":"2025-06-02T09:34:52.730Z"}
 {"level":"info","message":"Login successful for user: test","timestamp":"2025-06-02T09:34:52.788Z"}
+{"level":"info","message":"Database connection established","timestamp":"2025-06-02T11:00:31.613Z"}
+{"level":"info","message":"Server running on port 5000","timestamp":"2025-06-02T11:00:31.618Z"}
+{"level":"info","message":"Upload directory: D:\\led-soliton\\led-display-react\\server\\uploads","timestamp":"2025-06-02T11:00:31.618Z"}
+{"level":"info","message":"File uploaded successfully: 1748862071391-414285713.jpg","timestamp":"2025-06-02T11:01:11.409Z"}
+{"level":"info","message":"File uploaded successfully: 1748862084536-221488321.mp4","timestamp":"2025-06-02T11:01:24.599Z"}
+{"level":"info","message":"File uploaded successfully: 1748862115283-575266094.jpg","timestamp":"2025-06-02T11:01:55.518Z"}
+{"level":"info","message":"File uploaded successfully: 1748862120781-955335304.jpg","timestamp":"2025-06-02T11:02:00.848Z"}
+{"level":"info","message":"Database connection established","timestamp":"2025-06-03T13:46:27.759Z"}
+{"level":"info","message":"Server running on port 5000","timestamp":"2025-06-03T13:46:27.775Z"}
+{"level":"info","message":"Upload directory: D:\\led-soliton\\led-display-react\\server\\uploads","timestamp":"2025-06-03T13:46:27.776Z"}
+{"level":"info","message":"Database connection established","timestamp":"2025-06-11T10:44:57.843Z"}
+{"level":"info","message":"Database connection established","timestamp":"2025-06-11T10:45:47.224Z"}
+{"level":"info","message":"Database connection established","timestamp":"2025-06-11T10:47:29.181Z"}
+{"level":"info","message":"Database connection established","timestamp":"2025-06-11T10:48:57.212Z"}
+{"level":"info","message":"Database connection established","timestamp":"2025-06-11T10:55:09.838Z"}
+{"level":"info","message":"Server running on port 5000","timestamp":"2025-06-11T10:55:09.844Z"}
+{"level":"info","message":"Upload directory: D:\\led-soliton\\led-display-react\\server\\uploads","timestamp":"2025-06-11T10:55:09.844Z"}
+{"level":"info","message":"Attempting to serve file from: D:\\led-soliton\\led-display-react\\server\\public\\index.html","timestamp":"2025-06-11T10:55:40.590Z"}
+{"level":"info","message":"Login attempt for username: test","timestamp":"2025-06-11T10:56:22.472Z"}
+{"level":"info","message":"Login successful for user: test","timestamp":"2025-06-11T10:56:22.531Z"}
+{"level":"info","message":"File uploaded successfully: 1749639401921-536460156.jpg","timestamp":"2025-06-11T10:56:41.984Z"}

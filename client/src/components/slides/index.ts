@@ -1,5 +1,6 @@
-export { ImageSlide } from "./ImageSlide";
-export { VideoSlide } from "./VideoSlide";
-export { NewsSlide } from "./NewsSlide";
-export { EventSlide } from "./EventSlide";
-export { CurrentEscalationsSlideComponent } from "./CurrentEscalationsSlide"; 
+export * from './ImageSlide';
+export * from './VideoSlide';
+export * from './NewsSlide';
+export * from './EventSlide';
+export * from './CurrentEscalationsSlide';
+export * from './TeamComparisonSlide';

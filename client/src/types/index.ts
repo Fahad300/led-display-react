@@ -7,6 +7,8 @@ export const SLIDE_TYPES = {
     NEWS: 'news-slide',
     EVENT: 'event-slide',
     CURRENT_ESCALATIONS: 'current-escalations-slide',
+    TEAM_COMPARISON: 'team-comparison-slide',
+
 } as const;
 
 /**
@@ -132,9 +134,45 @@ export interface CurrentEscalationsSlide extends BaseSlide {
 }
 
 /**
+ * Team comparison data interface
+ */
+export interface TeamComparisonData {
+    teamName: string;
+    totalTickets: number;
+    cLevelEscalations: number;
+    omegaEscalations: number;
+    codeBlueEscalations: number;
+    averageResponseTime: string;
+    averageLeadTime: string;
+}
+
+/**
+ * Team comparison slide data
+ */
+export interface TeamComparisonSlideData {
+    teams: TeamComparisonData[];
+    lastUpdated: string;
+}
+
+/**
+ * Team comparison slide type
+ */
+export interface TeamComparisonSlide extends BaseSlide {
+    type: typeof SLIDE_TYPES.TEAM_COMPARISON;
+    data: TeamComparisonSlideData;
+}
+
+/**
  * Union type of all slide types
  */
-export type Slide = ImageSlide | VideoSlide | NewsSlide | EventSlide | CurrentEscalationsSlide;
+export type Slide =
+    | ImageSlide
+    | VideoSlide
+    | NewsSlide
+    | EventSlide
+    | CurrentEscalationsSlide
+    | TeamComparisonSlide
+    ;
 
 /**
  * Toast notification types

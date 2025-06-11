@@ -1,7 +1,8 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
-import { Slide, ImageSlide, SLIDE_TYPES, CurrentEscalationsSlide, DataSource } from '../types';
-import { createDemoImage } from '../utils/createDemoImages';
+import { Slide, SLIDE_TYPES, CurrentEscalationsSlide, DataSource } from '../types';
 import { currentEscalations } from '../data/currentEscalations';
+
+import { getTeamComparisonSlide } from '../data/teamComparison';
 
 // Local storage key for slides
 const STORAGE_KEY = 'led-display-templates-config';
@@ -45,33 +46,6 @@ const generateUniqueId = (): string => {
 };
 
 /**
- * Get a demo image slide for new users
- */
-const getDemoImageSlide = (): ImageSlide => {
-    // Create a demo image data URL
-    const demoImageUrl = createDemoImage(
-        "Welcome to LED Display\nClick Edit to customize",
-        800,
-        400,
-        '134D67',
-        'FFFFFF'
-    );
-
-    return {
-        id: "demo-image-slide",
-        name: "Welcome Image",
-        type: SLIDE_TYPES.IMAGE,
-        dataSource: "manual",
-        data: {
-            imageUrl: demoImageUrl,
-            caption: "Welcome to the LED Display System"
-        },
-        duration: 5,
-        active: true
-    };
-};
-
-/**
  * Get a current escalations slide
  */
 const getCurrentEscalationsSlide = (): CurrentEscalationsSlide | null => {
@@ -102,9 +76,16 @@ export const SlideProvider: React.FC<SlideProviderProps> = ({ children }) => {
     /**
      * Load slides from localStorage
      */
+    const saveSlides = useCallback((slidesToSave: Slide[]) => {
+        try {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(slidesToSave));
+        } catch (error) {
+            console.error("Error saving slides:", error);
+        }
+    }, []);
+
     const loadSlides = useCallback(() => {
         try {
-            // Load all templates
             const allTemplates = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
 
             // Type-check and filter to ensure we only get valid slides
@@ -113,46 +94,51 @@ export const SlideProvider: React.FC<SlideProviderProps> = ({ children }) => {
                 Object.values(SLIDE_TYPES).includes(slide.type)
             ) as Slide[];
 
-            // Inject currentEscalations slide if data exists and not already present
+            // Get default slides
             const escalationsSlide = getCurrentEscalationsSlide();
+            const comparisonSlide = getTeamComparisonSlide();
+
+            // Check which default slides already exist
             const hasEscalationsSlide = validSlides.some(s => s.type === SLIDE_TYPES.CURRENT_ESCALATIONS);
-            let slidesWithEscalations = validSlides;
+            const hasComparisonSlide = validSlides.some(s => s.type === SLIDE_TYPES.TEAM_COMPARISON);
+
+            let updatedSlides = [...validSlides];
+
+            // Add default slides if they don't exist
             if (escalationsSlide && !hasEscalationsSlide) {
-                slidesWithEscalations = [...validSlides, escalationsSlide];
+                updatedSlides = [...updatedSlides, escalationsSlide];
             }
-            if (slidesWithEscalations.length === 0) {
-                // Add a demo slide if no slides exist
-                const demoSlide = getDemoImageSlide();
-                setSlides([demoSlide]);
-                saveSlides([demoSlide]);
+
+            if (!hasComparisonSlide) {
+                updatedSlides = [...updatedSlides, comparisonSlide];
+            }
+
+            // Only update if we added new slides
+            if (updatedSlides.length > validSlides.length) {
+                setSlides(updatedSlides);
+                saveSlides(updatedSlides);
             } else {
-                setSlides(slidesWithEscalations);
+                setSlides(validSlides);
+                saveSlides(validSlides);
             }
         } catch (error) {
             console.error("Error loading slides:", error);
-            // Add a demo slide if there was an error
-            const demoSlide = getDemoImageSlide();
-            setSlides([demoSlide]);
-            saveSlides([demoSlide]);
+            setSlides([]);
+            saveSlides([]);
         }
-    }, []);
+    }, [saveSlides]);
 
-    /**
-     * Save slides to localStorage
-     */
-    const saveSlides = (slidesToSave: Slide[]) => {
-        try {
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(slidesToSave));
-        } catch (error) {
-            console.error("Error saving slides:", error);
-        }
-    };
+
+
+    // Load slides on mount
+    useEffect(() => {
+        loadSlides();
+    }, [loadSlides]);
 
     /**
      * Add a new slide
      */
-    const addSlide = (slide: Slide) => {
-        // Ensure the slide has a valid ID
+    const addSlide = useCallback((slide: Slide) => {
         const newSlide = {
             ...slide,
             id: slide.id || generateUniqueId()
@@ -161,53 +147,47 @@ export const SlideProvider: React.FC<SlideProviderProps> = ({ children }) => {
         const updatedSlides = [...slides, newSlide];
         setSlides(updatedSlides);
         saveSlides(updatedSlides);
-    };
+    }, [slides, saveSlides]);
 
     /**
      * Update an existing slide
      */
-    const updateSlide = (updatedSlide: Slide) => {
+    const updateSlide = useCallback((updatedSlide: Slide) => {
         const updatedSlides = slides.map(slide =>
             slide.id === updatedSlide.id ? updatedSlide : slide
         );
 
         setSlides(updatedSlides);
         saveSlides(updatedSlides);
-    };
+    }, [slides, saveSlides]);
 
     /**
      * Delete a slide by ID
      */
-    const deleteSlide = (id: string) => {
+    const deleteSlide = useCallback((id: string) => {
         const updatedSlides = slides.filter(slide => slide.id !== id);
         setSlides(updatedSlides);
         saveSlides(updatedSlides);
 
-        // Clear active slide if it was deleted
-        if (activeSlide && activeSlide.id === id) {
+        if (activeSlide?.id === id) {
             setActiveSlide(null);
         }
-    };
+    }, [slides, activeSlide, saveSlides]);
 
     /**
      * Get a slide by ID
      */
-    const getSlideById = (id: string): Slide | undefined => {
+    const getSlideById = useCallback((id: string): Slide | undefined => {
         return slides.find(slide => slide.id === id);
-    };
+    }, [slides]);
 
     /**
      * Reorder slides and save the new order
      */
-    const reorderSlides = (newSlides: Slide[]) => {
-        setSlides(newSlides);
-        saveSlides(newSlides);
-    };
-
-    // Load slides on mount
-    useEffect(() => {
-        loadSlides();
-    }, [loadSlides]);
+    const reorderSlides = useCallback((newOrder: Slide[]) => {
+        setSlides(newOrder);
+        saveSlides(newOrder);
+    }, [saveSlides]);
 
     // Value object for the context provider
     const contextValue: SlideContextType = {
@@ -219,7 +199,7 @@ export const SlideProvider: React.FC<SlideProviderProps> = ({ children }) => {
         deleteSlide,
         loadSlides,
         getSlideById,
-        reorderSlides
+        reorderSlides,
     };
 
     return (
@@ -232,6 +212,8 @@ export const SlideProvider: React.FC<SlideProviderProps> = ({ children }) => {
 /**
  * Custom hook to use the slide context
  */
-export const useSlides = () => useContext(SlideContext);
+export const useSlides = (): SlideContextType => {
+    return useContext(SlideContext);
+};
 
-export default SlideContext; 
+export default SlideContext;

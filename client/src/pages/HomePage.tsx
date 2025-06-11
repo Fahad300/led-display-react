@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useSlides } from '../contexts/SlideContext';
-import { Slide, SLIDE_TYPES, ImageSlide as ImageSlideType, VideoSlide as VideoSlideType, NewsSlide, EventSlide as EventSlideType } from '../types';
-import { EventSlide, ImageSlide, CurrentEscalationsSlideComponent } from "../components/slides";
+import { Slide, SLIDE_TYPES, ImageSlide as ImageSlideType, VideoSlide as VideoSlideType, NewsSlide, EventSlide as EventSlideType, TeamComparisonSlide as TeamComparisonSlideType } from '../types';
+import { EventSlide, ImageSlide, CurrentEscalationsSlideComponent, TeamComparisonSlideComponent } from "../components/slides";
 import { motion } from 'framer-motion';
 import {
     DndContext,
@@ -84,6 +84,10 @@ const getSlideTypeIcon = (type: string): React.ReactElement | null => {
                 </svg>
             );
         case SLIDE_TYPES.CURRENT_ESCALATIONS:
+            return (
+                <FontAwesomeIcon icon={faTicket} />
+            );
+        case SLIDE_TYPES.TEAM_COMPARISON:
             return (
                 <FontAwesomeIcon icon={faTicket} />
             );
@@ -877,6 +881,11 @@ const HomePage: React.FC = () => {
     const slidesContainerRef = useRef<HTMLDivElement>(null);
     const [dateTime, setDateTime] = useState<string>("");
 
+    // Debug log to check slides
+    useEffect(() => {
+        console.log('Current slides:', slides);
+    }, [slides]);
+
     // Process active slides to adjust EVENT slide duration and active state
     const processedActiveSlides = orderedSlides.map(slide => {
         if (slide.type === SLIDE_TYPES.EVENT) {
@@ -902,7 +911,7 @@ const HomePage: React.FC = () => {
     // Update active slides when processedActiveSlides change
     useEffect(() => {
         setActiveSlides(processedActiveSlides.filter(slide => slide.active));
-    }, [orderedSlides]);
+    }, [processedActiveSlides]);
 
     // Handle slide reordering
     const handleReorder = ({ sourceIndex, destinationIndex }: ReorderResult) => {
@@ -991,6 +1000,8 @@ const HomePage: React.FC = () => {
                 return <EventSlide slide={slide as EventSlideType} />;
             case SLIDE_TYPES.CURRENT_ESCALATIONS:
                 return <CurrentEscalationsSlideComponent slide={slide} />;
+            case SLIDE_TYPES.TEAM_COMPARISON:
+                return <TeamComparisonSlideComponent slide={slide as TeamComparisonSlideType} />;
             default:
                 return null;
         }
@@ -1246,4 +1257,4 @@ const HomePage: React.FC = () => {
     );
 };
 
-export default HomePage; 
+export default HomePage;
