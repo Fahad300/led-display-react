@@ -136,3 +136,9 @@
 {"level":"info","message":"File uploaded successfully: 1749809170555-410719781.mp4","timestamp":"2025-06-13T10:06:10.592Z"}
 {"level":"info","message":"File uploaded successfully: 1749809206541-642055637.jpg","timestamp":"2025-06-13T10:06:46.669Z"}
 {"level":"info","message":"File uploaded successfully: 1749809210041-603211801.png","timestamp":"2025-06-13T10:06:50.043Z"}
+{"level":"info","message":"Login attempt for username: test","timestamp":"2025-06-13T13:46:49.138Z"}
+{"level":"info","message":"Login successful for user: test","timestamp":"2025-06-13T13:46:49.194Z"}
+{"level":"info","message":"File uploaded successfully: 1749822425116-484043988.png","timestamp":"2025-06-13T13:47:05.117Z"}
+{"level":"info","message":"Login attempt for username: test","timestamp":"2025-06-13T13:48:15.746Z"}
+{"level":"info","message":"Login successful for user: test","timestamp":"2025-06-13T13:48:15.814Z"}
+{"level":"info","message":"File uploaded successfully: 1749822515228-838356401.jpg","timestamp":"2025-06-13T13:48:35.295Z"}

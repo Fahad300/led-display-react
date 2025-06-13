@@ -1,8 +1,8 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
 import { Slide, SLIDE_TYPES, CurrentEscalationsSlide, DataSource } from '../types';
 import { currentEscalations } from '../data/currentEscalations';
-
 import { getTeamComparisonSlide } from '../data/teamComparison';
+import { getDefaultGraphSlide } from '../data/graphData';
 
 // Local storage key for slides
 const STORAGE_KEY = 'led-display-templates-config';
@@ -97,10 +97,12 @@ export const SlideProvider: React.FC<SlideProviderProps> = ({ children }) => {
             // Get default slides
             const escalationsSlide = getCurrentEscalationsSlide();
             const comparisonSlide = getTeamComparisonSlide();
+            const graphSlide = getDefaultGraphSlide();
 
             // Check which default slides already exist
             const hasEscalationsSlide = validSlides.some(s => s.type === SLIDE_TYPES.CURRENT_ESCALATIONS);
             const hasComparisonSlide = validSlides.some(s => s.type === SLIDE_TYPES.TEAM_COMPARISON);
+            const hasGraphSlide = validSlides.some(s => s.type === SLIDE_TYPES.GRAPH);
 
             let updatedSlides = [...validSlides];
 
@@ -111,6 +113,10 @@ export const SlideProvider: React.FC<SlideProviderProps> = ({ children }) => {
 
             if (!hasComparisonSlide) {
                 updatedSlides = [...updatedSlides, comparisonSlide];
+            }
+
+            if (!hasGraphSlide) {
+                updatedSlides = [...updatedSlides, graphSlide];
             }
 
             // Only update if we added new slides
@@ -127,8 +133,6 @@ export const SlideProvider: React.FC<SlideProviderProps> = ({ children }) => {
             saveSlides([]);
         }
     }, [saveSlides]);
-
-
 
     // Load slides on mount
     useEffect(() => {

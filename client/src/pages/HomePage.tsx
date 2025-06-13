@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useSlides } from '../contexts/SlideContext';
-import { Slide, SLIDE_TYPES, ImageSlide as ImageSlideType, VideoSlide as VideoSlideType, NewsSlide, EventSlide as EventSlideType, TeamComparisonSlide as TeamComparisonSlideType } from '../types';
-import { EventSlide, ImageSlide, CurrentEscalationsSlideComponent, TeamComparisonSlideComponent } from "../components/slides";
+import { Slide, SLIDE_TYPES, ImageSlide as ImageSlideType, VideoSlide as VideoSlideType, NewsSlide, EventSlide as EventSlideType, TeamComparisonSlide as TeamComparisonSlideType, GraphSlide as GraphSlideType } from '../types';
+import { EventSlide, ImageSlide, CurrentEscalationsSlideComponent, TeamComparisonSlideComponent, GraphSlide } from "../components/slides";
 import { motion } from 'framer-motion';
 import {
     DndContext,
@@ -38,6 +38,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { useDisplaySettings } from "../contexts/DisplaySettingsContext";
 import { VideoSlide } from "../components/slides/VideoSlide";
 import { useNavigate } from 'react-router-dom';
+import { DigitalClock } from "../components/DigitalClock";
 
 // Type for reordering result
 interface ReorderResult {
@@ -335,7 +336,7 @@ const SlideManagementColumn: React.FC<{
                     items={slides.map(slide => slide.id)}
                     strategy={verticalListSortingStrategy}
                 >
-                    <div className="flex-1 overflow-y-auto space-y-4 pr-2">
+                    <div className="flex-1 overflow-y-auto space-y-4 pr-2 pb-[2rem]">
                         {slides.map((slide, index) => (
                             <SortableSlideCard
                                 key={slide.id}
@@ -1021,6 +1022,8 @@ const HomePage: React.FC = () => {
                 return <CurrentEscalationsSlideComponent slide={slide} />;
             case SLIDE_TYPES.TEAM_COMPARISON:
                 return <TeamComparisonSlideComponent slide={slide as TeamComparisonSlideType} />;
+            case SLIDE_TYPES.GRAPH:
+                return <GraphSlide slide={slide as GraphSlideType} />;
             default:
                 return null;
         }
@@ -1151,8 +1154,8 @@ const HomePage: React.FC = () => {
                             />
                             {/* Date/Time Stamp Overlay - Moved to top right */}
                             {settings.showDateStamp && (
-                                <div className="absolute top-4 right-4 bg-persivia-blue/90 text-white px-4 py-2 rounded-lg shadow-lg text-sm font-mono backdrop-blur-sm z-[10000]">
-                                    {dateTime}
+                                <div className="absolute top-4 right-4 z-[10000]">
+                                    <DigitalClock />
                                 </div>
                             )}
                             <SlideLogoOverlay isFullscreen={isFullscreen} />

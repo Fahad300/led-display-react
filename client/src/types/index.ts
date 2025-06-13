@@ -8,7 +8,7 @@ export const SLIDE_TYPES = {
     EVENT: 'event-slide',
     CURRENT_ESCALATIONS: 'current-escalations-slide',
     TEAM_COMPARISON: 'team-comparison-slide',
-
+    GRAPH: 'graph-slide'
 } as const;
 
 /**
@@ -163,6 +163,39 @@ export interface TeamComparisonSlide extends BaseSlide {
 }
 
 /**
+ * Graph data point interface
+ */
+export interface GraphDataPoint {
+    date: string;
+    value: number;
+    category: string;
+}
+
+/**
+ * Graph slide data
+ */
+export interface GraphSlideData {
+    title: string;
+    description: string;
+    graphType: 'line' | 'bar';
+    data: {
+        teamName: string;
+        dataPoints: GraphDataPoint[];
+    }[];
+    timeRange: 'daily' | 'weekly' | 'monthly';
+    lastUpdated: string;
+    categories: string[];
+}
+
+/**
+ * Graph slide type
+ */
+export interface GraphSlide extends BaseSlide {
+    type: typeof SLIDE_TYPES.GRAPH;
+    data: GraphSlideData;
+}
+
+/**
  * Union type of all slide types
  */
 export type Slide =
@@ -172,6 +205,7 @@ export type Slide =
     | EventSlide
     | CurrentEscalationsSlide
     | TeamComparisonSlide
+    | GraphSlide
     ;
 
 /**

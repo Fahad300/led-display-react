@@ -29,7 +29,7 @@ export const employees: Employee[] = [
     {
         id: "EMP002",
         name: "Sarah Johnson",
-        dob: "1990-06-13",
+        dob: "1990-06-14",
         designation: "Product Manager",
         teamName: "Product Management",
         picture: "",
