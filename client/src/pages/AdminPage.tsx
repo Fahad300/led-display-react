@@ -13,7 +13,9 @@ import {
     NewsSlide,
     EventSlide,
     NewsSlideData,
-    EventSlideData
+    EventSlideData,
+    DocumentSlide,
+    DocumentSlideData
 } from "../types";
 
 /** Configuration for the backend API URL */
@@ -59,7 +61,8 @@ type SlideTab = {
 const SLIDE_TABS: SlideTab[] = [
     { id: "image-tab", type: SLIDE_TYPES.IMAGE, label: "Image Slides" },
     { id: "video-tab", type: SLIDE_TYPES.VIDEO, label: "Video Slides" },
-    { id: "news-tab", type: SLIDE_TYPES.NEWS, label: "News Slides" }
+    { id: "news-tab", type: SLIDE_TYPES.NEWS, label: "News Slides" },
+    { id: "document-tab", type: SLIDE_TYPES.DOCUMENT, label: "Document Slides" },
 ];
 
 /** Function to upload a file to the server */
@@ -130,6 +133,10 @@ const EditModal: React.FC<EditModalProps> = ({ isOpen, onClose, slide, onSave })
 
         const isVideo = file.type.startsWith("video/");
         const isImage = file.type.startsWith("image/");
+        const isPdf = file.type === "application/pdf";
+        const isExcel = file.type.includes("spreadsheet");
+        const isPowerPoint = file.type.includes("presentation");
+        const isWord = file.type.includes("word");
 
         if (editedSlide.type === SLIDE_TYPES.IMAGE && !isImage) {
             addToast("Please upload an image file", "error");
@@ -137,6 +144,10 @@ const EditModal: React.FC<EditModalProps> = ({ isOpen, onClose, slide, onSave })
         }
         if (editedSlide.type === SLIDE_TYPES.VIDEO && !isVideo) {
             addToast("Please upload a video file", "error");
+            return;
+        }
+        if (editedSlide.type === SLIDE_TYPES.DOCUMENT && !(isImage || isPdf || isExcel || isPowerPoint || isWord)) {
+            addToast("Please upload a PDF, image, Excel, PowerPoint, Word", "error");
             return;
         }
 
@@ -173,6 +184,10 @@ const EditModal: React.FC<EditModalProps> = ({ isOpen, onClose, slide, onSave })
                 if (!eventSlide.data.title?.trim()) newErrors.title = "Title is required";
                 if (!eventSlide.data.description?.trim()) newErrors.description = "Description is required";
                 if (!eventSlide.data.date) newErrors.date = "Date is required";
+            } else if (editedSlide.type === SLIDE_TYPES.DOCUMENT) {
+                const documentSlide = editedSlide as DocumentSlide;
+                if (!pendingFile && !documentSlide.data.fileUrl) newErrors.imageUrl = "A document file is required";
+                if (!documentSlide.data.fileType && !pendingFile) newErrors.imageUrl = "File type is required";
             }
 
             // Only enforce 1-60s for non-video slides
@@ -220,6 +235,22 @@ const EditModal: React.FC<EditModalProps> = ({ isOpen, onClose, slide, onSave })
                             videoUrl: fileUrl,
                         } as VideoSlideData,
                     } as VideoSlide;
+                } else if (editedSlide.type === SLIDE_TYPES.DOCUMENT) {
+                    // Determine fileType
+                    let fileType: DocumentSlideData["fileType"] = "other";
+                    if (pendingFile.type.startsWith("image/")) fileType = "image";
+                    else if (pendingFile.type === "application/pdf") fileType = "pdf";
+                    else if (pendingFile.type.includes("spreadsheet")) fileType = "excel";
+                    else if (pendingFile.type.includes("presentation")) fileType = "powerpoint";
+                    else if (pendingFile.type.includes("word")) fileType = "word";
+                    updatedSlide = {
+                        ...editedSlide,
+                        data: {
+                            ...editedSlide.data,
+                            fileUrl,
+                            fileType,
+                        } as DocumentSlideData,
+                    } as DocumentSlide;
                 }
             }
             onSave(updatedSlide);
@@ -289,6 +320,57 @@ const EditModal: React.FC<EditModalProps> = ({ isOpen, onClose, slide, onSave })
                             onUpdate={setEditedSlide}
                             errors={errors}
                         />
+                    )}
+
+                    {/* DocumentSlide fields */}
+                    {editedSlide.type === SLIDE_TYPES.DOCUMENT && (
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                                Upload Document (PDF, image, Excel, PowerPoint, Word) *
+                            </label>
+                            <input
+                                type="file"
+                                accept=".pdf,image/*,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.presentationml.presentation,application/vnd.ms-powerpoint,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                                onChange={handleFileInput}
+                                className={`w-full px-3 py-2 border rounded-lg ${errors.imageUrl ? "border-red-500" : "border-gray-300"}`}
+                                disabled={isUploading}
+                            />
+                            {errors.imageUrl && (
+                                <p className="mt-1 text-sm text-red-500">{errors.imageUrl}</p>
+                            )}
+                            {/* Preview logic: show pendingPreviewUrl if exists, else show existing url */}
+                            {(pendingPreviewUrl || (editedSlide.data as DocumentSlideData).fileUrl) && (
+                                <div className="mt-2 flex justify-center">
+                                    {(() => {
+                                        const url = pendingPreviewUrl || (editedSlide.data as DocumentSlideData).fileUrl;
+                                        const type = (editedSlide.data as DocumentSlideData).fileType;
+                                        if (type === "image") {
+                                            return <img src={url} alt="Preview" className="max-h-48 rounded shadow" />;
+                                        }
+                                        if (type === "pdf") {
+                                            return <iframe src={url} title="PDF Preview" className="w-full h-48 rounded shadow border border-gray-200 bg-white" />;
+                                        }
+                                        if (["excel", "powerpoint", "word"].includes(type || "")) {
+                                            return <iframe src={`https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(url)}`} title="Office Preview" className="w-full h-48 rounded shadow border border-gray-200 bg-white" />;
+                                        }
+                                        return <span className="text-gray-500">Preview not available</span>;
+                                    })()}
+                                </div>
+                            )}
+                            <label className="block text-sm font-medium text-gray-700 mt-4 mb-1">Caption</label>
+                            <input
+                                type="text"
+                                value={(editedSlide.data as DocumentSlideData).caption || ""}
+                                onChange={e => setEditedSlide({
+                                    ...editedSlide,
+                                    data: {
+                                        ...editedSlide.data,
+                                        caption: e.target.value
+                                    } as DocumentSlideData
+                                })}
+                                className="w-full px-3 py-2 border rounded-lg border-gray-300"
+                            />
+                        </div>
                     )}
 
                     {/* Image/Video upload field */}
@@ -400,6 +482,8 @@ const getSlideTypeLabel = (type: typeof SLIDE_TYPES[keyof typeof SLIDE_TYPES]) =
             return "Video";
         case SLIDE_TYPES.NEWS:
             return "News";
+        case SLIDE_TYPES.DOCUMENT:
+            return "Document";
         default:
             return "Unknown";
     }
@@ -472,6 +556,20 @@ const AdminPage: React.FC = () => {
                         },
                         dataSource: "manual" as const,
                     } as NewsSlide;
+                case SLIDE_TYPES.DOCUMENT:
+                    return {
+                        id: crypto.randomUUID(),
+                        type: SLIDE_TYPES.DOCUMENT,
+                        name: "New Document Slide",
+                        active: true,
+                        duration: 10,
+                        data: {
+                            fileUrl: "",
+                            fileType: "pdf",
+                            caption: ""
+                        },
+                        dataSource: "manual" as const,
+                    } as DocumentSlide;
                 default:
                     throw new Error("Unsupported slide type");
             }

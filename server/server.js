@@ -40,11 +40,24 @@ const upload = multer({
     storage,
     limits: { fileSize: 100 * 1024 * 1024 }, // 100MB limit
     fileFilter: (req, file, cb) => {
-        // Accept only images and videos
-        if (file.mimetype.startsWith("image/") || file.mimetype.startsWith("video/")) {
+        const allowedMimes = [
+            "image/",
+            "video/",
+            "application/pdf",
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", // .xlsx
+            "application/vnd.ms-excel", // .xls
+            "application/vnd.openxmlformats-officedocument.presentationml.presentation", // .pptx
+            "application/vnd.ms-powerpoint", // .ppt
+            "application/msword", // .doc
+            "application/vnd.openxmlformats-officedocument.wordprocessingml.document", // .docx
+        ];
+
+        const isAllowed = allowedMimes.some(mime => file.mimetype.startsWith(mime) || file.mimetype === mime);
+
+        if (isAllowed) {
             cb(null, true);
         } else {
-            cb(new Error("Only image and video files are allowed"));
+            cb(new Error("Only image, video, PDF, and Office files (Excel, PowerPoint, Word) are allowed"));
         }
     }
 });

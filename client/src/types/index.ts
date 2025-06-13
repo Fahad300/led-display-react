@@ -8,7 +8,8 @@ export const SLIDE_TYPES = {
     EVENT: 'event-slide',
     CURRENT_ESCALATIONS: 'current-escalations-slide',
     TEAM_COMPARISON: 'team-comparison-slide',
-    GRAPH: 'graph-slide'
+    GRAPH: 'graph-slide',
+    DOCUMENT: 'document-slide',
 } as const;
 
 /**
@@ -196,6 +197,32 @@ export interface GraphSlide extends BaseSlide {
 }
 
 /**
+ * Document slide data
+ */
+export interface DocumentSlideData {
+    /**
+     * URL to the document (PDF, image, Office file, etc.)
+     */
+    fileUrl: string;
+    /**
+     * File type ("pdf", "image", "excel", "powerpoint", "word", etc.)
+     */
+    fileType: 'pdf' | 'image' | 'excel' | 'powerpoint' | 'word' | 'other';
+    /**
+     * Optional caption or description
+     */
+    caption?: string;
+}
+
+/**
+ * Document slide type
+ */
+export interface DocumentSlide extends BaseSlide {
+    type: typeof SLIDE_TYPES.DOCUMENT;
+    data: DocumentSlideData;
+}
+
+/**
  * Union type of all slide types
  */
 export type Slide =
@@ -206,6 +233,7 @@ export type Slide =
     | CurrentEscalationsSlide
     | TeamComparisonSlide
     | GraphSlide
+    | DocumentSlide
     ;
 
 /**

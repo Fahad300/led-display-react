@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useSlides } from '../contexts/SlideContext';
-import { Slide, SLIDE_TYPES, ImageSlide as ImageSlideType, VideoSlide as VideoSlideType, NewsSlide, EventSlide as EventSlideType, TeamComparisonSlide as TeamComparisonSlideType, GraphSlide as GraphSlideType } from '../types';
-import { EventSlide, ImageSlide, CurrentEscalationsSlideComponent, TeamComparisonSlideComponent, GraphSlide } from "../components/slides";
+import { Slide, SLIDE_TYPES, ImageSlide as ImageSlideType, VideoSlide as VideoSlideType, NewsSlide, EventSlide as EventSlideType, TeamComparisonSlide as TeamComparisonSlideType, GraphSlide as GraphSlideType, DocumentSlide as DocumentSlideType } from '../types';
+import { EventSlide, ImageSlide, CurrentEscalationsSlideComponent, TeamComparisonSlideComponent, GraphSlide, DocumentSlide } from "../components/slides";
 import { motion } from 'framer-motion';
 import {
     DndContext,
@@ -1024,6 +1024,8 @@ const HomePage: React.FC = () => {
                 return <TeamComparisonSlideComponent slide={slide as TeamComparisonSlideType} />;
             case SLIDE_TYPES.GRAPH:
                 return <GraphSlide slide={slide as GraphSlideType} />;
+            case SLIDE_TYPES.DOCUMENT:
+                return <DocumentSlide slide={slide as DocumentSlideType} />;
             default:
                 return null;
         }

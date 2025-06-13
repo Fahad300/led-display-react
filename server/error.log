@@ -1,1 +1,5 @@
 {"level":"error","message":"Login failed: Invalid credentials","timestamp":"2025-05-21T14:51:45.422Z"}
+{"error":{"storageErrors":[]},"level":"error","message":"Error: Only image and video files are allowed","method":"POST","path":"/api/upload","timestamp":"2025-06-13T14:20:44.284Z"}
+{"error":{"storageErrors":[]},"level":"error","message":"Error: Only image and video files are allowed","method":"POST","path":"/api/upload","timestamp":"2025-06-13T14:28:06.259Z"}
+{"error":{"storageErrors":[]},"level":"error","message":"Error: Only image and video files are allowed","method":"POST","path":"/api/upload","timestamp":"2025-06-13T14:41:24.894Z"}
+{"error":{"storageErrors":[]},"level":"error","message":"Error: Only image and video files are allowed","method":"POST","path":"/api/upload","timestamp":"2025-06-13T14:42:19.177Z"}

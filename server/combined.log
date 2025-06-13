@@ -142,3 +142,50 @@
 {"level":"info","message":"Login attempt for username: test","timestamp":"2025-06-13T13:48:15.746Z"}
 {"level":"info","message":"Login successful for user: test","timestamp":"2025-06-13T13:48:15.814Z"}
 {"level":"info","message":"File uploaded successfully: 1749822515228-838356401.jpg","timestamp":"2025-06-13T13:48:35.295Z"}
+{"level":"info","message":"Login attempt for username: test","timestamp":"2025-06-13T13:49:25.548Z"}
+{"level":"info","message":"Login successful for user: test","timestamp":"2025-06-13T13:49:25.619Z"}
+{"error":{"storageErrors":[]},"level":"error","message":"Error: Only image and video files are allowed","method":"POST","path":"/api/upload","timestamp":"2025-06-13T14:20:44.284Z"}
+{"level":"info","message":"Attempting to serve file from: D:\\led-soliton\\led-display-react\\server\\public\\index.html","timestamp":"2025-06-13T14:20:58.860Z"}
+{"level":"info","message":"Attempting to serve file from: D:\\led-soliton\\led-display-react\\server\\public\\index.html","timestamp":"2025-06-13T14:20:59.032Z"}
+{"level":"info","message":"Attempting to serve file from: D:\\led-soliton\\led-display-react\\server\\public\\index.html","timestamp":"2025-06-13T14:20:59.151Z"}
+{"level":"info","message":"File uploaded successfully: 1749824560273-474433878.jpg","timestamp":"2025-06-13T14:22:40.363Z"}
+{"level":"info","message":"File uploaded successfully: 1749824570187-307428703.jpg","timestamp":"2025-06-13T14:22:50.236Z"}
+{"error":{"storageErrors":[]},"level":"error","message":"Error: Only image and video files are allowed","method":"POST","path":"/api/upload","timestamp":"2025-06-13T14:28:06.259Z"}
+{"error":{"storageErrors":[]},"level":"error","message":"Error: Only image and video files are allowed","method":"POST","path":"/api/upload","timestamp":"2025-06-13T14:41:24.894Z"}
+{"level":"info","message":"Database connection established","timestamp":"2025-06-13T14:41:42.737Z"}
+{"level":"info","message":"Server running on port 5000","timestamp":"2025-06-13T14:41:42.741Z"}
+{"level":"info","message":"Upload directory: D:\\led-soliton\\led-display-react\\server\\uploads","timestamp":"2025-06-13T14:41:42.742Z"}
+{"level":"info","message":"Attempting to serve file from: D:\\led-soliton\\led-display-react\\server\\public\\index.html","timestamp":"2025-06-13T14:41:45.878Z"}
+{"level":"info","message":"Attempting to serve file from: D:\\led-soliton\\led-display-react\\server\\public\\index.html","timestamp":"2025-06-13T14:41:46.033Z"}
+{"level":"info","message":"Attempting to serve file from: D:\\led-soliton\\led-display-react\\server\\public\\index.html","timestamp":"2025-06-13T14:41:46.137Z"}
+{"level":"info","message":"Login attempt for username: test","timestamp":"2025-06-13T14:42:02.909Z"}
+{"level":"info","message":"Login successful for user: test","timestamp":"2025-06-13T14:42:02.988Z"}
+{"error":{"storageErrors":[]},"level":"error","message":"Error: Only image and video files are allowed","method":"POST","path":"/api/upload","timestamp":"2025-06-13T14:42:19.177Z"}
+{"level":"info","message":"Database connection established","timestamp":"2025-06-13T14:45:05.947Z"}
+{"level":"info","message":"Server running on port 5000","timestamp":"2025-06-13T14:45:05.953Z"}
+{"level":"info","message":"Upload directory: D:\\led-soliton\\led-display-react\\server\\uploads","timestamp":"2025-06-13T14:45:05.953Z"}
+{"level":"info","message":"Database connection established","timestamp":"2025-06-13T14:46:00.888Z"}
+{"level":"info","message":"Server running on port 5000","timestamp":"2025-06-13T14:46:00.894Z"}
+{"level":"info","message":"Upload directory: D:\\led-soliton\\led-display-react\\server\\uploads","timestamp":"2025-06-13T14:46:00.895Z"}
+{"level":"info","message":"Database connection established","timestamp":"2025-06-13T14:46:25.821Z"}
+{"level":"info","message":"Server running on port 5000","timestamp":"2025-06-13T14:46:25.826Z"}
+{"level":"info","message":"Upload directory: D:\\led-soliton\\led-display-react\\server\\uploads","timestamp":"2025-06-13T14:46:25.826Z"}
+{"level":"info","message":"Deleted file: 1749808084109-756424058.jpg","timestamp":"2025-06-13T14:46:57.982Z"}
+{"level":"info","message":"Deleted file: 1749809170555-410719781.mp4","timestamp":"2025-06-13T14:46:57.987Z"}
+{"level":"info","message":"Deleted file: 1749809206541-642055637.jpg","timestamp":"2025-06-13T14:46:57.991Z"}
+{"level":"info","message":"Deleted file: 1749809210041-603211801.png","timestamp":"2025-06-13T14:46:57.992Z"}
+{"level":"info","message":"Deleted file: 1749822425116-484043988.png","timestamp":"2025-06-13T14:46:57.993Z"}
+{"level":"info","message":"Deleted file: 1749822515228-838356401.jpg","timestamp":"2025-06-13T14:46:57.998Z"}
+{"level":"info","message":"Deleted file: 1749824560273-474433878.jpg","timestamp":"2025-06-13T14:46:58.004Z"}
+{"level":"info","message":"Deleted file: 1749824570187-307428703.jpg","timestamp":"2025-06-13T14:46:58.010Z"}
+{"level":"info","message":"All files purged successfully","timestamp":"2025-06-13T14:46:58.011Z"}
+{"level":"info","message":"File uploaded successfully: 1749826031471-942654886.pdf","timestamp":"2025-06-13T14:47:11.474Z"}
+{"level":"info","message":"File uploaded successfully: 1749826148714-754004763.pdf","timestamp":"2025-06-13T14:49:08.715Z"}
+{"level":"info","message":"Deleted file: 1749826031471-942654886.pdf","timestamp":"2025-06-13T14:50:46.756Z"}
+{"level":"info","message":"Deleted file: 1749826148714-754004763.pdf","timestamp":"2025-06-13T14:50:46.757Z"}
+{"level":"info","message":"All files purged successfully","timestamp":"2025-06-13T14:50:46.757Z"}
+{"level":"info","message":"File uploaded successfully: 1749826257651-840746153.pdf","timestamp":"2025-06-13T14:50:57.653Z"}
+{"level":"info","message":"File uploaded successfully: 1749826385525-742511112.pdf","timestamp":"2025-06-13T14:53:05.526Z"}
+{"level":"info","message":"Deleted file: 1749826257651-840746153.pdf","timestamp":"2025-06-13T15:02:26.777Z"}
+{"level":"info","message":"Deleted file: 1749826385525-742511112.pdf","timestamp":"2025-06-13T15:02:26.779Z"}
+{"level":"info","message":"All files purged successfully","timestamp":"2025-06-13T15:02:26.779Z"}

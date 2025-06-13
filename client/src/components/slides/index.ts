@@ -1,7 +1,8 @@
-export * from "./EventSlide";
-export * from "./ImageSlide";
-export * from "./VideoSlide";
-export * from "./NewsSlide";
-export * from "./CurrentEscalationsSlide";
-export * from "./TeamComparisonSlide";
-export * from "./GraphSlide";
+export { EventSlide } from "./EventSlide";
+export { ImageSlide } from "./ImageSlide";
+export { VideoSlide } from "./VideoSlide";
+export { NewsSlide } from "./NewsSlide";
+export { CurrentEscalationsSlideComponent } from "./CurrentEscalationsSlide";
+export { TeamComparisonSlideComponent } from "./TeamComparisonSlide";
+export { GraphSlide } from "./GraphSlide";
+export { default as DocumentSlide } from "./DocumentSlide";
