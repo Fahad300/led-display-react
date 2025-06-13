@@ -1,9 +1,9 @@
 import React, { ReactNode, useState, useRef, useEffect } from "react";
-import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate, Outlet } from 'react-router-dom';
 import { useAuth } from "../../contexts/AuthContext";
 
 interface MainLayoutProps {
-    children: ReactNode;
+    children?: ReactNode;
 }
 
 /**
@@ -12,7 +12,7 @@ interface MainLayoutProps {
 const NAVBAR_HEIGHT = 56; // px
 const FOOTER_HEIGHT = 40; // px
 
-const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
+const MainLayout: React.FC<MainLayoutProps> = () => {
     const location = useLocation();
     const { isAuthenticated, logout, user } = useAuth();
     const navigate = useNavigate();
@@ -22,10 +22,10 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
     // Helper to check if a route is active
     const isActive = (path: string): boolean => location.pathname === path;
 
-    // If not authenticated and not on login page, redirect to login
-    React.useEffect(() => {
-        if (!isAuthenticated && window.location.pathname !== "/login") {
-            navigate("/login");
+    // Handle authentication redirects
+    useEffect(() => {
+        if (!isAuthenticated) {
+            navigate("/login", { replace: true });
         }
     }, [isAuthenticated, navigate]);
 
@@ -122,7 +122,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
                 className="flex-1 flex flex-col w-full"
                 style={{ minHeight: `calc(100vh - ${NAVBAR_HEIGHT + FOOTER_HEIGHT}px)`, marginTop: `${NAVBAR_HEIGHT}px` }}
             >
-                {children}
+                <Outlet />
             </main>
 
             {/* Footer */}

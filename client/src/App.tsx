@@ -21,10 +21,13 @@ const App: React.FC = () => {
           <Router>
             <AuthProvider>
               <DisplaySettingsProvider>
-                <MainLayout>
-                  <Routes>
-                    <Route path="/login" element={<Login />} />
-                    <Route path="/register" element={<Register />} />
+                <Routes>
+                  {/* Public Routes */}
+                  <Route path="/login" element={<Login />} />
+                  <Route path="/register" element={<Register />} />
+
+                  {/* Protected Routes */}
+                  <Route element={<MainLayout />}>
                     <Route
                       path="/"
                       element={
@@ -49,9 +52,11 @@ const App: React.FC = () => {
                         </ProtectedRoute>
                       }
                     />
-                    <Route path="*" element={<Navigate to="/" replace />} />
-                  </Routes>
-                </MainLayout>
+                  </Route>
+
+                  {/* Fallback Route */}
+                  <Route path="*" element={<Navigate to="/" replace />} />
+                </Routes>
               </DisplaySettingsProvider>
             </AuthProvider>
           </Router>

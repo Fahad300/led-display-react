@@ -120,3 +120,19 @@
 {"level":"info","message":"Login attempt for username: test","timestamp":"2025-06-11T10:56:22.472Z"}
 {"level":"info","message":"Login successful for user: test","timestamp":"2025-06-11T10:56:22.531Z"}
 {"level":"info","message":"File uploaded successfully: 1749639401921-536460156.jpg","timestamp":"2025-06-11T10:56:41.984Z"}
+{"level":"info","message":"Database connection established","timestamp":"2025-06-13T09:46:09.869Z"}
+{"level":"info","message":"Server running on port 5000","timestamp":"2025-06-13T09:46:09.877Z"}
+{"level":"info","message":"Upload directory: D:\\led-soliton\\led-display-react\\server\\uploads","timestamp":"2025-06-13T09:46:09.878Z"}
+{"level":"info","message":"Attempting to serve file from: D:\\led-soliton\\led-display-react\\server\\public\\index.html","timestamp":"2025-06-13T09:46:17.935Z"}
+{"level":"info","message":"Login attempt for username: test","timestamp":"2025-06-13T09:47:08.494Z"}
+{"level":"info","message":"Login successful for user: test","timestamp":"2025-06-13T09:47:08.576Z"}
+{"level":"info","message":"Deleted file: 1748862071391-414285713.jpg","timestamp":"2025-06-13T09:47:41.927Z"}
+{"level":"info","message":"Deleted file: 1748862084536-221488321.mp4","timestamp":"2025-06-13T09:47:41.928Z"}
+{"level":"info","message":"Deleted file: 1748862115283-575266094.jpg","timestamp":"2025-06-13T09:47:41.929Z"}
+{"level":"info","message":"Deleted file: 1748862120781-955335304.jpg","timestamp":"2025-06-13T09:47:41.930Z"}
+{"level":"info","message":"Deleted file: 1749639401921-536460156.jpg","timestamp":"2025-06-13T09:47:41.932Z"}
+{"level":"info","message":"All files purged successfully","timestamp":"2025-06-13T09:47:41.933Z"}
+{"level":"info","message":"File uploaded successfully: 1749808084109-756424058.jpg","timestamp":"2025-06-13T09:48:04.227Z"}
+{"level":"info","message":"File uploaded successfully: 1749809170555-410719781.mp4","timestamp":"2025-06-13T10:06:10.592Z"}
+{"level":"info","message":"File uploaded successfully: 1749809206541-642055637.jpg","timestamp":"2025-06-13T10:06:46.669Z"}
+{"level":"info","message":"File uploaded successfully: 1749809210041-603211801.png","timestamp":"2025-06-13T10:06:50.043Z"}

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useSlides } from '../contexts/SlideContext';
 import { Slide, SLIDE_TYPES, ImageSlide as ImageSlideType, VideoSlide as VideoSlideType, NewsSlide, EventSlide as EventSlideType, TeamComparisonSlide as TeamComparisonSlideType } from '../types';
 import { EventSlide, ImageSlide, CurrentEscalationsSlideComponent, TeamComparisonSlideComponent } from "../components/slides";
@@ -37,6 +37,7 @@ import { faCompress, faExpand, faTicket } from '@fortawesome/free-solid-svg-icon
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { useDisplaySettings } from "../contexts/DisplaySettingsContext";
 import { VideoSlide } from "../components/slides/VideoSlide";
+import { useNavigate } from 'react-router-dom';
 
 // Type for reordering result
 interface ReorderResult {
@@ -880,37 +881,53 @@ const HomePage: React.FC = () => {
     const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
     const slidesContainerRef = useRef<HTMLDivElement>(null);
     const [dateTime, setDateTime] = useState<string>("");
-
-    // Debug log to check slides
-    useEffect(() => {
-        console.log('Current slides:', slides);
-    }, [slides]);
+    const navigate = useNavigate();
 
     // Process active slides to adjust EVENT slide duration and active state
-    const processedActiveSlides = orderedSlides.map(slide => {
-        if (slide.type === SLIDE_TYPES.EVENT) {
-            const today = new Date();
-            const hasBirthdays = employees.some(employee => {
-                const dob = new Date(employee.dob);
-                return dob.getMonth() === today.getMonth() && dob.getDate() === today.getDate();
-            });
-            if (hasBirthdays) {
-                return { ...slide, duration: 10, active: true };
-            } else {
-                return { ...slide, duration: 0, active: false };
+    const processedActiveSlides = useMemo(() => {
+        return orderedSlides.map(slide => {
+            if (slide.type === SLIDE_TYPES.EVENT) {
+                const today = new Date();
+                const hasBirthdays = employees.some(employee => {
+                    const dob = new Date(employee.dob);
+                    return dob.getMonth() === today.getMonth() && dob.getDate() === today.getDate();
+                });
+                // Always keep event slides in the list, but mark them as active only if there are birthdays
+                return { ...slide, duration: hasBirthdays ? 10 : 0, active: hasBirthdays };
             }
-        }
-        return slide;
-    });
+            return slide;
+        });
+    }, [orderedSlides]);
 
-    // Initialize ordered slides
+    // Initialize ordered slides and update active slides
     useEffect(() => {
-        setOrderedSlides(slides);
+        // Ensure we have an event slide in the list
+        const hasEventSlide = slides.some(slide => slide.type === SLIDE_TYPES.EVENT);
+        if (!hasEventSlide) {
+            const eventSlide: EventSlideType = {
+                id: "event-slide",
+                name: "Birthday Events",
+                type: SLIDE_TYPES.EVENT,
+                active: true,
+                duration: 10,
+                data: {
+                    title: "Birthday Celebrations",
+                    description: "Celebrating our team members' birthdays",
+                    date: new Date().toISOString(),
+                    isEmployeeSlide: true
+                },
+                dataSource: "manual"
+            };
+            setOrderedSlides([...slides, eventSlide]);
+        } else {
+            setOrderedSlides(slides);
+        }
     }, [slides]);
 
     // Update active slides when processedActiveSlides change
     useEffect(() => {
-        setActiveSlides(processedActiveSlides.filter(slide => slide.active));
+        const active = processedActiveSlides.filter(slide => slide.active);
+        setActiveSlides(active);
     }, [processedActiveSlides]);
 
     // Handle slide reordering
@@ -983,7 +1000,9 @@ const HomePage: React.FC = () => {
         return () => window.removeEventListener("keydown", handleKeyPress);
     }, []);
 
-    const handleRefresh = () => window.location.reload();
+    const handleRefresh = () => {
+        navigate(0); // This will trigger a re-render without a full page reload
+    };
 
     /**
      * Render content based on slide type
