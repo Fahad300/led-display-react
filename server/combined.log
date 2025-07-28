@@ -189,3 +189,86 @@
 {"level":"info","message":"Deleted file: 1749826257651-840746153.pdf","timestamp":"2025-06-13T15:02:26.777Z"}
 {"level":"info","message":"Deleted file: 1749826385525-742511112.pdf","timestamp":"2025-06-13T15:02:26.779Z"}
 {"level":"info","message":"All files purged successfully","timestamp":"2025-06-13T15:02:26.779Z"}
+{"level":"info","message":"Login attempt for username: test","timestamp":"2025-06-13T15:06:05.571Z"}
+{"level":"info","message":"Login successful for user: test","timestamp":"2025-06-13T15:06:05.624Z"}
+{"level":"info","message":"Database connection established","timestamp":"2025-07-15T12:36:34.883Z"}
+{"level":"info","message":"Server running on port 5000","timestamp":"2025-07-15T12:36:34.893Z"}
+{"level":"info","message":"Upload directory: D:\\led-soliton\\led-display-react\\server\\uploads","timestamp":"2025-07-15T12:36:34.894Z"}
+{"level":"info","message":"Attempting to serve file from: D:\\led-soliton\\led-display-react\\server\\public\\index.html","timestamp":"2025-07-15T12:37:02.654Z"}
+{"level":"info","message":"Login attempt for username: test","timestamp":"2025-07-15T12:37:32.199Z"}
+{"level":"info","message":"Login successful for user: test","timestamp":"2025-07-15T12:37:32.282Z"}
+{"level":"info","message":"File uploaded successfully: 1752583084577-329341523.jpg","timestamp":"2025-07-15T12:38:04.633Z"}
+{"level":"info","message":"File uploaded successfully: 1752583104296-31182446.mp4","timestamp":"2025-07-15T12:38:24.368Z"}
+{"level":"info","message":"File uploaded successfully: 1752583133014-382507109.jpg","timestamp":"2025-07-15T12:38:53.076Z"}
+{"level":"info","message":"File uploaded successfully: 1752583139228-594670533.jpg","timestamp":"2025-07-15T12:38:59.299Z"}
+{"level":"info","message":"File uploaded successfully: 1752583160735-653472706.docx","timestamp":"2025-07-15T12:39:20.752Z"}
+{"level":"info","message":"File uploaded successfully: 1752583320314-194657929.png","timestamp":"2025-07-15T12:42:00.318Z"}
+{"level":"info","message":"Deleted file: 1752583084577-329341523.jpg","timestamp":"2025-07-15T12:44:54.825Z"}
+{"level":"info","message":"Deleted file: 1752583104296-31182446.mp4","timestamp":"2025-07-15T12:44:54.826Z"}
+{"level":"info","message":"Deleted file: 1752583133014-382507109.jpg","timestamp":"2025-07-15T12:44:54.829Z"}
+{"level":"info","message":"Deleted file: 1752583139228-594670533.jpg","timestamp":"2025-07-15T12:44:54.831Z"}
+{"level":"info","message":"Deleted file: 1752583160735-653472706.docx","timestamp":"2025-07-15T12:44:54.833Z"}
+{"level":"info","message":"Deleted file: 1752583320314-194657929.png","timestamp":"2025-07-15T12:44:54.833Z"}
+{"level":"info","message":"All files purged successfully","timestamp":"2025-07-15T12:44:54.834Z"}
+{"level":"info","message":"Database connection established","timestamp":"2025-07-25T10:39:26.162Z"}
+{"level":"info","message":"Server running on port 5000","timestamp":"2025-07-25T10:39:26.171Z"}
+{"level":"info","message":"Upload directory: D:\\led-soliton\\led-display-react\\server\\uploads","timestamp":"2025-07-25T10:39:26.172Z"}
+{"level":"info","message":"Attempting to serve file from: D:\\led-soliton\\led-display-react\\server\\public\\index.html","timestamp":"2025-07-25T10:39:32.686Z"}
+{"level":"info","message":"Login attempt for username: test","timestamp":"2025-07-25T10:43:45.370Z"}
+{"level":"info","message":"Login successful for user: test","timestamp":"2025-07-25T10:43:45.457Z"}
+{"level":"info","message":"File uploaded successfully: 1753440266230-709664731.jpg","timestamp":"2025-07-25T10:44:26.294Z"}
+{"level":"info","message":"Database connection established","timestamp":"2025-07-25T12:40:35.958Z"}
+{"level":"info","message":"Server running on port 5000","timestamp":"2025-07-25T12:40:35.964Z"}
+{"level":"info","message":"Upload directory: D:\\led-soliton\\led-display-react\\server\\uploads","timestamp":"2025-07-25T12:40:35.964Z"}
+{"level":"info","message":"Database connection established","timestamp":"2025-07-25T12:40:46.896Z"}
+{"level":"info","message":"Server running on port 5000","timestamp":"2025-07-25T12:40:46.900Z"}
+{"level":"info","message":"Upload directory: D:\\led-soliton\\led-display-react\\server\\uploads","timestamp":"2025-07-25T12:40:46.900Z"}
+{"level":"info","message":"Database connection established","timestamp":"2025-07-25T12:40:56.188Z"}
+{"level":"info","message":"Server running on port 5000","timestamp":"2025-07-25T12:40:56.194Z"}
+{"level":"info","message":"Upload directory: D:\\led-soliton\\led-display-react\\server\\uploads","timestamp":"2025-07-25T12:40:56.194Z"}
+{"level":"error","message":"JWT strategy error: QueryFailedError: SQLITE_ERROR: no such table: users","timestamp":"2025-07-25T14:05:21.968Z"}
+{"error":{"__augmented":true,"code":"SQLITE_ERROR","driverError":{"__augmented":true,"code":"SQLITE_ERROR","errno":1},"errno":1,"parameters":["d484a328-ff20-43d8-862b-e9e059bea845"],"query":"SELECT \"User\".\"id\" AS \"User_id\", \"User\".\"username\" AS \"User_username\", \"User\".\"password\" AS \"User_password\", \"User\".\"createdAt\" AS \"User_createdAt\" FROM \"users\" \"User\" WHERE ((\"User\".\"id\" = ?)) LIMIT 1"},"level":"error","message":"Error: SQLITE_ERROR: no such table: users","method":"GET","path":"/api/auth/me","timestamp":"2025-07-25T14:05:21.971Z"}
+{"level":"error","message":"JWT strategy error: QueryFailedError: SQLITE_ERROR: no such table: users","timestamp":"2025-07-25T14:05:21.984Z"}
+{"error":{"__augmented":true,"code":"SQLITE_ERROR","driverError":{"__augmented":true,"code":"SQLITE_ERROR","errno":1},"errno":1,"parameters":["d484a328-ff20-43d8-862b-e9e059bea845"],"query":"SELECT \"User\".\"id\" AS \"User_id\", \"User\".\"username\" AS \"User_username\", \"User\".\"password\" AS \"User_password\", \"User\".\"createdAt\" AS \"User_createdAt\" FROM \"users\" \"User\" WHERE ((\"User\".\"id\" = ?)) LIMIT 1"},"level":"error","message":"Error: SQLITE_ERROR: no such table: users","method":"GET","path":"/api/auth/me","timestamp":"2025-07-25T14:05:21.985Z"}
+{"level":"info","message":"Login attempt for username: test","timestamp":"2025-07-25T14:05:27.063Z"}
+{"level":"error","message":"Local strategy error: QueryFailedError: SQLITE_ERROR: no such table: users","timestamp":"2025-07-25T14:05:27.067Z"}
+{"level":"error","message":"Login error: QueryFailedError: SQLITE_ERROR: no such table: users","timestamp":"2025-07-25T14:05:27.068Z"}
+{"level":"error","message":"Stack trace: QueryFailedError: SQLITE_ERROR: no such table: users\n    at handler (D:\\led-soliton\\led-display-react\\server\\node_modules\\typeorm\\src\\driver\\sqlite\\SqliteQueryRunner.ts:133:29)\n    at replacement (D:\\led-soliton\\led-display-react\\server\\node_modules\\sqlite3\\lib\\trace.js:25:27)\n    at Statement.errBack (D:\\led-soliton\\led-display-react\\server\\node_modules\\sqlite3\\lib\\sqlite3.js:15:21)","timestamp":"2025-07-25T14:05:27.070Z"}
+{"level":"info","message":"Login attempt for username: test","timestamp":"2025-07-25T14:05:29.368Z"}
+{"level":"error","message":"Local strategy error: QueryFailedError: SQLITE_ERROR: no such table: users","timestamp":"2025-07-25T14:05:29.372Z"}
+{"level":"error","message":"Login error: QueryFailedError: SQLITE_ERROR: no such table: users","timestamp":"2025-07-25T14:05:29.373Z"}
+{"level":"error","message":"Stack trace: QueryFailedError: SQLITE_ERROR: no such table: users\n    at handler (D:\\led-soliton\\led-display-react\\server\\node_modules\\typeorm\\src\\driver\\sqlite\\SqliteQueryRunner.ts:133:29)\n    at replacement (D:\\led-soliton\\led-display-react\\server\\node_modules\\sqlite3\\lib\\trace.js:25:27)\n    at Statement.errBack (D:\\led-soliton\\led-display-react\\server\\node_modules\\sqlite3\\lib\\sqlite3.js:15:21)","timestamp":"2025-07-25T14:05:29.374Z"}
+{"level":"info","message":"Attempting to serve file from: D:\\led-soliton\\led-display-react\\server\\public\\index.html","timestamp":"2025-07-25T14:05:31.635Z"}
+{"level":"info","message":"Attempting to serve file from: D:\\led-soliton\\led-display-react\\server\\public\\index.html","timestamp":"2025-07-25T14:05:31.777Z"}
+{"level":"info","message":"Attempting to serve file from: D:\\led-soliton\\led-display-react\\server\\public\\index.html","timestamp":"2025-07-25T14:05:31.909Z"}
+{"level":"info","message":"Attempting to serve file from: D:\\led-soliton\\led-display-react\\server\\public\\index.html","timestamp":"2025-07-25T14:05:32.021Z"}
+{"level":"info","message":"Login attempt for username: test","timestamp":"2025-07-25T14:05:34.775Z"}
+{"level":"error","message":"Local strategy error: QueryFailedError: SQLITE_ERROR: no such table: users","timestamp":"2025-07-25T14:05:34.778Z"}
+{"level":"error","message":"Login error: QueryFailedError: SQLITE_ERROR: no such table: users","timestamp":"2025-07-25T14:05:34.778Z"}
+{"level":"error","message":"Stack trace: QueryFailedError: SQLITE_ERROR: no such table: users\n    at handler (D:\\led-soliton\\led-display-react\\server\\node_modules\\typeorm\\src\\driver\\sqlite\\SqliteQueryRunner.ts:133:29)\n    at replacement (D:\\led-soliton\\led-display-react\\server\\node_modules\\sqlite3\\lib\\trace.js:25:27)\n    at Statement.errBack (D:\\led-soliton\\led-display-react\\server\\node_modules\\sqlite3\\lib\\sqlite3.js:15:21)","timestamp":"2025-07-25T14:05:34.778Z"}
+{"level":"info","message":"Login attempt for username: test","timestamp":"2025-07-25T14:05:55.265Z"}
+{"level":"error","message":"Local strategy error: QueryFailedError: SQLITE_ERROR: no such table: users","timestamp":"2025-07-25T14:05:55.270Z"}
+{"level":"error","message":"Login error: QueryFailedError: SQLITE_ERROR: no such table: users","timestamp":"2025-07-25T14:05:55.271Z"}
+{"level":"error","message":"Stack trace: QueryFailedError: SQLITE_ERROR: no such table: users\n    at handler (D:\\led-soliton\\led-display-react\\server\\node_modules\\typeorm\\src\\driver\\sqlite\\SqliteQueryRunner.ts:133:29)\n    at replacement (D:\\led-soliton\\led-display-react\\server\\node_modules\\sqlite3\\lib\\trace.js:25:27)\n    at Statement.errBack (D:\\led-soliton\\led-display-react\\server\\node_modules\\sqlite3\\lib\\sqlite3.js:15:21)","timestamp":"2025-07-25T14:05:55.271Z"}
+{"level":"info","message":"Database connection established","timestamp":"2025-07-25T14:06:31.958Z"}
+{"level":"info","message":"Server running on port 5000","timestamp":"2025-07-25T14:06:31.965Z"}
+{"level":"info","message":"Upload directory: D:\\led-soliton\\led-display-react\\server\\uploads","timestamp":"2025-07-25T14:06:31.966Z"}
+{"level":"info","message":"Attempting to serve file from: D:\\led-soliton\\led-display-react\\server\\public\\index.html","timestamp":"2025-07-25T14:06:35.280Z"}
+{"level":"info","message":"Attempting to serve file from: D:\\led-soliton\\led-display-react\\server\\public\\index.html","timestamp":"2025-07-25T14:06:35.419Z"}
+{"level":"info","message":"Attempting to serve file from: D:\\led-soliton\\led-display-react\\server\\public\\index.html","timestamp":"2025-07-25T14:06:35.540Z"}
+{"level":"info","message":"Attempting to serve file from: D:\\led-soliton\\led-display-react\\server\\public\\index.html","timestamp":"2025-07-25T14:06:35.675Z"}
+{"level":"info","message":"Attempting to serve file from: D:\\led-soliton\\led-display-react\\server\\public\\index.html","timestamp":"2025-07-25T14:06:35.797Z"}
+{"level":"info","message":"Attempting to serve file from: D:\\led-soliton\\led-display-react\\server\\public\\index.html","timestamp":"2025-07-25T14:06:35.926Z"}
+{"level":"info","message":"Login attempt for username: test","timestamp":"2025-07-25T14:06:44.220Z"}
+{"level":"error","message":"Login failed: Invalid credentials","timestamp":"2025-07-25T14:06:44.230Z"}
+{"level":"error","message":"Login attempt details - Username: test","timestamp":"2025-07-25T14:06:44.231Z"}
+{"level":"info","message":"Login attempt for username: test","timestamp":"2025-07-25T14:11:06.530Z"}
+{"level":"error","message":"Login failed: Invalid credentials","timestamp":"2025-07-25T14:11:06.532Z"}
+{"level":"error","message":"Login attempt details - Username: test","timestamp":"2025-07-25T14:11:06.532Z"}
+{"level":"info","message":"Login attempt for username: test","timestamp":"2025-07-25T14:11:21.266Z"}
+{"level":"info","message":"Login successful for user: test","timestamp":"2025-07-25T14:11:21.327Z"}
+{"level":"info","message":"Login attempt for username: test","timestamp":"2025-07-28T09:06:27.489Z"}
+{"level":"info","message":"Login successful for user: test","timestamp":"2025-07-28T09:06:27.556Z"}
+{"level":"info","message":"Attempting to serve file from: D:\\led-soliton\\led-display-react\\server\\public\\index.html","timestamp":"2025-07-28T09:06:53.599Z"}
+{"level":"info","message":"Deleted file: 1753440266230-709664731.jpg","timestamp":"2025-07-28T09:47:55.562Z"}
+{"level":"info","message":"All files purged successfully","timestamp":"2025-07-28T09:47:55.564Z"}

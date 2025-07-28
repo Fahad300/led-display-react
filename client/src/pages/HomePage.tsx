@@ -881,20 +881,56 @@ const HomePage: React.FC = () => {
     const [activeSlides, setActiveSlides] = useState<Slide[]>([]);
     const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
     const slidesContainerRef = useRef<HTMLDivElement>(null);
-    const [dateTime, setDateTime] = useState<string>("");
+    const [, setDateTime] = useState<string>("");
     const navigate = useNavigate();
+
+    // Helper functions for date checks
+    const isBirthdayToday = (dob: string): boolean => {
+        const today = new Date();
+        const date = new Date(dob);
+        return date.getMonth() === today.getMonth() && date.getDate() === today.getDate();
+    };
+
+    const isAnniversaryToday = (dateOfJoining: string): boolean => {
+        const today = new Date();
+        const date = new Date(dateOfJoining);
+        return date.getMonth() === today.getMonth() && date.getDate() === today.getDate();
+    };
 
     // Process active slides to adjust EVENT slide duration and active state
     const processedActiveSlides = useMemo(() => {
         return orderedSlides.map(slide => {
             if (slide.type === SLIDE_TYPES.EVENT) {
-                const today = new Date();
-                const hasBirthdays = employees.some(employee => {
-                    const dob = new Date(employee.dob);
-                    return dob.getMonth() === today.getMonth() && dob.getDate() === today.getDate();
-                });
-                // Always keep event slides in the list, but mark them as active only if there are birthdays
-                return { ...slide, duration: hasBirthdays ? 10 : 0, active: hasBirthdays };
+                // Birthday event slide
+                if (slide.id === "birthday-event-slide") {
+                    const birthdayEmployees = employees.filter(employee => isBirthdayToday(employee.dob));
+                    const hasBirthdays = birthdayEmployees.length > 0;
+                    return {
+                        ...slide,
+                        duration: hasBirthdays ? 10 : 0,
+                        active: hasBirthdays,
+                        data: {
+                            ...slide.data,
+                            employees: birthdayEmployees,
+                            eventType: "birthday" as "birthday"
+                        }
+                    };
+                }
+                // Anniversary event slide
+                if (slide.id === "anniversary-event-slide") {
+                    const anniversaryEmployees = employees.filter(employee => isAnniversaryToday(employee.dateOfJoining));
+                    const hasAnniversaries = anniversaryEmployees.length > 0;
+                    return {
+                        ...slide,
+                        duration: hasAnniversaries ? 10 : 0,
+                        active: hasAnniversaries,
+                        data: {
+                            ...slide.data,
+                            employees: anniversaryEmployees,
+                            eventType: "anniversary" as "anniversary"
+                        }
+                    };
+                }
             }
             return slide;
         });
@@ -902,27 +938,50 @@ const HomePage: React.FC = () => {
 
     // Initialize ordered slides and update active slides
     useEffect(() => {
-        // Ensure we have an event slide in the list
-        const hasEventSlide = slides.some(slide => slide.type === SLIDE_TYPES.EVENT);
-        if (!hasEventSlide) {
-            const eventSlide: EventSlideType = {
-                id: "event-slide",
-                name: "Birthday Events",
-                type: SLIDE_TYPES.EVENT,
-                active: true,
-                duration: 10,
-                data: {
-                    title: "Birthday Celebrations",
-                    description: "Celebrating our team members' birthdays",
-                    date: new Date().toISOString(),
-                    isEmployeeSlide: true
-                },
-                dataSource: "manual"
-            };
-            setOrderedSlides([...slides, eventSlide]);
-        } else {
-            setOrderedSlides(slides);
-        }
+        // Remove any existing event slides
+        const nonEventSlides = slides.filter(slide => slide.type !== SLIDE_TYPES.EVENT);
+
+        // Birthday event slide
+        const birthdayEmployees = employees.filter(employee => isBirthdayToday(employee.dob));
+        const birthdayEventSlide: EventSlideType | null = birthdayEmployees.length > 0 ? {
+            id: "birthday-event-slide",
+            name: "Birthday Celebrations",
+            type: SLIDE_TYPES.EVENT,
+            active: true,
+            duration: 10,
+            data: {
+                title: "Birthday Celebrations",
+                description: "Celebrating our team members' birthdays",
+                date: new Date().toISOString(),
+                isEmployeeSlide: true,
+                employees: birthdayEmployees,
+                eventType: "birthday"
+            },
+            dataSource: "manual"
+        } : null;
+
+        // Anniversary event slide
+        const anniversaryEmployees = employees.filter(employee => isAnniversaryToday(employee.dateOfJoining));
+        const anniversaryEventSlide: EventSlideType | null = anniversaryEmployees.length > 0 ? {
+            id: "anniversary-event-slide",
+            name: "Work Anniversaries",
+            type: SLIDE_TYPES.EVENT,
+            active: true,
+            duration: 10,
+            data: {
+                title: "Work Anniversaries",
+                description: "Celebrating our team members' work anniversaries",
+                date: new Date().toISOString(),
+                isEmployeeSlide: true,
+                employees: anniversaryEmployees,
+                eventType: "anniversary"
+            },
+            dataSource: "manual"
+        } : null;
+
+        // Add event slides if there are employees for today
+        const eventSlides: EventSlideType[] = [birthdayEventSlide, anniversaryEventSlide].filter((s): s is EventSlideType => s !== null);
+        setOrderedSlides([...nonEventSlides, ...eventSlides]);
     }, [slides]);
 
     // Update active slides when processedActiveSlides change

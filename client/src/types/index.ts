@@ -1,3 +1,5 @@
+import type { Employee } from "../data/employees";
+
 /**
  * Slide types used in the application
  */
@@ -101,6 +103,14 @@ export interface EventSlideData {
     fontSize?: string;
     isEmployeeSlide?: boolean;
     employeeId?: string;
+    /**
+     * Employees for birthday/anniversary event slides
+     */
+    employees?: Employee[];
+    /**
+     * Event type for employee event slides
+     */
+    eventType?: "birthday" | "anniversary";
 }
 
 /**

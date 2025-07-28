@@ -1,6 +1,7 @@
 import { DataSource } from "typeorm";
 import { User } from "../models/User";
 import { Display } from "../models/Display";
+import { Employee } from "../models/Employee";
 import path from "path";
 import fs from "fs";
 import { logger } from "../utils/logger";
@@ -18,7 +19,7 @@ export const AppDataSource = new DataSource({
     database: dbPath,
     synchronize: true,
     logging: true, // Enable logging in all environments for debugging
-    entities: [User, Display],
+    entities: [User, Display, Employee],
     migrations: [],
     subscribers: []
 });

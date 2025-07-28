@@ -30,7 +30,7 @@ export const Login: React.FC = () => {
     };
 
     return (
-        <div className="h-[calc(100vh-4rem)] flex items-center justify-center bg-gradient-to-br from-gray-900 to-gray-800 relative overflow-hidden">
+        <div className="h-[100vh] flex items-center justify-center bg-gradient-to-br from-gray-900 to-gray-800 relative overflow-hidden">
             {/* Background Pattern */}
             <div className="absolute inset-0 bg-grid-white/[0.05] bg-[size:60px_60px]" />
 
