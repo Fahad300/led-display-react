@@ -17,7 +17,7 @@ export const SLIDE_TYPES = {
 /**
  * Slide data sources
  */
-export type DataSource = 'manual' | 'api' | 'file';
+export type DataSource = 'manual' | 'api' | 'file' | 'automated';
 
 /**
  * Base slide interface that all slides extend

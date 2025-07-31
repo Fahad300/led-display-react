@@ -1,8 +1,9 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
-import { Slide, SLIDE_TYPES, CurrentEscalationsSlide, DataSource } from '../types';
+import { Slide, SLIDE_TYPES, CurrentEscalationsSlide } from '../types';
 import { currentEscalations } from '../data/currentEscalations';
 import { getTeamComparisonSlide } from '../data/teamComparison';
 import { getDefaultGraphSlide } from '../data/graphData';
+import { SLIDE_DATA_SOURCES } from '../config/slideDefaults';
 
 // Local storage key for slides
 const STORAGE_KEY = 'led-display-templates-config';
@@ -18,6 +19,7 @@ interface SlideContextType {
     loadSlides: () => void;
     getSlideById: (id: string) => Slide | undefined;
     reorderSlides: (slides: Slide[]) => void;
+    refreshSlidesDataSources: () => void;
 }
 
 // Create the context with default values
@@ -31,6 +33,7 @@ const SlideContext = createContext<SlideContextType>({
     loadSlides: () => { },
     getSlideById: () => undefined,
     reorderSlides: () => { },
+    refreshSlidesDataSources: () => { },
 });
 
 // Props for the provider component
@@ -54,7 +57,7 @@ const getCurrentEscalationsSlide = (): CurrentEscalationsSlide | null => {
         id: "current-escalations-1",
         name: "Current Escalations",
         type: SLIDE_TYPES.CURRENT_ESCALATIONS,
-        dataSource: "manual" as DataSource,
+        dataSource: SLIDE_DATA_SOURCES["current-escalations-slide"],
         duration: 10,
         active: true,
         data: {
@@ -94,39 +97,44 @@ export const SlideProvider: React.FC<SlideProviderProps> = ({ children }) => {
                 Object.values(SLIDE_TYPES).includes(slide.type)
             ) as Slide[];
 
+            // Force update data sources for existing slides based on current configuration
+            const updatedValidSlides = validSlides.map(slide => {
+                const slideTypeKey = slide.type as keyof typeof SLIDE_DATA_SOURCES;
+                const newDataSource = SLIDE_DATA_SOURCES[slideTypeKey] || "manual";
+                return {
+                    ...slide,
+                    dataSource: newDataSource
+                };
+            });
+
             // Get default slides
             const escalationsSlide = getCurrentEscalationsSlide();
             const comparisonSlide = getTeamComparisonSlide();
             const graphSlide = getDefaultGraphSlide();
 
             // Check which default slides already exist
-            const hasEscalationsSlide = validSlides.some(s => s.type === SLIDE_TYPES.CURRENT_ESCALATIONS);
-            const hasComparisonSlide = validSlides.some(s => s.type === SLIDE_TYPES.TEAM_COMPARISON);
-            const hasGraphSlide = validSlides.some(s => s.type === SLIDE_TYPES.GRAPH);
+            const hasEscalationsSlide = updatedValidSlides.some(s => s.type === SLIDE_TYPES.CURRENT_ESCALATIONS);
+            const hasComparisonSlide = updatedValidSlides.some(s => s.type === SLIDE_TYPES.TEAM_COMPARISON);
+            const hasGraphSlide = updatedValidSlides.some(s => s.type === SLIDE_TYPES.GRAPH);
 
-            let updatedSlides = [...validSlides];
+            let finalSlides = [...updatedValidSlides];
 
             // Add default slides if they don't exist
             if (escalationsSlide && !hasEscalationsSlide) {
-                updatedSlides = [...updatedSlides, escalationsSlide];
+                finalSlides = [...finalSlides, escalationsSlide];
             }
 
             if (!hasComparisonSlide) {
-                updatedSlides = [...updatedSlides, comparisonSlide];
+                finalSlides = [...finalSlides, comparisonSlide];
             }
 
             if (!hasGraphSlide) {
-                updatedSlides = [...updatedSlides, graphSlide];
+                finalSlides = [...finalSlides, graphSlide];
             }
 
-            // Only update if we added new slides
-            if (updatedSlides.length > validSlides.length) {
-                setSlides(updatedSlides);
-                saveSlides(updatedSlides);
-            } else {
-                setSlides(validSlides);
-                saveSlides(validSlides);
-            }
+            // Always update slides to ensure data sources are current
+            setSlides(finalSlides);
+            saveSlides(finalSlides);
         } catch (error) {
             console.error("Error loading slides:", error);
             setSlides([]);
@@ -193,6 +201,22 @@ export const SlideProvider: React.FC<SlideProviderProps> = ({ children }) => {
         saveSlides(newOrder);
     }, [saveSlides]);
 
+    /**
+     * Refresh all slides with current data source configuration
+     */
+    const refreshSlidesDataSources = useCallback(() => {
+        const updatedSlides = slides.map(slide => {
+            const slideTypeKey = slide.type as keyof typeof SLIDE_DATA_SOURCES;
+            const newDataSource = SLIDE_DATA_SOURCES[slideTypeKey] || "manual";
+            return {
+                ...slide,
+                dataSource: newDataSource
+            };
+        });
+        setSlides(updatedSlides);
+        saveSlides(updatedSlides);
+    }, [slides, saveSlides]);
+
     // Value object for the context provider
     const contextValue: SlideContextType = {
         slides,
@@ -204,6 +228,7 @@ export const SlideProvider: React.FC<SlideProviderProps> = ({ children }) => {
         loadSlides,
         getSlideById,
         reorderSlides,
+        refreshSlidesDataSources,
     };
 
     return (

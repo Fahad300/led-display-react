@@ -1,4 +1,5 @@
 import { TeamComparisonData, DataSource, TeamComparisonSlide } from "../types";
+import { SLIDE_DATA_SOURCES } from "../config/slideDefaults";
 
 export const teamComparisonData: TeamComparisonData[] = [
     {
@@ -53,7 +54,7 @@ export function getTeamComparisonSlide(): TeamComparisonSlide {
         id: 'team-comparison-1',
         name: 'Team Performance Comparison',
         type: 'team-comparison-slide',
-        dataSource: 'manual' as DataSource,
+        dataSource: SLIDE_DATA_SOURCES["team-comparison-slide"],
         duration: 15,
         active: true,
         data: {

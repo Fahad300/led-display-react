@@ -1,4 +1,5 @@
 import { GraphSlide, SLIDE_TYPES } from "../types";
+import { SLIDE_DATA_SOURCES } from "../config/slideDefaults";
 
 const teamNames = [
     "Team Alpha", "Team Beta", "Team Gamma", "Team Delta", "Team Epsilon",
@@ -39,7 +40,7 @@ export const getDefaultGraphSlide = (): GraphSlide => {
         id: "graph-1",
         name: "Escalation Trend Graph",
         type: SLIDE_TYPES.GRAPH,
-        dataSource: "manual",
+        dataSource: SLIDE_DATA_SOURCES["graph-slide"],
         duration: 10,
         active: true,
         data: graphData

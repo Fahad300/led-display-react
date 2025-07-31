@@ -29,14 +29,14 @@ export const employees: Employee[] = [
         picture: "",
         email: "sarah.johnson@company.com",
         gender: "female",
-        dateOfJoining: "2009-07-28",
+        dateOfJoining: "2009-07-30",
         isBirthday: false,
         isAnniversary: true
     },
     {
         id: "EMP002",
         name: "Jhon Snow",
-        dob: "2002-07-28",
+        dob: "2002-07-30",
         designation: "Software Engineer",
         teamName: "Development",
         picture: "",

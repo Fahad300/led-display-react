@@ -207,12 +207,12 @@ const SortableSlideCard: React.FC<{
         return slide.name;
     };
 
-    // Get display source based on slide type
-    const getDisplaySource = () => {
-        if (slide.type === SLIDE_TYPES.EVENT) {
-            return "automated";
-        }
-        if (slide.type === SLIDE_TYPES.CURRENT_ESCALATIONS) {
+    // Helper to get display source label for a slide
+    const getDisplaySource = (slide: Slide): string => {
+        if (
+            slide.type === SLIDE_TYPES.EVENT &&
+            (slide.data?.eventType === "birthday" || slide.data?.eventType === "anniversary")
+        ) {
             return "automated";
         }
         return slide.dataSource;
@@ -283,7 +283,7 @@ const SortableSlideCard: React.FC<{
                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                             </svg>
-                            <span>{getDisplaySource()}</span>
+                            <span>{getDisplaySource(slide)}</span>
                         </div>
                     </div>
 
