@@ -77,6 +77,7 @@ const getIconPath = (type: ToastType): React.ReactElement => {
 /**
  * Toast component for displaying notifications
  */
+// eslint-disable-next-line @typescript-eslint/no-redeclare
 const Toast: React.FC<{ toast: Toast; onRemove: (id: string) => void }> = ({ toast, onRemove }) => {
     useEffect(() => {
         if (toast.duration && toast.duration > 0) {

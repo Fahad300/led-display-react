@@ -2,7 +2,6 @@ import express from "express";
 import { FileManager } from "../utils/fileManager";
 import { isAuthenticated } from "../middleware/auth";
 import { logger } from "../utils/logger";
-import { Employee } from "../models/Employee";
 import { AppDataSource } from "../config/database";
 
 const router = express.Router();
@@ -119,20 +118,6 @@ router.post("/uploads/delete", isAuthenticated, async (req, res) => {
     }
 });
 
-// GET /api/employees/today - Employees with birthday or anniversary today
-router.get("/api/employees/today", async (req, res) => {
-    try {
-        const employeeRepo = AppDataSource.getRepository(Employee);
-        const employees = await employeeRepo.find({
-            where: [
-                { isBirthday: true },
-                { isAnniversary: true }
-            ]
-        });
-        res.json(employees);
-    } catch (error) {
-        res.status(500).json({ error: (error instanceof Error) ? error.message : "Unknown error" });
-    }
-});
+
 
 export default router; 

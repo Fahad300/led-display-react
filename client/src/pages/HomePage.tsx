@@ -2,7 +2,6 @@ import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { useSlides } from '../contexts/SlideContext';
 import { Slide, SLIDE_TYPES, ImageSlide as ImageSlideType, VideoSlide as VideoSlideType, NewsSlide, EventSlide as EventSlideType, TeamComparisonSlide as TeamComparisonSlideType, GraphSlide as GraphSlideType, DocumentSlide as DocumentSlideType } from '../types';
 import { EventSlide, ImageSlide, CurrentEscalationsSlideComponent, TeamComparisonSlideComponent, GraphSlide, DocumentSlide } from "../components/slides";
-import { motion } from 'framer-motion';
 import {
     DndContext,
     closestCenter,
@@ -19,7 +18,6 @@ import {
     useSortable
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import ReactConfetti from "react-confetti";
 import { employees } from "../data/employees";
 import SlideLogoOverlay from "../components/SlideLogoOverlay";
 import { Swiper, SwiperSlide } from "swiper/react";
@@ -39,6 +37,7 @@ import { useDisplaySettings } from "../contexts/DisplaySettingsContext";
 import { VideoSlide } from "../components/slides/VideoSlide";
 import { useNavigate } from 'react-router-dom';
 import { DigitalClock } from "../components/DigitalClock";
+import NewsSlideComponent from "../components/NewsSlideComponent";
 
 // Type for reordering result
 interface ReorderResult {
@@ -536,352 +535,62 @@ const VideoSlideComponent: React.FC<{ slide: VideoSlideType }> = ({ slide }) => 
 };
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-const AnimatedCharacters: React.FC<{ text: string; className?: string; style?: React.CSSProperties }> = ({
-    text,
-    className = "",
-    style = {}
-}) => {
-    const letters = Array.from(text);
 
-    const containerVariants = {
-        hidden: { opacity: 0 },
-        visible: (i = 1) => ({
-            opacity: 1,
-            transition: { staggerChildren: 0.03, delayChildren: 0.2 * i }
-        })
-    };
 
-    const childVariants = {
-        visible: {
-            opacity: 1,
-            y: 0,
-            scale: 1,
-            transition: {
-                type: "spring",
-                damping: 12,
-                stiffness: 200
-            }
-        },
-        hidden: {
-            opacity: 0,
-            y: 20,
-            scale: 0.5
-        }
-    };
 
-    return (
-        <motion.span
-            style={{ display: "inline-block", ...style }}
-            variants={containerVariants}
-            initial="hidden"
-            animate="visible"
-            className={className}
-        >
-            {letters.map((letter, index) => (
-                <motion.span
-                    key={index}
-                    style={{ display: "inline-block", whiteSpace: "pre" }}
-                    variants={childVariants}
-                >
-                    {letter}
-                </motion.span>
-            ))}
-        </motion.span>
-    );
-};
 
-/**
- * Enhanced Animated Title Component with color and position animations
- */
-const AnimatedTitle: React.FC<{
-    text: string;
-    className?: string;
-    baseColor: string;
-}> = ({ text, className = "", baseColor }) => {
-    const letters = Array.from(text);
-    const colors = [
-        baseColor,
-        "#FFD700", // Gold
-        "#FF69B4", // Hot Pink
-        "#00FFFF", // Cyan
-        baseColor
-    ];
 
-    const containerVariants = {
-        animate: {
-            transition: {
-                staggerChildren: 0.1,
-                repeat: Infinity,
-                repeatType: "reverse" as const,
-                duration: 8
-            }
-        }
-    };
-
-    const letterVariants = {
-        animate: {
-            y: [0, -20, 0, 20, 0],
-            x: [0, 10, 0, -10, 0],
-            color: colors,
-            textShadow: [
-                "0 0 20px rgba(255,255,255,0.5)",
-                "0 0 60px rgba(255,255,255,0.3)",
-                "0 0 20px rgba(255,255,255,0.5)"
-            ],
-            transition: {
-                duration: 4,
-                repeat: Infinity,
-                repeatType: "reverse" as const,
-                ease: "easeInOut"
-            }
-        }
-    };
-
-    return (
-        <motion.div
-            className={`inline-block ${className}`}
-            variants={containerVariants}
-            animate="animate"
-        >
-            {letters.map((letter, index) => (
-                <motion.span
-                    key={index}
-                    className="inline-block"
-                    variants={letterVariants}
-                    style={{ display: "inline-block", whiteSpace: "pre" }}
-                >
-                    {letter}
-                </motion.span>
-            ))}
-        </motion.div>
-    );
-};
-
-/**
- * News Slide Component
- */
-const NewsSlideComponent: React.FC<{ slide: NewsSlide }> = ({ slide }) => {
-    const [windowSize, setWindowSize] = useState({
-        width: window.innerWidth,
-        height: window.innerHeight
-    });
-
-    useEffect(() => {
-        const handleResize = () => {
-            setWindowSize({
-                width: window.innerWidth,
-                height: window.innerHeight
-            });
-        };
-
-        window.addEventListener("resize", handleResize);
-        return () => window.removeEventListener("resize", handleResize);
-    }, []);
-
-    const {
-        title,
-        details,
-        backgroundImage,
-        overlayOpacity = 0.5,
-        textColor = "#FFFFFF",
-        textSize = "large",
-        textAlignment = "center"
-    } = slide.data;
-
-    // Enhanced text size mapping for fullscreen
-    const getTitleSize = () => {
-        switch (textSize) {
-            case "small": return "text-5xl md:text-6xl";
-            case "medium": return "text-6xl md:text-7xl";
-            case "large": return "text-7xl md:text-8xl";
-            case "xl": return "text-8xl md:text-9xl";
-            case "2xl": return "text-9xl md:text-[10rem]";
-            default: return "text-7xl md:text-8xl";
-        }
-    };
-
-    const getDetailsSize = () => {
-        switch (textSize) {
-            case "small": return "text-xl md:text-2xl";
-            case "medium": return "text-2xl md:text-3xl";
-            case "large": return "text-3xl md:text-4xl";
-            case "xl": return "text-4xl md:text-5xl";
-            case "2xl": return "text-5xl md:text-6xl";
-            default: return "text-3xl md:text-4xl";
-        }
-    };
-
-    // Enhanced animation variants with corrected easing
-    const containerVariants = {
-        hidden: { opacity: 0, scale: 0.95 },
-        visible: {
-            opacity: 1,
-            scale: 1,
-            transition: {
-                duration: 0.8,
-                ease: "easeOut",
-                staggerChildren: 0.3
-            }
-        },
-        exit: {
-            opacity: 0,
-            scale: 0.95,
-            transition: {
-                duration: 0.5,
-                ease: "easeInOut"
-            }
-        }
-    };
-
-    const textContainerVariants = {
-        hidden: { opacity: 0, y: 50 },
-        visible: {
-            opacity: 1,
-            y: 0,
-            transition: {
-                duration: 1,
-                ease: "easeOut",
-                staggerChildren: 0.2
-            }
-        }
-    };
-
-    return (
-        <motion.div
-            className="relative w-full h-full flex items-center justify-center overflow-hidden"
-            variants={containerVariants}
-            initial="hidden"
-            animate="visible"
-            exit="exit"
-        >
-            {/* React Confetti Effect */}
-            <ReactConfetti
-                width={windowSize.width}
-                height={windowSize.height}
-                numberOfPieces={50}
-                recycle={true}
-                colors={["#ff0000", "#00ff00", "#0000ff", "#ffff00", "#ff00ff", "#00ffff"]}
-                opacity={0.7}
-                gravity={0.1}
-            />
-
-            {backgroundImage && (
-                <motion.div
-                    className="absolute inset-0 w-full h-full"
-                    initial={{ scale: 1.2, opacity: 0 }}
-                    animate={{
-                        scale: 1,
-                        opacity: 1,
-                        transition: { duration: 1.5, ease: "easeOut" }
-                    }}
-                >
-                    <img
-                        src={backgroundImage}
-                        alt={title}
-                        className="w-full h-full object-cover"
-                        onError={(e) => {
-                            const target = e.target as HTMLImageElement;
-                            target.onerror = null;
-                            target.parentElement!.innerHTML = `
-                                <div class="flex flex-col items-center justify-center h-full bg-base-300">
-                                    <svg class="w-24 h-24 text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                                    </svg>
-                                    <p class="text-gray-500 text-2xl">Failed to load image</p>
-                                </div>
-                            `;
-                        }}
-                    />
-                    <motion.div
-                        className="absolute inset-0 bg-gradient-to-b from-black/70 via-black/50 to-black/70"
-                        initial={{ opacity: 0 }}
-                        animate={{
-                            opacity: overlayOpacity,
-                            transition: { duration: 1 }
-                        }}
-                    />
-                </motion.div>
-            )}
-
-            <motion.div
-                className={`relative w-full max-w-[90%] mx-auto px-8 py-16 ${textAlignment === "left"
-                    ? "text-left"
-                    : textAlignment === "right"
-                        ? "text-right"
-                        : "text-center"
-                    }`}
-                variants={textContainerVariants}
-            >
-                <motion.div className="space-y-12">
-                    <motion.div
-                        className={`font-bold tracking-tight ${getTitleSize()}`}
-                    >
-                        <AnimatedTitle
-                            text={title}
-                            baseColor={textColor}
-                            className="leading-tight"
-                        />
-                    </motion.div>
-
-                    <motion.div
-                        className={`space-y-8 ${getDetailsSize()}`}
-                        style={{ color: textColor }}
-                    >
-                        {details.split('\n').map((paragraph, index) => (
-                            <motion.p
-                                key={index}
-                                initial={{ opacity: 0, x: -30 }}
-                                animate={{
-                                    opacity: 1,
-                                    x: 0,
-                                    transition: {
-                                        delay: 1 + (index * 0.2),
-                                        duration: 0.8,
-                                        ease: "easeOut"
-                                    }
-                                }}
-                                className="leading-tight"
-                            >
-                                {paragraph}
-                            </motion.p>
-                        ))}
-                        {/* Show newsImage below details if present */}
-                        {slide.data.newsImage && (
-                            <div className="mt-8 flex justify-center">
-                                <div className="relative w-48 h-48 z-0">
-                                    {/* Animated conic-gradient border */}
-                                    <div className="animated-conic-border"></div>
-                                    {/* Inner white border for clean edge */}
-                                    <div className="absolute inset-[4px] rounded-full bg-white"></div>
-                                    {/* Image container */}
-                                    <div className="absolute inset-[8px] rounded-full overflow-hidden">
-                                        <img
-                                            src={slide.data.newsImage}
-                                            alt="News"
-                                            className="w-full h-full object-cover"
-                                        />
-                                    </div>
-                                </div>
-                            </div>
-                        )}
-                    </motion.div>
-                </motion.div>
-            </motion.div>
-        </motion.div>
-    );
-};
 
 /**
  * Home Page Component - Displays the slideshow
  */
+/**
+ * Slide Duration Indicator Component
+ */
+const SlideDurationIndicator: React.FC<{
+    currentSlide: Slide;
+    currentIndex: number;
+    totalSlides: number;
+}> = ({ currentSlide, currentIndex, totalSlides }) => {
+    const [timeRemaining, setTimeRemaining] = useState(currentSlide.duration);
+
+    useEffect(() => {
+        setTimeRemaining(currentSlide.duration);
+
+        const interval = setInterval(() => {
+            setTimeRemaining(prev => {
+                if (prev <= 1) {
+                    return currentSlide.duration; // Reset for next slide
+                }
+                return prev - 1;
+            });
+        }, 1000);
+
+        return () => clearInterval(interval);
+    }, [currentSlide, currentIndex]);
+
+    return (
+        <div className="absolute bottom-4 left-4 z-[10000] bg-black/50 text-white px-3 py-1 rounded-lg text-sm">
+            <div className="flex items-center gap-2">
+                <span>{currentIndex + 1}/{totalSlides}</span>
+                <span>•</span>
+                <span>{timeRemaining}s</span>
+                <span>•</span>
+                <span>{currentSlide.name}</span>
+            </div>
+        </div>
+    );
+};
+
 const HomePage: React.FC = () => {
     const { slides, updateSlide, reorderSlides } = useSlides();
-    const { settings, updateSettings } = useDisplaySettings();
+    const { settings, updateSettings, forceRefresh } = useDisplaySettings();
     const [orderedSlides, setOrderedSlides] = useState<Slide[]>([]);
     const [activeSlides, setActiveSlides] = useState<Slide[]>([]);
     const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
     const slidesContainerRef = useRef<HTMLDivElement>(null);
     const [, setDateTime] = useState<string>("");
+    const [currentSlideIndex, setCurrentSlideIndex] = useState(0);
     const navigate = useNavigate();
 
     // Helper functions for date checks
@@ -1064,6 +773,21 @@ const HomePage: React.FC = () => {
         navigate(0); // This will trigger a re-render without a full page reload
     };
 
+    const handleForceRefreshDisplay = () => {
+        forceRefresh();
+        // Show a brief success message
+        const button = document.querySelector('[data-force-refresh]') as HTMLButtonElement;
+        if (button) {
+            const originalText = button.textContent;
+            button.textContent = "Refreshing...";
+            button.disabled = true;
+            setTimeout(() => {
+                button.textContent = originalText;
+                button.disabled = false;
+            }, 2000);
+        }
+    };
+
     /**
      * Render content based on slide type
      */
@@ -1107,19 +831,7 @@ const HomePage: React.FC = () => {
         updateSettings({ hideArrows: !settings.hideArrows });
     };
 
-    // If there are no active slides, show a message
-    if (activeSlides.length === 0) {
-        return (
-            <div className="flex flex-col items-center justify-center h-[500px]">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-16 w-16 text-slate-400 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                </svg>
-                <h3 className="text-2xl font-bold mb-2">No Active Slides</h3>
-                <p className="text-slate-500 mb-4">There are no active slides to display.</p>
-                <a href="/admin" className="btn btn-primary">Go to Admin</a>
-            </div>
-        );
-    }
+    // Show controls even when there are no active slides
 
     // --- UI ---
     return (
@@ -1202,22 +914,40 @@ const HomePage: React.FC = () => {
                             </div>
                         )}
                         <div className={`absolute inset-[1px] bg-persivia-white rounded-lg overflow-hidden ${isFullscreen ? "rounded-none" : ""}`}>
-                            <SwiperSlideshow
-                                slides={processedActiveSlides.filter(slide => slide.active)}
-                                renderSlideContent={renderSlideContent}
-                                onSlideChange={(index) => {
-                                    // Handle slide change if needed
-                                }}
-                                hidePagination={settings.hidePagination}
-                                hideArrows={settings.hideArrows}
-                                effect={settings.swiperEffect}
-                                isFullscreen={isFullscreen}
-                            />
+                            {activeSlides.length > 0 ? (
+                                <SwiperSlideshow
+                                    slides={processedActiveSlides.filter(slide => slide.active)}
+                                    renderSlideContent={renderSlideContent}
+                                    onSlideChange={(index) => {
+                                        setCurrentSlideIndex(index);
+                                    }}
+                                    hidePagination={settings.hidePagination}
+                                    hideArrows={settings.hideArrows}
+                                    effect={settings.swiperEffect}
+                                    isFullscreen={isFullscreen}
+                                />
+                            ) : (
+                                <div className="w-full h-full flex flex-col items-center justify-center bg-persivia-light-gray">
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-16 w-16 text-slate-400 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                    </svg>
+                                    <h3 className="text-xl font-semibold mb-2 text-slate-600">No Active Slides</h3>
+                                    <p className="text-slate-500 text-center">Create and activate slides to see them here</p>
+                                </div>
+                            )}
                             {/* Date/Time Stamp Overlay - Moved to top right */}
                             {settings.showDateStamp && (
                                 <div className="absolute top-4 right-4 z-[10000]">
                                     <DigitalClock />
                                 </div>
+                            )}
+                            {/* Slide Duration Indicator */}
+                            {activeSlides.length > 0 && activeSlides[currentSlideIndex] && (
+                                <SlideDurationIndicator
+                                    currentSlide={activeSlides[currentSlideIndex]}
+                                    currentIndex={currentSlideIndex}
+                                    totalSlides={activeSlides.length}
+                                />
                             )}
                             <SlideLogoOverlay isFullscreen={isFullscreen} />
                         </div>
@@ -1227,7 +957,15 @@ const HomePage: React.FC = () => {
 
             {/* Settings Panel - Right Column */}
             <aside className="w-[370px] min-w-[320px] max-w-[400px] bg-persivia-white shadow-lg flex flex-col p-6 border-l border-persivia-light-gray">
-                <h2 className="text-2xl font-bold text-center mb-6 text-persivia-blue">Display Controls</h2>
+                <div className="flex items-center justify-between mb-6">
+                    <h2 className="text-2xl font-bold text-center text-persivia-blue">Display Controls</h2>
+                    <div className="flex items-center gap-2 text-xs text-green-600">
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        <span>Live Sync</span>
+                    </div>
+                </div>
 
                 {/* Effect Card */}
                 <div className="bg-persivia-light-gray/50 rounded-lg p-4 mb-4">
@@ -1334,6 +1072,15 @@ const HomePage: React.FC = () => {
                     className="w-full bg-persivia-blue hover:bg-persivia-blue/90 text-white font-medium py-2 px-4 rounded-lg transition-colors"
                 >
                     Refresh Display
+                </button>
+
+                {/* Force Refresh Display Button */}
+                <button
+                    onClick={handleForceRefreshDisplay}
+                    className="w-full bg-red-600 hover:bg-red-700 text-white font-medium py-2 px-4 rounded-lg transition-colors mt-2"
+                    data-force-refresh
+                >
+                    Force Refresh All Displays
                 </button>
             </aside>
         </div>

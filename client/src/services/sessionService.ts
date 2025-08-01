@@ -1,0 +1,226 @@
+import axios from "axios";
+
+const API_BASE_URL = process.env.REACT_APP_BACKEND_URL || "http://localhost:5000";
+
+export interface SessionData {
+    sessionId: string;
+    displaySettings: any;
+    slideData: any[];
+    appSettings: any;
+    lastActivity: string;
+    deviceInfo: string;
+}
+
+export interface SessionInfo {
+    id: string;
+    deviceInfo: string;
+    ipAddress: string;
+    isActive: boolean;
+    lastActivity: string;
+    createdAt: string;
+}
+
+class SessionService {
+    private sessionToken: string | null = null;
+
+    /**
+     * Get device information
+     */
+    private getDeviceInfo(): string {
+        return `${navigator.userAgent} - ${navigator.platform}`;
+    }
+
+    /**
+     * Get IP address (simplified - in production you'd get this from server)
+     */
+    private getIpAddress(): string {
+        return "client-side"; // In production, this would be determined server-side
+    }
+
+    /**
+     * Create or update session
+     */
+    async createSession(): Promise<string> {
+        try {
+            const response = await axios.post(`${API_BASE_URL}/api/sessions/create`, {
+                deviceInfo: this.getDeviceInfo(),
+                ipAddress: this.getIpAddress()
+            });
+
+            this.sessionToken = response.data.sessionToken;
+            if (!this.sessionToken) {
+                throw new Error("Failed to create session: No session token received");
+            }
+            return this.sessionToken;
+        } catch (error) {
+            console.error("Error creating session:", error);
+            throw error;
+        }
+    }
+
+    /**
+     * Get current session data
+     */
+    async getCurrentSession(): Promise<SessionData | null> {
+        try {
+            const response = await axios.get(`${API_BASE_URL}/api/sessions/current`);
+            return response.data;
+        } catch (error) {
+            console.error("Error getting session:", error);
+            return null;
+        }
+    }
+
+    /**
+     * Update display settings
+     */
+    async updateDisplaySettings(settings: any): Promise<void> {
+        try {
+            await axios.put(`${API_BASE_URL}/api/sessions/display-settings`, {
+                settings
+            });
+        } catch (error) {
+            console.error("Error updating display settings:", error);
+            throw error;
+        }
+    }
+
+    /**
+     * Update slide data
+     */
+    async updateSlideData(slides: any[]): Promise<void> {
+        try {
+            await axios.put(`${API_BASE_URL}/api/sessions/slide-data`, {
+                slides
+            });
+        } catch (error) {
+            console.error("Error updating slide data:", error);
+            throw error;
+        }
+    }
+
+    /**
+     * Update app settings
+     */
+    async updateAppSettings(settings: any): Promise<void> {
+        try {
+            await axios.put(`${API_BASE_URL}/api/sessions/app-settings`, {
+                settings
+            });
+        } catch (error) {
+            console.error("Error updating app settings:", error);
+            throw error;
+        }
+    }
+
+    /**
+     * Logout and deactivate session
+     */
+    async logout(): Promise<void> {
+        try {
+            await axios.delete(`${API_BASE_URL}/api/sessions/logout`);
+            this.sessionToken = null;
+        } catch (error) {
+            console.error("Error logging out:", error);
+            throw error;
+        }
+    }
+
+    /**
+     * Get all sessions for the user
+     */
+    async getAllSessions(): Promise<SessionInfo[]> {
+        try {
+            const response = await axios.get(`${API_BASE_URL}/api/sessions/all`);
+            return response.data;
+        } catch (error) {
+            console.error("Error getting sessions:", error);
+            return [];
+        }
+    }
+
+    /**
+     * Sync settings from server (works for both authenticated and unauthenticated)
+     */
+    async syncFromServer(): Promise<{
+        displaySettings: any;
+        slideData: any[];
+        appSettings: any;
+    } | null> {
+        try {
+            // First try to get current session data (for authenticated users)
+            const sessionData = await this.getCurrentSession();
+            if (sessionData) {
+                return {
+                    displaySettings: sessionData.displaySettings,
+                    slideData: sessionData.slideData,
+                    appSettings: sessionData.appSettings
+                };
+            }
+
+            // If no authenticated session, try to get the most recent active session
+            try {
+                const response = await axios.get(`${API_BASE_URL}/api/sessions/latest`);
+                if (response.data) {
+                    return {
+                        displaySettings: response.data.displaySettings,
+                        slideData: response.data.slideData,
+                        appSettings: response.data.appSettings
+                    };
+                }
+            } catch (error) {
+                console.debug("No latest session available:", error);
+            }
+
+            return null;
+        } catch (error) {
+            console.error("Error syncing from server:", error);
+            return null;
+        }
+    }
+
+    /**
+     * Sync settings to server
+     */
+    async syncToServer(data: {
+        displaySettings?: any;
+        slideData?: any[];
+        appSettings?: any;
+    }): Promise<void> {
+        try {
+            const promises: Promise<void>[] = [];
+
+            if (data.displaySettings) {
+                promises.push(this.updateDisplaySettings(data.displaySettings));
+            }
+
+            if (data.slideData) {
+                promises.push(this.updateSlideData(data.slideData));
+            }
+
+            if (data.appSettings) {
+                promises.push(this.updateAppSettings(data.appSettings));
+            }
+
+            await Promise.all(promises);
+        } catch (error) {
+            console.error("Error syncing to server:", error);
+            throw error;
+        }
+    }
+
+    /**
+     * Initialize session on app startup
+     */
+    async initializeSession(): Promise<void> {
+        try {
+            await this.createSession();
+            console.log("Session initialized successfully");
+        } catch (error) {
+            console.error("Error initializing session:", error);
+        }
+    }
+}
+
+export const sessionService = new SessionService();
+export default sessionService; 

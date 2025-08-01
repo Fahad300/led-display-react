@@ -1,4 +1,4 @@
-import { TeamComparisonData, DataSource, TeamComparisonSlide } from "../types";
+import { TeamComparisonData, TeamComparisonSlide } from "../types";
 import { SLIDE_DATA_SOURCES } from "../config/slideDefaults";
 
 export const teamComparisonData: TeamComparisonData[] = [

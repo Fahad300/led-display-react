@@ -10,6 +10,7 @@ import { logger } from "./utils/logger";
 import authRoutes from "./routes/auth";
 import adminRoutes from "./routes/admin";
 import displayRoutes from "./routes/display";
+import sessionsRoutes from "./routes/sessions";
 import mainRoutes from "./routes/main";
 import { initializePassport } from "./config/passport";
 import { isAuthenticated } from "./middleware/auth";
@@ -104,6 +105,7 @@ initializePassport();
 app.use("/api/auth", authRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/display", displayRoutes);
+app.use("/api/sessions", sessionsRoutes);
 app.use("/", mainRoutes);
 
 // Global error handler

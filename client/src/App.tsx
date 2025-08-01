@@ -12,21 +12,28 @@ import Register from "./pages/Register";
 import HomePage from './pages/HomePage';
 import AdminPage from './pages/AdminPage';
 import MediaPage from './pages/MediaPage';
+import DisplayPage from "./pages/DisplayPage";
 
 const App: React.FC = () => {
   return (
     <SettingsProvider>
-      <SlideProvider>
-        <ToastProvider>
-          <Router>
-            <AuthProvider>
+      <ToastProvider>
+        <Router>
+          <AuthProvider>
+            <SlideProvider>
               <DisplaySettingsProvider>
                 <Routes>
                   {/* Public Routes */}
                   <Route path="/login" element={<Login />} />
                   <Route path="/register" element={<Register />} />
 
-                  {/* Protected Routes */}
+                  {/* Display Route - No Header/Footer - Public Access for LED Screen */}
+                  <Route
+                    path="/display"
+                    element={<DisplayPage />}
+                  />
+
+                  {/* Protected Routes with Header/Footer */}
                   <Route element={<MainLayout />}>
                     <Route
                       path="/"
@@ -58,10 +65,10 @@ const App: React.FC = () => {
                   <Route path="*" element={<Navigate to="/" replace />} />
                 </Routes>
               </DisplaySettingsProvider>
-            </AuthProvider>
-          </Router>
-        </ToastProvider>
-      </SlideProvider>
+            </SlideProvider>
+          </AuthProvider>
+        </Router>
+      </ToastProvider>
     </SettingsProvider>
   );
 };

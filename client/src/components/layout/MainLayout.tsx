@@ -72,7 +72,8 @@ const MainLayout: React.FC<MainLayoutProps> = () => {
                 <div className="flex items-center gap-4">
                     {isAuthenticated && (
                         <>
-                            <Link to="/" className={`px-3 py-1 rounded text-sm font-medium text-white hover:bg-persivia-blue hover:text-persivia-light-teal transition-colors ${isActive('/') ? 'bg-persivia-blue' : ''}`}>Display</Link>
+                            <Link to="/" className={`px-3 py-1 rounded text-sm font-medium text-white hover:bg-persivia-blue hover:text-persivia-light-teal transition-colors ${isActive('/') ? 'bg-persivia-blue' : ''}`}>Home</Link>
+                            <Link to="/display" className={`px-3 py-1 rounded text-sm font-medium text-white hover:bg-persivia-blue hover:text-persivia-light-teal transition-colors ${isActive('/display') ? 'bg-persivia-blue' : ''}`}>Display</Link>
                             <Link to="/admin" className={`px-3 py-1 rounded text-sm font-medium text-white hover:bg-persivia-blue hover:text-persivia-light-teal transition-colors ${isActive('/admin') ? 'bg-persivia-blue' : ''}`}>Admin</Link>
                             <Link to="/media" className={`px-3 py-1 rounded text-sm font-medium text-white hover:bg-persivia-blue hover:text-persivia-light-teal transition-colors ${isActive('/media') ? 'bg-persivia-blue' : ''}`}>Media</Link>
                             {/* User Avatar and Dropdown */}

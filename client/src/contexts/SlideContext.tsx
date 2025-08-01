@@ -1,8 +1,10 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback, useRef } from 'react';
 import { Slide, SLIDE_TYPES, CurrentEscalationsSlide } from '../types';
 import { currentEscalations } from '../data/currentEscalations';
 import { getTeamComparisonSlide } from '../data/teamComparison';
 import { getDefaultGraphSlide } from '../data/graphData';
+import { useAuth } from './AuthContext';
+import sessionService from '../services/sessionService';
 import { SLIDE_DATA_SOURCES } from '../config/slideDefaults';
 
 // Local storage key for slides
@@ -15,11 +17,12 @@ interface SlideContextType {
     setActiveSlide: (slide: Slide | null) => void;
     addSlide: (slide: Slide) => void;
     updateSlide: (slide: Slide) => void;
-    deleteSlide: (id: string) => void;
+    deleteSlide: (id: string) => Promise<void>;
     loadSlides: () => void;
     getSlideById: (id: string) => Slide | undefined;
     reorderSlides: (slides: Slide[]) => void;
     refreshSlidesDataSources: () => void;
+    isLoading: boolean;
 }
 
 // Create the context with default values
@@ -29,11 +32,12 @@ const SlideContext = createContext<SlideContextType>({
     setActiveSlide: () => { },
     addSlide: () => { },
     updateSlide: () => { },
-    deleteSlide: () => { },
+    deleteSlide: async () => { },
     loadSlides: () => { },
     getSlideById: () => undefined,
     reorderSlides: () => { },
     refreshSlidesDataSources: () => { },
+    isLoading: false,
 });
 
 // Props for the provider component
@@ -73,23 +77,92 @@ const getCurrentEscalationsSlide = (): CurrentEscalationsSlide | null => {
  * Provider component that wraps the app and provides the slide context
  */
 export const SlideProvider: React.FC<SlideProviderProps> = ({ children }) => {
+    const { isAuthenticated } = useAuth();
     const [slides, setSlides] = useState<Slide[]>([]);
     const [activeSlide, setActiveSlide] = useState<Slide | null>(null);
+    const [isLoading, setIsLoading] = useState<boolean>(true);
+    const lastUpdateRef = useRef<number>(0);
+    const updateTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+    const lastLocalChangeRef = useRef<number>(0);
 
     /**
-     * Load slides from localStorage
+     * Debounced save function to prevent excessive updates
      */
-    const saveSlides = useCallback((slidesToSave: Slide[]) => {
+    const debouncedSaveSlides = useCallback(async (slidesToSave: Slide[]) => {
+        // Clear existing timeout
+        if (updateTimeoutRef.current) {
+            clearTimeout(updateTimeoutRef.current);
+        }
+
+        // Set new timeout for debounced save
+        updateTimeoutRef.current = setTimeout(async () => {
+            try {
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(slidesToSave));
+
+                // Sync to server if authenticated
+                if (isAuthenticated) {
+                    try {
+                        await sessionService.updateSlideData(slidesToSave);
+                    } catch (error) {
+                        console.error("Error syncing slides to server:", error);
+                    }
+                }
+            } catch (error) {
+                console.error("Error saving slides:", error);
+            }
+        }, 300); // 300ms debounce
+    }, [isAuthenticated]);
+
+    /**
+     * Immediate save function for critical operations
+     */
+    const immediateSaveSlides = useCallback(async (slidesToSave: Slide[]) => {
+        // Clear any pending debounced saves to prevent conflicts
+        if (updateTimeoutRef.current) {
+            clearTimeout(updateTimeoutRef.current);
+            updateTimeoutRef.current = null;
+        }
+
         try {
             localStorage.setItem(STORAGE_KEY, JSON.stringify(slidesToSave));
+
+            // Sync to server if authenticated
+            if (isAuthenticated) {
+                try {
+                    await sessionService.updateSlideData(slidesToSave);
+                } catch (error) {
+                    console.error("Error syncing slides to server:", error);
+                }
+            }
         } catch (error) {
             console.error("Error saving slides:", error);
         }
-    }, []);
+    }, [isAuthenticated]);
 
-    const loadSlides = useCallback(() => {
+    /**
+     * Load slides from localStorage and server
+     */
+    const loadSlides = useCallback(async () => {
+        setIsLoading(true);
         try {
-            const allTemplates = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
+            let allTemplates: any[] = [];
+
+            // Try to load from server first if authenticated
+            if (isAuthenticated) {
+                try {
+                    const serverData = await sessionService.syncFromServer();
+                    if (serverData?.slideData && serverData.slideData.length > 0) {
+                        allTemplates = serverData.slideData;
+                    }
+                } catch (error) {
+                    console.error("Error loading slides from server:", error);
+                }
+            }
+
+            // Fallback to localStorage if no server data
+            if (allTemplates.length === 0) {
+                allTemplates = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
+            }
 
             // Type-check and filter to ensure we only get valid slides
             const validSlides = allTemplates.filter((slide: any) =>
@@ -134,23 +207,87 @@ export const SlideProvider: React.FC<SlideProviderProps> = ({ children }) => {
 
             // Always update slides to ensure data sources are current
             setSlides(finalSlides);
-            saveSlides(finalSlides);
+            await debouncedSaveSlides(finalSlides);
         } catch (error) {
             console.error("Error loading slides:", error);
             setSlides([]);
-            saveSlides([]);
+            await debouncedSaveSlides([]);
+        } finally {
+            setIsLoading(false);
         }
-    }, [saveSlides]);
+    }, [debouncedSaveSlides, isAuthenticated]);
 
     // Load slides on mount
     useEffect(() => {
         loadSlides();
     }, [loadSlides]);
 
+    // Cross-device synchronization via polling with improved change detection
+    useEffect(() => {
+        let pollInterval: NodeJS.Timeout | null = null;
+
+        const pollForUpdates = async () => {
+            try {
+                // Try to get latest slide data from server (works for both authenticated and unauthenticated)
+                const serverData = await sessionService.syncFromServer();
+                if (serverData?.slideData && serverData.slideData.length > 0) {
+                    // Type-check and filter to ensure we only get valid slides
+                    const validSlides = serverData.slideData.filter((slide: any) =>
+                        slide && slide.id && slide.type &&
+                        Object.values(SLIDE_TYPES).includes(slide.type)
+                    ) as Slide[];
+
+                    // Only update if there are actual changes and enough time has passed
+                    const currentTime = Date.now();
+                    const currentSlidesJson = JSON.stringify(slides);
+                    const newSlidesJson = JSON.stringify(validSlides);
+
+                    // Don't override if we've made local changes in the last 5 seconds
+                    const timeSinceLocalChange = currentTime - lastLocalChangeRef.current;
+                    if (currentSlidesJson !== newSlidesJson &&
+                        (currentTime - lastUpdateRef.current) > 2000 &&
+                        timeSinceLocalChange > 5000) {
+                        console.log("🔄 Slides updated from server:", validSlides.length, "slides");
+                        console.log("⏰ Time since local change:", timeSinceLocalChange, "ms");
+                        setSlides(validSlides);
+                        lastUpdateRef.current = currentTime;
+                        await debouncedSaveSlides(validSlides);
+                    } else {
+                        console.log("🚫 Skipping server update - recent local changes or no changes");
+                    }
+                }
+            } catch (error) {
+                // Silently handle errors for polling
+                console.debug("Polling for slide updates:", error);
+            }
+        };
+
+        // Poll every 10 seconds for cross-device slide updates
+        pollInterval = setInterval(pollForUpdates, 10000);
+
+        // Initial poll
+        pollForUpdates();
+
+        return () => {
+            if (pollInterval) {
+                clearInterval(pollInterval);
+            }
+        };
+    }, [debouncedSaveSlides]); // Removed slides from dependency array
+
+    // Cleanup timeout on unmount
+    useEffect(() => {
+        return () => {
+            if (updateTimeoutRef.current) {
+                clearTimeout(updateTimeoutRef.current);
+            }
+        };
+    }, []);
+
     /**
      * Add a new slide
      */
-    const addSlide = useCallback((slide: Slide) => {
+    const addSlide = useCallback(async (slide: Slide) => {
         const newSlide = {
             ...slide,
             id: slide.id || generateUniqueId()
@@ -158,33 +295,42 @@ export const SlideProvider: React.FC<SlideProviderProps> = ({ children }) => {
 
         const updatedSlides = [...slides, newSlide];
         setSlides(updatedSlides);
-        saveSlides(updatedSlides);
-    }, [slides, saveSlides]);
+        lastLocalChangeRef.current = Date.now();
+        await immediateSaveSlides(updatedSlides);
+    }, [slides, immediateSaveSlides]);
 
     /**
      * Update an existing slide
      */
-    const updateSlide = useCallback((updatedSlide: Slide) => {
+    const updateSlide = useCallback(async (updatedSlide: Slide) => {
         const updatedSlides = slides.map(slide =>
             slide.id === updatedSlide.id ? updatedSlide : slide
         );
 
         setSlides(updatedSlides);
-        saveSlides(updatedSlides);
-    }, [slides, saveSlides]);
+        lastLocalChangeRef.current = Date.now();
+        await immediateSaveSlides(updatedSlides);
+    }, [slides, immediateSaveSlides]);
 
     /**
      * Delete a slide by ID
      */
-    const deleteSlide = useCallback((id: string) => {
+    const deleteSlide = useCallback(async (id: string) => {
+        console.log("🗑️ Deleting slide with ID:", id);
+        console.log("📊 Current slides count:", slides.length);
+
         const updatedSlides = slides.filter(slide => slide.id !== id);
+        console.log("📊 Updated slides count:", updatedSlides.length);
+
         setSlides(updatedSlides);
-        saveSlides(updatedSlides);
+        lastLocalChangeRef.current = Date.now();
+        await immediateSaveSlides(updatedSlides);
+        console.log("✅ Slide deletion completed");
 
         if (activeSlide?.id === id) {
             setActiveSlide(null);
         }
-    }, [slides, activeSlide, saveSlides]);
+    }, [slides, activeSlide, immediateSaveSlides]);
 
     /**
      * Get a slide by ID
@@ -198,8 +344,9 @@ export const SlideProvider: React.FC<SlideProviderProps> = ({ children }) => {
      */
     const reorderSlides = useCallback((newOrder: Slide[]) => {
         setSlides(newOrder);
-        saveSlides(newOrder);
-    }, [saveSlides]);
+        lastLocalChangeRef.current = Date.now();
+        debouncedSaveSlides(newOrder);
+    }, [debouncedSaveSlides]);
 
     /**
      * Refresh all slides with current data source configuration
@@ -214,8 +361,9 @@ export const SlideProvider: React.FC<SlideProviderProps> = ({ children }) => {
             };
         });
         setSlides(updatedSlides);
-        saveSlides(updatedSlides);
-    }, [slides, saveSlides]);
+        lastLocalChangeRef.current = Date.now();
+        debouncedSaveSlides(updatedSlides);
+    }, [slides, debouncedSaveSlides]);
 
     // Value object for the context provider
     const contextValue: SlideContextType = {
@@ -229,6 +377,7 @@ export const SlideProvider: React.FC<SlideProviderProps> = ({ children }) => {
         getSlideById,
         reorderSlides,
         refreshSlidesDataSources,
+        isLoading,
     };
 
     return (

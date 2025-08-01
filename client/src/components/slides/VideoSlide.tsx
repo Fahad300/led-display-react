@@ -78,7 +78,6 @@ export const VideoSlide: React.FC<VideoSlideProps> = ({ slide, onUpdate }) => {
                     autoPlay={slide.data.autoplay}
                     loop={slide.data.loop}
                     muted={slide.data.muted}
-                    controls
                 />
                 {captionElement}
                 {onUpdate && (
