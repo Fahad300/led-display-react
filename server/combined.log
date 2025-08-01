@@ -402,3 +402,393 @@
 {"level":"info","message":"File uploaded successfully: 1754043690761-408128709.mp4","timestamp":"2025-08-01T10:21:30.852Z"}
 {"level":"info","message":"File uploaded successfully: 1754043730840-642102882.jpg","timestamp":"2025-08-01T10:22:10.912Z"}
 {"level":"info","message":"File uploaded successfully: 1754043736537-83977204.jpg","timestamp":"2025-08-01T10:22:16.619Z"}
+{"level":"info","message":"Database connection established","timestamp":"2025-08-01T11:05:34.722Z"}
+{"level":"info","message":"Server running on port 5000","timestamp":"2025-08-01T11:05:34.726Z"}
+{"level":"info","message":"Upload directory: D:\\led-soliton\\led-display-react\\server\\uploads","timestamp":"2025-08-01T11:05:34.727Z"}
+{"level":"info","message":"Database connection established","timestamp":"2025-08-01T11:05:54.109Z"}
+{"level":"info","message":"Server running on port 5000","timestamp":"2025-08-01T11:05:54.114Z"}
+{"level":"info","message":"Upload directory: D:\\led-soliton\\led-display-react\\server\\uploads","timestamp":"2025-08-01T11:05:54.115Z"}
+{"level":"info","message":"\n=== MySQL Database Setup Instructions ===","timestamp":"2025-08-01T11:39:38.015Z"}
+{"level":"info","message":"1. Install MySQL Server on your system","timestamp":"2025-08-01T11:39:38.018Z"}
+{"level":"info","message":"2. Set up environment variables in .env file:","timestamp":"2025-08-01T11:39:38.019Z"}
+{"level":"info","message":"   DB_HOST=localhost","timestamp":"2025-08-01T11:39:38.019Z"}
+{"level":"info","message":"   DB_PORT=3306","timestamp":"2025-08-01T11:39:38.019Z"}
+{"level":"info","message":"   DB_USERNAME=led_display_user","timestamp":"2025-08-01T11:39:38.019Z"}
+{"level":"info","message":"   DB_PASSWORD=your_secure_password","timestamp":"2025-08-01T11:39:38.020Z"}
+{"level":"info","message":"   DB_DATABASE=led_display_db","timestamp":"2025-08-01T11:39:38.020Z"}
+{"level":"info","message":"   MYSQL_ROOT_PASSWORD=your_root_password","timestamp":"2025-08-01T11:39:38.020Z"}
+{"level":"info","message":"3. Run: npm run migrate","timestamp":"2025-08-01T11:39:38.020Z"}
+{"level":"info","message":"4. Run: npm run seed","timestamp":"2025-08-01T11:39:38.020Z"}
+{"level":"info","message":"5. Start the server: npm run dev","timestamp":"2025-08-01T11:39:38.020Z"}
+{"level":"info","message":"==========================================\n","timestamp":"2025-08-01T11:39:38.021Z"}
+{"level":"info","message":"Starting complete database setup...","timestamp":"2025-08-01T11:39:38.021Z"}
+{"level":"info","message":"Creating MySQL database and user...","timestamp":"2025-08-01T11:39:38.021Z"}
+{"level":"info","message":"Database 'led_display_db' created or already exists","timestamp":"2025-08-01T11:39:38.073Z"}
+{"level":"info","message":"User 'admin' created or already exists","timestamp":"2025-08-01T11:39:38.083Z"}
+{"level":"info","message":"Privileges granted to 'admin'","timestamp":"2025-08-01T11:39:38.093Z"}
+{"level":"info","message":"Starting database migration...","timestamp":"2025-08-01T11:39:38.095Z"}
+{"level":"info","message":"Database connection established","timestamp":"2025-08-01T11:39:38.497Z"}
+{"level":"info","message":"Database 'led_display_db' created or already exists","timestamp":"2025-08-01T11:39:38.524Z"}
+{"level":"info","message":"Executed 0 migrations","timestamp":"2025-08-01T11:39:38.568Z"}
+{"level":"info","message":"Table 'users' exists","timestamp":"2025-08-01T11:39:38.572Z"}
+{"level":"info","message":"Table 'displays' exists","timestamp":"2025-08-01T11:39:38.575Z"}
+{"level":"info","message":"Table 'sessions' exists","timestamp":"2025-08-01T11:39:38.577Z"}
+{"level":"info","message":"Creating database indexes...","timestamp":"2025-08-01T11:39:38.578Z"}
+{"level":"warn","message":"Index creation warning: You have an error in your SQL syntax; check the manual that corresponds to your MySQL server version for the right syntax to use near 'IF NOT EXISTS idx_users_username \n            ON users(username)' at line 1","timestamp":"2025-08-01T11:39:38.582Z"}
+{"level":"info","message":"Database migration completed successfully","timestamp":"2025-08-01T11:39:38.582Z"}
+{"level":"info","message":"Starting database seeding...","timestamp":"2025-08-01T11:39:38.583Z"}
+{"level":"info","message":"Database connection established","timestamp":"2025-08-01T11:39:38.659Z"}
+{"level":"info","message":"Created admin user: admin/admin123","timestamp":"2025-08-01T11:39:38.781Z"}
+{"level":"info","message":"Created demo user: demo/demo123","timestamp":"2025-08-01T11:39:38.889Z"}
+{"level":"info","message":"User seeding completed","timestamp":"2025-08-01T11:39:38.889Z"}
+{"level":"info","message":"Created 2 sample displays","timestamp":"2025-08-01T11:39:38.918Z"}
+{"level":"info","message":"Created sample session","timestamp":"2025-08-01T11:39:38.935Z"}
+{"level":"info","message":"Database seeding completed successfully","timestamp":"2025-08-01T11:39:38.936Z"}
+{"level":"info","message":"Database setup completed successfully!","timestamp":"2025-08-01T11:39:38.937Z"}
+{"level":"info","message":"Verifying database connection...","timestamp":"2025-08-01T11:39:38.937Z"}
+{"level":"info","message":"Database connection verified successfully","timestamp":"2025-08-01T11:39:38.946Z"}
+{"level":"info","message":"Database query response time: 1ms","timestamp":"2025-08-01T11:39:38.947Z"}
+{"level":"info","message":"Starting database migration...","timestamp":"2025-08-01T11:39:52.520Z"}
+{"level":"info","message":"Database connection established","timestamp":"2025-08-01T11:39:52.635Z"}
+{"level":"info","message":"Database 'led_display_db' created or already exists","timestamp":"2025-08-01T11:39:52.644Z"}
+{"level":"info","message":"Executed 0 migrations","timestamp":"2025-08-01T11:39:52.652Z"}
+{"level":"info","message":"Table 'users' exists","timestamp":"2025-08-01T11:39:52.656Z"}
+{"level":"info","message":"Table 'displays' exists","timestamp":"2025-08-01T11:39:52.659Z"}
+{"level":"info","message":"Table 'sessions' exists","timestamp":"2025-08-01T11:39:52.662Z"}
+{"level":"info","message":"Creating database indexes...","timestamp":"2025-08-01T11:39:52.663Z"}
+{"level":"info","message":"Starting database migration...","timestamp":"2025-08-01T11:50:45.365Z"}
+{"level":"info","message":"Database connection established","timestamp":"2025-08-01T11:50:45.466Z"}
+{"level":"info","message":"Database 'led_display_db' created or already exists","timestamp":"2025-08-01T11:50:45.475Z"}
+{"level":"info","message":"Executed 0 migrations","timestamp":"2025-08-01T11:50:45.483Z"}
+{"level":"info","message":"Table 'users' exists","timestamp":"2025-08-01T11:50:45.487Z"}
+{"level":"info","message":"Table 'displays' exists","timestamp":"2025-08-01T11:50:45.489Z"}
+{"level":"info","message":"Table 'sessions' exists","timestamp":"2025-08-01T11:50:45.492Z"}
+{"level":"info","message":"Creating database indexes...","timestamp":"2025-08-01T11:50:45.493Z"}
+{"level":"info","message":"Starting database migration...","timestamp":"2025-08-01T11:52:24.097Z"}
+{"level":"info","message":"Database connection established","timestamp":"2025-08-01T11:52:24.197Z"}
+{"level":"info","message":"Database 'led_display_db' created or already exists","timestamp":"2025-08-01T11:52:24.205Z"}
+{"level":"info","message":"Executed 0 migrations","timestamp":"2025-08-01T11:52:24.212Z"}
+{"level":"info","message":"Table 'users' exists","timestamp":"2025-08-01T11:52:24.216Z"}
+{"level":"info","message":"Table 'displays' exists","timestamp":"2025-08-01T11:52:24.220Z"}
+{"level":"info","message":"Table 'sessions' exists","timestamp":"2025-08-01T11:52:24.223Z"}
+{"level":"info","message":"Creating database indexes...","timestamp":"2025-08-01T11:52:24.223Z"}
+{"level":"info","message":"Index already exists: idx_users_username","timestamp":"2025-08-01T11:52:24.226Z"}
+{"level":"info","message":"Index already exists: idx_displays_created_by","timestamp":"2025-08-01T11:52:24.228Z"}
+{"level":"info","message":"Index already exists: idx_displays_is_active","timestamp":"2025-08-01T11:52:24.230Z"}
+{"level":"info","message":"Index already exists: idx_sessions_user_id","timestamp":"2025-08-01T11:52:24.233Z"}
+{"level":"info","message":"Index already exists: idx_sessions_token","timestamp":"2025-08-01T11:52:24.236Z"}
+{"level":"info","message":"Index already exists: idx_sessions_is_active","timestamp":"2025-08-01T11:52:24.239Z"}
+{"level":"info","message":"Starting database seeding...","timestamp":"2025-08-01T11:52:52.263Z"}
+{"level":"info","message":"Database connection established","timestamp":"2025-08-01T11:52:52.366Z"}
+{"level":"info","message":"Users already exist (2 found), skipping user seeding","timestamp":"2025-08-01T11:52:52.372Z"}
+{"level":"info","message":"Displays already exist (2 found), skipping display seeding","timestamp":"2025-08-01T11:52:52.376Z"}
+{"level":"info","message":"Sessions already exist (1 found), skipping session seeding","timestamp":"2025-08-01T11:52:52.380Z"}
+{"level":"info","message":"Database seeding completed successfully","timestamp":"2025-08-01T11:52:52.381Z"}
+{"level":"info","message":"Seeded data verification:","timestamp":"2025-08-01T11:52:52.430Z"}
+{"level":"info","message":"Database connection established","timestamp":"2025-08-01T11:53:03.874Z"}
+{"level":"info","message":"Server running on port 3001","timestamp":"2025-08-01T11:53:03.878Z"}
+{"level":"info","message":"Upload directory: D:\\led-soliton\\led-display-react\\server\\uploads","timestamp":"2025-08-01T11:53:03.878Z"}
+{"level":"info","message":"Database connection established","timestamp":"2025-08-01T11:54:33.123Z"}
+{"level":"info","message":"Server running on port 3001","timestamp":"2025-08-01T11:54:33.129Z"}
+{"level":"info","message":"Upload directory: D:\\led-soliton\\led-display-react\\server\\uploads","timestamp":"2025-08-01T11:54:33.130Z"}
+{"level":"info","message":"Database connection established","timestamp":"2025-08-01T11:55:09.415Z"}
+{"level":"info","message":"Server running on port 3001","timestamp":"2025-08-01T11:55:09.422Z"}
+{"level":"info","message":"Upload directory: D:\\led-soliton\\led-display-react\\server\\uploads","timestamp":"2025-08-01T11:55:09.423Z"}
+{"level":"info","message":"Database connection established","timestamp":"2025-08-01T11:55:40.799Z"}
+{"level":"info","message":"Server running on port 3001","timestamp":"2025-08-01T11:55:40.806Z"}
+{"level":"info","message":"Upload directory: D:\\led-soliton\\led-display-react\\server\\uploads","timestamp":"2025-08-01T11:55:40.807Z"}
+{"level":"info","message":"Database connection established","timestamp":"2025-08-01T11:57:21.998Z"}
+{"level":"info","message":"Server running on port 5000","timestamp":"2025-08-01T11:57:22.004Z"}
+{"level":"info","message":"Upload directory: D:\\led-soliton\\led-display-react\\server\\uploads","timestamp":"2025-08-01T11:57:22.005Z"}
+{"level":"info","message":"Login attempt for username: admin","timestamp":"2025-08-01T11:58:09.590Z"}
+{"level":"error","message":"Login failed: Invalid credentials","timestamp":"2025-08-01T11:58:09.669Z"}
+{"level":"error","message":"Login attempt details - Username: admin","timestamp":"2025-08-01T11:58:09.670Z"}
+{"level":"info","message":"Login attempt for username: test","timestamp":"2025-08-01T11:58:16.591Z"}
+{"level":"error","message":"Login failed: Invalid credentials","timestamp":"2025-08-01T11:58:16.593Z"}
+{"level":"error","message":"Login attempt details - Username: test","timestamp":"2025-08-01T11:58:16.594Z"}
+{"level":"info","message":"Login attempt for username: test","timestamp":"2025-08-01T11:58:18.151Z"}
+{"level":"error","message":"Login failed: Invalid credentials","timestamp":"2025-08-01T11:58:18.154Z"}
+{"level":"error","message":"Login attempt details - Username: test","timestamp":"2025-08-01T11:58:18.155Z"}
+{"level":"info","message":"Login attempt for username: admin","timestamp":"2025-08-01T11:58:51.302Z"}
+{"level":"error","message":"Login failed: Invalid credentials","timestamp":"2025-08-01T11:58:51.378Z"}
+{"level":"error","message":"Login attempt details - Username: admin","timestamp":"2025-08-01T11:58:51.379Z"}
+{"level":"info","message":"Login attempt for username: test","timestamp":"2025-08-01T11:58:55.565Z"}
+{"level":"error","message":"Login failed: Invalid credentials","timestamp":"2025-08-01T11:58:55.569Z"}
+{"level":"error","message":"Login attempt details - Username: test","timestamp":"2025-08-01T11:58:55.570Z"}
+{"level":"info","message":"Login attempt for username: admin2","timestamp":"2025-08-01T11:59:26.511Z"}
+{"level":"info","message":"Login successful for user: admin2","timestamp":"2025-08-01T11:59:26.593Z"}
+{"level":"info","message":"File uploaded successfully: 1754049592476-442648850.jpg","timestamp":"2025-08-01T11:59:52.592Z"}
+{"level":"info","message":"Database connection established","timestamp":"2025-08-01T12:01:40.476Z"}
+{"level":"info","message":"Server running on port 5000","timestamp":"2025-08-01T12:01:40.482Z"}
+{"level":"info","message":"Upload directory: D:\\led-soliton\\led-display-react\\server\\uploads","timestamp":"2025-08-01T12:01:40.482Z"}
+{"level":"info","message":"Database connection established","timestamp":"2025-08-01T12:01:59.197Z"}
+{"level":"info","message":"Server running on port 5000","timestamp":"2025-08-01T12:01:59.204Z"}
+{"level":"info","message":"Upload directory: D:\\led-soliton\\led-display-react\\server\\uploads","timestamp":"2025-08-01T12:01:59.204Z"}
+{"level":"info","message":"Database connection established","timestamp":"2025-08-01T12:05:22.438Z"}
+{"level":"info","message":"Server running on port 5000","timestamp":"2025-08-01T12:05:22.445Z"}
+{"level":"info","message":"Upload directory: D:\\led-soliton\\led-display-react\\server\\uploads","timestamp":"2025-08-01T12:05:22.445Z"}
+{"level":"info","message":"Database connection established","timestamp":"2025-08-01T12:05:37.270Z"}
+{"level":"info","message":"Server running on port 5000","timestamp":"2025-08-01T12:05:37.276Z"}
+{"level":"info","message":"Upload directory: D:\\led-soliton\\led-display-react\\server\\uploads","timestamp":"2025-08-01T12:05:37.276Z"}
+{"level":"info","message":"Database connection established","timestamp":"2025-08-01T12:06:05.033Z"}
+{"level":"info","message":"Server running on port 5000","timestamp":"2025-08-01T12:06:05.037Z"}
+{"level":"info","message":"Upload directory: D:\\led-soliton\\led-display-react\\server\\uploads","timestamp":"2025-08-01T12:06:05.038Z"}
+{"level":"info","message":"File uploaded successfully: 1754049992652-285999529.mp4","timestamp":"2025-08-01T12:06:32.692Z"}
+{"level":"info","message":"File uploaded successfully: 1754050016399-992677129.jpg","timestamp":"2025-08-01T12:06:56.497Z"}
+{"level":"info","message":"File uploaded successfully: 1754050020468-150033899.jpg","timestamp":"2025-08-01T12:07:00.531Z"}
+{"level":"info","message":"File uploaded successfully: 1754050034033-52154521.pdf","timestamp":"2025-08-01T12:07:14.052Z"}
+{"level":"info","message":"Login attempt for username: test","timestamp":"2025-08-01T12:08:47.699Z"}
+{"level":"error","message":"Login failed: Invalid credentials","timestamp":"2025-08-01T12:08:47.702Z"}
+{"level":"error","message":"Login attempt details - Username: test","timestamp":"2025-08-01T12:08:47.702Z"}
+{"level":"info","message":"Login attempt for username: test","timestamp":"2025-08-01T12:08:48.796Z"}
+{"level":"error","message":"Login failed: Invalid credentials","timestamp":"2025-08-01T12:08:48.799Z"}
+{"level":"error","message":"Login attempt details - Username: test","timestamp":"2025-08-01T12:08:48.800Z"}
+{"level":"info","message":"Login attempt for username: admin2","timestamp":"2025-08-01T12:08:58.187Z"}
+{"level":"info","message":"Login successful for user: admin2","timestamp":"2025-08-01T12:08:58.258Z"}
+{"level":"info","message":"Database connection established","timestamp":"2025-08-01T12:11:16.422Z"}
+{"level":"info","message":"Server running on port 5000","timestamp":"2025-08-01T12:11:16.428Z"}
+{"level":"info","message":"Upload directory: D:\\led-soliton\\led-display-react\\server\\uploads","timestamp":"2025-08-01T12:11:16.428Z"}
+{"level":"info","message":"Database connection established","timestamp":"2025-08-01T12:11:33.864Z"}
+{"level":"info","message":"Server running on port 5000","timestamp":"2025-08-01T12:11:33.872Z"}
+{"level":"info","message":"Upload directory: D:\\led-soliton\\led-display-react\\server\\uploads","timestamp":"2025-08-01T12:11:33.873Z"}
+{"level":"info","message":"Database connection established","timestamp":"2025-08-01T12:12:04.642Z"}
+{"level":"info","message":"Server running on port 5000","timestamp":"2025-08-01T12:12:04.649Z"}
+{"level":"info","message":"Upload directory: D:\\led-soliton\\led-display-react\\server\\uploads","timestamp":"2025-08-01T12:12:04.650Z"}
+{"level":"info","message":"Database connection established","timestamp":"2025-08-01T12:12:28.765Z"}
+{"level":"info","message":"Server running on port 5000","timestamp":"2025-08-01T12:12:28.773Z"}
+{"level":"info","message":"Upload directory: D:\\led-soliton\\led-display-react\\server\\uploads","timestamp":"2025-08-01T12:12:28.774Z"}
+{"level":"info","message":"Database connection established","timestamp":"2025-08-01T12:13:44.590Z"}
+{"level":"info","message":"Server running on port 5000","timestamp":"2025-08-01T12:13:44.595Z"}
+{"level":"info","message":"Upload directory: D:\\led-soliton\\led-display-react\\server\\uploads","timestamp":"2025-08-01T12:13:44.596Z"}
+{"level":"info","message":"Database connection established","timestamp":"2025-08-01T12:30:28.509Z"}
+{"level":"info","message":"Server running on port 5000","timestamp":"2025-08-01T12:30:28.514Z"}
+{"level":"info","message":"Upload directory: D:\\led-soliton\\led-display-react\\server\\uploads","timestamp":"2025-08-01T12:30:28.514Z"}
+{"level":"info","message":"Starting database migration...","timestamp":"2025-08-01T12:48:09.387Z"}
+{"level":"info","message":"Database connection established","timestamp":"2025-08-01T12:48:09.472Z"}
+{"level":"info","message":"Database 'led_display_db' created or already exists","timestamp":"2025-08-01T12:48:09.480Z"}
+{"level":"info","message":"Executed 0 migrations","timestamp":"2025-08-01T12:48:09.487Z"}
+{"level":"info","message":"📋 Database schema ready - 3/3 tables verified","timestamp":"2025-08-01T12:48:09.493Z"}
+{"level":"info","message":"Creating database indexes...","timestamp":"2025-08-01T12:48:09.494Z"}
+{"level":"info","message":"⚡ Performance indexes ready - all indexes exist","timestamp":"2025-08-01T12:48:09.505Z"}
+{"level":"info","message":"Starting database seeding...","timestamp":"2025-08-01T12:48:16.685Z"}
+{"level":"info","message":"Database connection established","timestamp":"2025-08-01T12:48:16.781Z"}
+{"level":"info","message":"👥 Users ready - 3 users found","timestamp":"2025-08-01T12:48:16.786Z"}
+{"level":"info","message":"📺 Displays ready - 2 displays found","timestamp":"2025-08-01T12:48:16.790Z"}
+{"level":"info","message":"🔐 Sessions ready - 2 sessions found","timestamp":"2025-08-01T12:48:16.791Z"}
+{"level":"info","message":"Database seeding completed successfully","timestamp":"2025-08-01T12:48:16.792Z"}
+{"level":"info","message":"Seeded data verification:","timestamp":"2025-08-01T12:48:16.840Z"}
+{"level":"info","message":"Database connection established","timestamp":"2025-08-01T12:48:23.961Z"}
+{"level":"info","message":"Server running on port 5000","timestamp":"2025-08-01T12:48:23.966Z"}
+{"level":"info","message":"Upload directory: D:\\led-soliton\\led-display-react\\server\\uploads","timestamp":"2025-08-01T12:48:23.966Z"}
+{"level":"info","message":"Database connection established","timestamp":"2025-08-01T13:54:27.115Z"}
+{"level":"info","message":"Server running on port 5000","timestamp":"2025-08-01T13:54:27.120Z"}
+{"level":"info","message":"Upload directory: D:\\led-soliton\\led-display-react\\server\\uploads","timestamp":"2025-08-01T13:54:27.121Z"}
+{"level":"info","message":"Database connection established","timestamp":"2025-08-01T13:54:50.418Z"}
+{"level":"info","message":"Server running on port 5000","timestamp":"2025-08-01T13:54:50.424Z"}
+{"level":"info","message":"Upload directory: D:\\led-soliton\\led-display-react\\server\\uploads","timestamp":"2025-08-01T13:54:50.424Z"}
+{"level":"info","message":"Database connection established","timestamp":"2025-08-01T13:55:01.653Z"}
+{"level":"info","message":"Server running on port 5000","timestamp":"2025-08-01T13:55:01.657Z"}
+{"level":"info","message":"Upload directory: D:\\led-soliton\\led-display-react\\server\\uploads","timestamp":"2025-08-01T13:55:01.658Z"}
+{"level":"info","message":"Database connection established","timestamp":"2025-08-01T13:55:25.440Z"}
+{"level":"info","message":"Server running on port 5000","timestamp":"2025-08-01T13:55:25.445Z"}
+{"level":"info","message":"Upload directory: D:\\led-soliton\\led-display-react\\server\\uploads","timestamp":"2025-08-01T13:55:25.445Z"}
+{"level":"info","message":"Database connection established","timestamp":"2025-08-01T13:55:58.784Z"}
+{"level":"info","message":"Server running on port 5000","timestamp":"2025-08-01T13:55:58.788Z"}
+{"level":"info","message":"Upload directory: D:\\led-soliton\\led-display-react\\server\\uploads","timestamp":"2025-08-01T13:55:58.789Z"}
+{"level":"info","message":"Database connection established","timestamp":"2025-08-01T13:57:35.353Z"}
+{"level":"info","message":"Server running on port 5000","timestamp":"2025-08-01T13:57:35.357Z"}
+{"level":"info","message":"Upload directory: D:\\led-soliton\\led-display-react\\server\\uploads","timestamp":"2025-08-01T13:57:35.358Z"}
+{"level":"info","message":"Database connection established","timestamp":"2025-08-01T13:57:52.522Z"}
+{"level":"info","message":"Server running on port 5000","timestamp":"2025-08-01T13:57:52.527Z"}
+{"level":"info","message":"Upload directory: D:\\led-soliton\\led-display-react\\server\\uploads","timestamp":"2025-08-01T13:57:52.527Z"}
+{"level":"info","message":"Database connection established","timestamp":"2025-08-01T13:58:02.707Z"}
+{"level":"info","message":"Server running on port 5000","timestamp":"2025-08-01T13:58:02.711Z"}
+{"level":"info","message":"Upload directory: D:\\led-soliton\\led-display-react\\server\\uploads","timestamp":"2025-08-01T13:58:02.712Z"}
+{"level":"info","message":"Database connection established","timestamp":"2025-08-01T13:58:30.937Z"}
+{"level":"info","message":"Server running on port 5000","timestamp":"2025-08-01T13:58:30.942Z"}
+{"level":"info","message":"Upload directory: D:\\led-soliton\\led-display-react\\server\\uploads","timestamp":"2025-08-01T13:58:30.943Z"}
+{"level":"info","message":"Database connection established","timestamp":"2025-08-01T13:59:09.684Z"}
+{"level":"info","message":"Server running on port 5000","timestamp":"2025-08-01T13:59:09.689Z"}
+{"level":"info","message":"Upload directory: D:\\led-soliton\\led-display-react\\server\\uploads","timestamp":"2025-08-01T13:59:09.689Z"}
+{"level":"info","message":"Database connection established","timestamp":"2025-08-01T13:59:15.385Z"}
+{"level":"info","message":"Server running on port 5000","timestamp":"2025-08-01T13:59:15.390Z"}
+{"level":"info","message":"Upload directory: D:\\led-soliton\\led-display-react\\server\\uploads","timestamp":"2025-08-01T13:59:15.390Z"}
+{"level":"info","message":"Starting database migration...","timestamp":"2025-08-01T14:03:24.750Z"}
+{"level":"error","message":"Migration failed: ⨯ Unable to compile TypeScript:\n\u001b[96msrc/migrations/001_create_files_table.ts\u001b[0m:\u001b[93m76\u001b[0m:\u001b[93m13\u001b[0m - \u001b[91merror\u001b[0m\u001b[90m TS7009: \u001b[0m'new' expression, whose target lacks a construct signature, implicitly has an 'any' type.\r\n\r\n\u001b[7m 76\u001b[0m             new ForeignKey({\r\n\u001b[7m   \u001b[0m \u001b[91m            ~~~~~~~~~~~~~~~~\u001b[0m\r\n\u001b[7m 77\u001b[0m                 columnNames: [\"uploaded_by\"],\r\n\u001b[7m   \u001b[0m \u001b[91m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\u001b[0m\r\n\u001b[7m...\u001b[0m \r\n\u001b[7m 80\u001b[0m                 onDelete: \"CASCADE\"\r\n\u001b[7m   \u001b[0m \u001b[91m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\u001b[0m\r\n\u001b[7m 81\u001b[0m             })\r\n\u001b[7m   \u001b[0m \u001b[91m~~~~~~~~~~~~~~\u001b[0m\r\n\u001b[96msrc/migrations/001_create_files_table.ts\u001b[0m:\u001b[93m77\u001b[0m:\u001b[93m17\u001b[0m - \u001b[91merror\u001b[0m\u001b[90m TS2353: \u001b[0mObject literal may only specify known properties, and 'columnNames' does not exist in type '(type?: any) => ObjectType<unknown>'.\r\n\r\n\u001b[7m77\u001b[0m                 columnNames: [\"uploaded_by\"],\r\n\u001b[7m  \u001b[0m \u001b[91m                ~~~~~~~~~~~\u001b[0m\r\n","timestamp":"2025-08-01T14:03:25.024Z"}
+{"level":"info","message":"Starting database migration...","timestamp":"2025-08-01T14:03:41.611Z"}
+{"level":"error","message":"Migration failed: ⨯ Unable to compile TypeScript:\n\u001b[96msrc/migrations/001_create_files_table.ts\u001b[0m:\u001b[93m76\u001b[0m:\u001b[93m13\u001b[0m - \u001b[91merror\u001b[0m\u001b[90m TS7009: \u001b[0m'new' expression, whose target lacks a construct signature, implicitly has an 'any' type.\r\n\r\n\u001b[7m 76\u001b[0m             new ForeignKey({\r\n\u001b[7m   \u001b[0m \u001b[91m            ~~~~~~~~~~~~~~~~\u001b[0m\r\n\u001b[7m 77\u001b[0m                 columnNames: [\"uploaded_by\"],\r\n\u001b[7m   \u001b[0m \u001b[91m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\u001b[0m\r\n\u001b[7m...\u001b[0m \r\n\u001b[7m 80\u001b[0m                 onDelete: \"CASCADE\"\r\n\u001b[7m   \u001b[0m \u001b[91m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\u001b[0m\r\n\u001b[7m 81\u001b[0m             })\r\n\u001b[7m   \u001b[0m \u001b[91m~~~~~~~~~~~~~~\u001b[0m\r\n\u001b[96msrc/migrations/001_create_files_table.ts\u001b[0m:\u001b[93m77\u001b[0m:\u001b[93m17\u001b[0m - \u001b[91merror\u001b[0m\u001b[90m TS2353: \u001b[0mObject literal may only specify known properties, and 'columnNames' does not exist in type '(type?: any) => ObjectType<unknown>'.\r\n\r\n\u001b[7m77\u001b[0m                 columnNames: [\"uploaded_by\"],\r\n\u001b[7m  \u001b[0m \u001b[91m                ~~~~~~~~~~~\u001b[0m\r\n","timestamp":"2025-08-01T14:03:41.882Z"}
+{"level":"info","message":"Starting database migration...","timestamp":"2025-08-01T14:05:28.686Z"}
+{"level":"error","message":"Migration failed: ⨯ Unable to compile TypeScript:\n\u001b[96msrc/migrations/001_create_files_table.ts\u001b[0m:\u001b[93m76\u001b[0m:\u001b[93m13\u001b[0m - \u001b[91merror\u001b[0m\u001b[90m TS2345: \u001b[0mArgument of type '{ columnNames: string[]; referencedColumnNames: string[]; referencedTableName: string; onDelete: string; }' is not assignable to parameter of type 'TableForeignKey'.\r\n  Type '{ columnNames: string[]; referencedColumnNames: string[]; referencedTableName: string; onDelete: string; }' is missing the following properties from type 'TableForeignKey': \"@instanceof\", clone\r\n\r\n\u001b[7m 76\u001b[0m             {\r\n\u001b[7m   \u001b[0m \u001b[91m            ~\u001b[0m\r\n\u001b[7m 77\u001b[0m                 columnNames: [\"uploaded_by\"],\r\n\u001b[7m   \u001b[0m \u001b[91m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\u001b[0m\r\n\u001b[7m...\u001b[0m \r\n\u001b[7m 80\u001b[0m                 onDelete: \"CASCADE\"\r\n\u001b[7m   \u001b[0m \u001b[91m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\u001b[0m\r\n\u001b[7m 81\u001b[0m             }\r\n\u001b[7m   \u001b[0m \u001b[91m~~~~~~~~~~~~~\u001b[0m\r\n","timestamp":"2025-08-01T14:05:28.959Z"}
+{"level":"info","message":"Starting database migration...","timestamp":"2025-08-01T14:08:10.176Z"}
+{"level":"info","message":"Database connection established","timestamp":"2025-08-01T14:08:10.453Z"}
+{"level":"info","message":"Database 'led_display_db' created or already exists","timestamp":"2025-08-01T14:08:10.461Z"}
+{"level":"error","message":"Migration failed: Duplicate foreign key constraint name 'FK_63c92c51cd7fd95c2d79d709b61'","timestamp":"2025-08-01T14:08:10.487Z"}
+{"level":"info","message":"Starting database migration...","timestamp":"2025-08-01T14:11:10.346Z"}
+{"level":"info","message":"Database connection established","timestamp":"2025-08-01T14:11:10.658Z"}
+{"level":"info","message":"Database 'led_display_db' created or already exists","timestamp":"2025-08-01T14:11:10.665Z"}
+{"level":"info","message":"Executed 1 migrations","timestamp":"2025-08-01T14:11:10.692Z"}
+{"level":"info","message":"📋 Database schema ready - 3/3 tables verified","timestamp":"2025-08-01T14:11:10.698Z"}
+{"level":"info","message":"Creating database indexes...","timestamp":"2025-08-01T14:11:10.699Z"}
+{"level":"info","message":"⚡ Performance indexes ready - all indexes exist","timestamp":"2025-08-01T14:11:10.711Z"}
+{"level":"info","message":"Database connection established","timestamp":"2025-08-01T14:11:25.819Z"}
+{"level":"info","message":"Server running on port 5000","timestamp":"2025-08-01T14:11:25.824Z"}
+{"level":"info","message":"Upload directory: D:\\led-soliton\\led-display-react\\server\\uploads","timestamp":"2025-08-01T14:11:25.825Z"}
+{"level":"info","message":"Attempting to serve file from: D:\\led-soliton\\led-display-react\\server\\public\\index.html","timestamp":"2025-08-01T14:11:50.510Z"}
+{"level":"info","message":"Attempting to serve file from: D:\\led-soliton\\led-display-react\\server\\public\\index.html","timestamp":"2025-08-01T14:12:01.069Z"}
+{"level":"info","message":"Attempting to serve file from: D:\\led-soliton\\led-display-react\\server\\public\\index.html","timestamp":"2025-08-01T14:12:01.304Z"}
+{"level":"info","message":"Attempting to serve file from: D:\\led-soliton\\led-display-react\\server\\public\\index.html","timestamp":"2025-08-01T14:12:01.440Z"}
+{"level":"info","message":"Login attempt for username: admin2","timestamp":"2025-08-01T14:12:28.170Z"}
+{"level":"error","message":"Login failed: Invalid credentials","timestamp":"2025-08-01T14:12:28.173Z"}
+{"level":"error","message":"Login attempt details - Username: admin2","timestamp":"2025-08-01T14:12:28.174Z"}
+{"level":"info","message":"Login attempt for username: admin2","timestamp":"2025-08-01T14:12:31.885Z"}
+{"level":"error","message":"Login failed: Invalid credentials","timestamp":"2025-08-01T14:12:31.889Z"}
+{"level":"error","message":"Login attempt details - Username: admin2","timestamp":"2025-08-01T14:12:31.890Z"}
+{"level":"info","message":"Login attempt for username: admin","timestamp":"2025-08-01T14:12:41.517Z"}
+{"level":"error","message":"Login failed: Invalid credentials","timestamp":"2025-08-01T14:12:41.520Z"}
+{"level":"error","message":"Login attempt details - Username: admin","timestamp":"2025-08-01T14:12:41.520Z"}
+{"level":"info","message":"Login attempt for username: admin2","timestamp":"2025-08-01T14:12:43.814Z"}
+{"level":"error","message":"Login failed: Invalid credentials","timestamp":"2025-08-01T14:12:43.815Z"}
+{"level":"error","message":"Login attempt details - Username: admin2","timestamp":"2025-08-01T14:12:43.816Z"}
+{"level":"info","message":"Login attempt for username: test","timestamp":"2025-08-01T14:13:10.507Z"}
+{"level":"error","message":"Login failed: Invalid credentials","timestamp":"2025-08-01T14:13:10.510Z"}
+{"level":"error","message":"Login attempt details - Username: test","timestamp":"2025-08-01T14:13:10.511Z"}
+{"level":"info","message":"Login attempt for username: test","timestamp":"2025-08-01T14:13:11.753Z"}
+{"level":"error","message":"Login failed: Invalid credentials","timestamp":"2025-08-01T14:13:11.756Z"}
+{"level":"error","message":"Login attempt details - Username: test","timestamp":"2025-08-01T14:13:11.756Z"}
+{"level":"info","message":"Database connection established","timestamp":"2025-08-01T14:16:41.310Z"}
+{"level":"info","message":"Server running on port 5000","timestamp":"2025-08-01T14:16:41.317Z"}
+{"level":"info","message":"Upload directory: D:\\led-soliton\\led-display-react\\server\\uploads","timestamp":"2025-08-01T14:16:41.318Z"}
+{"level":"info","message":"Starting database migration...","timestamp":"2025-08-01T14:16:54.067Z"}
+{"level":"info","message":"Database connection established","timestamp":"2025-08-01T14:16:54.344Z"}
+{"level":"info","message":"Database 'led_display_db' created or already exists","timestamp":"2025-08-01T14:16:54.352Z"}
+{"level":"info","message":"Executed 0 migrations","timestamp":"2025-08-01T14:16:54.357Z"}
+{"level":"info","message":"📋 Database schema ready - 3/3 tables verified","timestamp":"2025-08-01T14:16:54.363Z"}
+{"level":"info","message":"Creating database indexes...","timestamp":"2025-08-01T14:16:54.364Z"}
+{"level":"info","message":"⚡ Performance indexes ready - all indexes exist","timestamp":"2025-08-01T14:16:54.373Z"}
+{"level":"info","message":"Database connection established","timestamp":"2025-08-01T14:17:29.329Z"}
+{"level":"info","message":"Server running on port 5000","timestamp":"2025-08-01T14:17:29.336Z"}
+{"level":"info","message":"Upload directory: D:\\led-soliton\\led-display-react\\server\\uploads","timestamp":"2025-08-01T14:17:29.336Z"}
+{"level":"info","message":"Starting database seeding...","timestamp":"2025-08-01T14:17:52.189Z"}
+{"level":"info","message":"Database connection established","timestamp":"2025-08-01T14:17:52.481Z"}
+{"level":"info","message":"👥 Users ready - 3 users found","timestamp":"2025-08-01T14:17:52.485Z"}
+{"level":"info","message":"📺 Displays ready - 2 displays found","timestamp":"2025-08-01T14:17:52.487Z"}
+{"level":"info","message":"🔐 Sessions ready - 2 sessions found","timestamp":"2025-08-01T14:17:52.489Z"}
+{"level":"info","message":"Database seeding completed successfully","timestamp":"2025-08-01T14:17:52.489Z"}
+{"level":"info","message":"Seeded data verification:","timestamp":"2025-08-01T14:17:52.524Z"}
+{"level":"info","message":"\n=== MySQL Database Setup Instructions ===","timestamp":"2025-08-01T14:23:18.879Z"}
+{"level":"info","message":"1. Install MySQL Server on your system","timestamp":"2025-08-01T14:23:18.882Z"}
+{"level":"info","message":"2. Set up environment variables in .env file:","timestamp":"2025-08-01T14:23:18.882Z"}
+{"level":"info","message":"   DB_HOST=localhost","timestamp":"2025-08-01T14:23:18.882Z"}
+{"level":"info","message":"   DB_PORT=3306","timestamp":"2025-08-01T14:23:18.882Z"}
+{"level":"info","message":"   DB_USERNAME=led_display_user","timestamp":"2025-08-01T14:23:18.882Z"}
+{"level":"info","message":"   DB_PASSWORD=your_secure_password","timestamp":"2025-08-01T14:23:18.883Z"}
+{"level":"info","message":"   DB_DATABASE=led_display_db","timestamp":"2025-08-01T14:23:18.883Z"}
+{"level":"info","message":"   MYSQL_ROOT_PASSWORD=your_root_password","timestamp":"2025-08-01T14:23:18.883Z"}
+{"level":"info","message":"3. Run: npm run migrate","timestamp":"2025-08-01T14:23:18.883Z"}
+{"level":"info","message":"4. Run: npm run seed","timestamp":"2025-08-01T14:23:18.883Z"}
+{"level":"info","message":"5. Start the server: npm run dev","timestamp":"2025-08-01T14:23:18.884Z"}
+{"level":"info","message":"==========================================\n","timestamp":"2025-08-01T14:23:18.884Z"}
+{"level":"info","message":"Starting complete database setup...","timestamp":"2025-08-01T14:23:18.884Z"}
+{"level":"info","message":"Creating MySQL database and user...","timestamp":"2025-08-01T14:23:18.884Z"}
+{"level":"info","message":"Database 'led_display_db' created or already exists","timestamp":"2025-08-01T14:23:18.925Z"}
+{"level":"info","message":"User 'admin' created or already exists","timestamp":"2025-08-01T14:23:18.939Z"}
+{"level":"info","message":"Privileges granted to 'admin'","timestamp":"2025-08-01T14:23:18.964Z"}
+{"level":"info","message":"Starting database migration...","timestamp":"2025-08-01T14:23:18.964Z"}
+{"level":"info","message":"Database connection established","timestamp":"2025-08-01T14:23:19.798Z"}
+{"level":"info","message":"Database 'led_display_db' created or already exists","timestamp":"2025-08-01T14:23:19.801Z"}
+{"level":"info","message":"Executed 1 migrations","timestamp":"2025-08-01T14:23:19.853Z"}
+{"level":"info","message":"📋 Database schema ready - 3/3 tables verified","timestamp":"2025-08-01T14:23:19.856Z"}
+{"level":"info","message":"Creating database indexes...","timestamp":"2025-08-01T14:23:19.856Z"}
+{"level":"info","message":"⚡ Performance indexes ready - all indexes exist","timestamp":"2025-08-01T14:23:19.861Z"}
+{"level":"info","message":"Database migration completed successfully","timestamp":"2025-08-01T14:23:19.861Z"}
+{"level":"info","message":"Starting database seeding...","timestamp":"2025-08-01T14:23:19.862Z"}
+{"level":"info","message":"Database connection established","timestamp":"2025-08-01T14:23:19.893Z"}
+{"level":"info","message":"👥 Default users created - admin/admin123, demo/demo123","timestamp":"2025-08-01T14:23:20.111Z"}
+{"level":"info","message":"📺 Sample displays created - 4 displays added","timestamp":"2025-08-01T14:23:20.139Z"}
+{"level":"info","message":"🔐 Sample session created","timestamp":"2025-08-01T14:23:20.149Z"}
+{"level":"info","message":"Database seeding completed successfully","timestamp":"2025-08-01T14:23:20.149Z"}
+{"level":"info","message":"Database setup completed successfully!","timestamp":"2025-08-01T14:23:20.151Z"}
+{"level":"info","message":"Verifying database connection...","timestamp":"2025-08-01T14:23:20.151Z"}
+{"level":"info","message":"Database connection verified successfully","timestamp":"2025-08-01T14:23:20.159Z"}
+{"level":"info","message":"Database query response time: 1ms","timestamp":"2025-08-01T14:23:20.160Z"}
+{"level":"info","message":"Database connection established","timestamp":"2025-08-01T14:23:33.476Z"}
+{"level":"info","message":"Server running on port 5000","timestamp":"2025-08-01T14:23:33.484Z"}
+{"level":"info","message":"Upload directory: D:\\led-soliton\\led-display-react\\server\\uploads","timestamp":"2025-08-01T14:23:33.485Z"}
+{"level":"info","message":"Login attempt for username: admin","timestamp":"2025-08-01T14:25:06.689Z"}
+{"level":"error","message":"Login failed: Invalid credentials","timestamp":"2025-08-01T14:25:06.701Z"}
+{"level":"error","message":"Login attempt details - Username: admin","timestamp":"2025-08-01T14:25:06.702Z"}
+{"level":"info","message":"Login attempt for username: demo","timestamp":"2025-08-01T14:25:13.740Z"}
+{"level":"error","message":"Login failed: Invalid credentials","timestamp":"2025-08-01T14:25:13.742Z"}
+{"level":"error","message":"Login attempt details - Username: demo","timestamp":"2025-08-01T14:25:13.742Z"}
+{"level":"info","message":"Login attempt for username: demo","timestamp":"2025-08-01T14:28:01.759Z"}
+{"level":"error","message":"Login failed: Invalid credentials","timestamp":"2025-08-01T14:28:01.763Z"}
+{"level":"error","message":"Login attempt details - Username: demo","timestamp":"2025-08-01T14:28:01.763Z"}
+{"level":"info","message":"Login attempt for username: test","timestamp":"2025-08-01T14:28:36.420Z"}
+{"level":"info","message":"Login successful for user: test","timestamp":"2025-08-01T14:28:36.472Z"}
+{"level":"info","message":"Login attempt for username: fahad","timestamp":"2025-08-01T14:31:30.800Z"}
+{"level":"info","message":"Login successful for user: fahad","timestamp":"2025-08-01T14:31:30.868Z"}
+{"level":"info","message":"Deleted file: 1754043616293-577867930.jpg","timestamp":"2025-08-01T14:31:52.464Z"}
+{"level":"info","message":"Deleted file: 1754043690761-408128709.mp4","timestamp":"2025-08-01T14:31:52.467Z"}
+{"level":"info","message":"Deleted file: 1754043730840-642102882.jpg","timestamp":"2025-08-01T14:31:52.468Z"}
+{"level":"info","message":"Deleted file: 1754043736537-83977204.jpg","timestamp":"2025-08-01T14:31:52.470Z"}
+{"level":"info","message":"Deleted file: 1754049592476-442648850.jpg","timestamp":"2025-08-01T14:31:52.476Z"}
+{"level":"info","message":"Deleted file: 1754049992652-285999529.mp4","timestamp":"2025-08-01T14:31:52.478Z"}
+{"level":"info","message":"Deleted file: 1754050016399-992677129.jpg","timestamp":"2025-08-01T14:31:52.482Z"}
+{"level":"info","message":"Deleted file: 1754050020468-150033899.jpg","timestamp":"2025-08-01T14:31:52.483Z"}
+{"level":"info","message":"Deleted file: 1754050034033-52154521.pdf","timestamp":"2025-08-01T14:31:52.484Z"}
+{"level":"info","message":"All files purged successfully","timestamp":"2025-08-01T14:31:52.484Z"}
+{"level":"info","message":"\n=== MySQL Database Setup Instructions ===","timestamp":"2025-08-01T15:25:22.891Z"}
+{"level":"info","message":"1. Install MySQL Server on your system","timestamp":"2025-08-01T15:25:22.896Z"}
+{"level":"info","message":"2. Set up environment variables in .env file:","timestamp":"2025-08-01T15:25:22.896Z"}
+{"level":"info","message":"   DB_HOST=localhost","timestamp":"2025-08-01T15:25:22.897Z"}
+{"level":"info","message":"   DB_PORT=3306","timestamp":"2025-08-01T15:25:22.897Z"}
+{"level":"info","message":"   DB_USERNAME=led_display_user","timestamp":"2025-08-01T15:25:22.897Z"}
+{"level":"info","message":"   DB_PASSWORD=your_secure_password","timestamp":"2025-08-01T15:25:22.898Z"}
+{"level":"info","message":"   DB_DATABASE=led_display_db","timestamp":"2025-08-01T15:25:22.898Z"}
+{"level":"info","message":"   MYSQL_ROOT_PASSWORD=your_root_password","timestamp":"2025-08-01T15:25:22.898Z"}
+{"level":"info","message":"3. Run: npm run migrate","timestamp":"2025-08-01T15:25:22.898Z"}
+{"level":"info","message":"4. Run: npm run seed","timestamp":"2025-08-01T15:25:22.899Z"}
+{"level":"info","message":"5. Start the server: npm run dev","timestamp":"2025-08-01T15:25:22.899Z"}
+{"level":"info","message":"==========================================\n","timestamp":"2025-08-01T15:25:22.900Z"}
+{"level":"info","message":"Starting complete database setup...","timestamp":"2025-08-01T15:25:22.901Z"}
+{"level":"info","message":"Creating MySQL database and user...","timestamp":"2025-08-01T15:25:22.904Z"}
+{"level":"warn","message":"Database/user creation warning: Access denied for user 'root'@'localhost' (using password: NO)","timestamp":"2025-08-01T15:25:22.940Z"}
+{"level":"info","message":"You may need to create the database and user manually:","timestamp":"2025-08-01T15:25:22.941Z"}
+{"level":"info","message":"CREATE DATABASE led_display_db CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;","timestamp":"2025-08-01T15:25:22.941Z"}
+{"level":"info","message":"CREATE USER 'led_display_user'@'%' IDENTIFIED BY 'led_display_password';","timestamp":"2025-08-01T15:25:22.942Z"}
+{"level":"info","message":"GRANT ALL PRIVILEGES ON led_display_db.* TO 'led_display_user'@'%';","timestamp":"2025-08-01T15:25:22.942Z"}
+{"level":"info","message":"FLUSH PRIVILEGES;","timestamp":"2025-08-01T15:25:22.943Z"}
+{"level":"info","message":"Starting database migration...","timestamp":"2025-08-01T15:25:22.943Z"}
+{"level":"info","message":"Database connection established","timestamp":"2025-08-01T15:25:23.364Z"}
+{"level":"info","message":"Database 'led_display_db' created or already exists","timestamp":"2025-08-01T15:25:23.373Z"}
+{"level":"info","message":"Executed 0 migrations","timestamp":"2025-08-01T15:25:23.381Z"}
+{"level":"info","message":"📋 Database schema ready - 3/3 tables verified","timestamp":"2025-08-01T15:25:23.388Z"}
+{"level":"info","message":"Creating database indexes...","timestamp":"2025-08-01T15:25:23.388Z"}
+{"level":"info","message":"⚡ Performance indexes ready - all indexes exist","timestamp":"2025-08-01T15:25:23.398Z"}
+{"level":"info","message":"Database migration completed successfully","timestamp":"2025-08-01T15:25:23.398Z"}
+{"level":"info","message":"Starting database seeding...","timestamp":"2025-08-01T15:25:23.399Z"}
+{"level":"info","message":"Database connection established","timestamp":"2025-08-01T15:25:23.407Z"}
+{"level":"info","message":"👥 Users ready - 2 users found","timestamp":"2025-08-01T15:25:23.411Z"}
+{"level":"info","message":"📺 Displays ready - 4 displays found","timestamp":"2025-08-01T15:25:23.413Z"}
+{"level":"info","message":"🔐 Sessions ready - 1 sessions found","timestamp":"2025-08-01T15:25:23.416Z"}
+{"level":"info","message":"Database seeding completed successfully","timestamp":"2025-08-01T15:25:23.416Z"}
+{"level":"info","message":"Database setup completed successfully!","timestamp":"2025-08-01T15:25:23.417Z"}
+{"level":"info","message":"Verifying database connection...","timestamp":"2025-08-01T15:25:23.417Z"}
+{"level":"info","message":"Database connection verified successfully","timestamp":"2025-08-01T15:25:23.424Z"}
+{"level":"info","message":"Database query response time: 0ms","timestamp":"2025-08-01T15:25:23.425Z"}
+{"level":"error","message":"Error during database initialization: Cannot use import statement outside a module","stack":"D:\\led-soliton\\led-display-react\\server\\src\\migrations\\001_create_files_table.ts:1\nimport { MigrationInterface, QueryRunner, Table, TableForeignKey } from \"typeorm\";\n^^^^^^\n\nSyntaxError: Cannot use import statement outside a module\n    at wrapSafe (node:internal/modules/cjs/loader:1378:20)\n    at Module._compile (node:internal/modules/cjs/loader:1428:41)\n    at Module._extensions..js (node:internal/modules/cjs/loader:1548:10)\n    at Module.load (node:internal/modules/cjs/loader:1288:32)\n    at Module._load (node:internal/modules/cjs/loader:1104:12)\n    at Module.require (node:internal/modules/cjs/loader:1311:19)\n    at require (node:internal/modules/helpers:179:18)\n    at tryToRequire (D:\\led-soliton\\led-display-react\\server\\node_modules\\typeorm\\util\\ImportUtils.js:20:17)\n    at importOrRequireFile (D:\\led-soliton\\led-display-react\\server\\node_modules\\typeorm\\util\\ImportUtils.js:34:24)\n    at async D:\\led-soliton\\led-display-react\\server\\node_modules\\typeorm\\util\\DirectoryExportedClassesLoader.js:47:41","timestamp":"2025-08-01T15:26:11.807Z"}
+{"level":"error","message":"Error during database initialization: Cannot use import statement outside a module","stack":"D:\\led-soliton\\led-display-react\\server\\src\\migrations\\001_create_files_table.ts:1\nimport { MigrationInterface, QueryRunner, Table, TableForeignKey } from \"typeorm\";\n^^^^^^\n\nSyntaxError: Cannot use import statement outside a module\n    at wrapSafe (node:internal/modules/cjs/loader:1378:20)\n    at Module._compile (node:internal/modules/cjs/loader:1428:41)\n    at Module._extensions..js (node:internal/modules/cjs/loader:1548:10)\n    at Module.load (node:internal/modules/cjs/loader:1288:32)\n    at Module._load (node:internal/modules/cjs/loader:1104:12)\n    at Module.require (node:internal/modules/cjs/loader:1311:19)\n    at require (node:internal/modules/helpers:179:18)\n    at tryToRequire (D:\\led-soliton\\led-display-react\\server\\node_modules\\typeorm\\util\\ImportUtils.js:20:17)\n    at importOrRequireFile (D:\\led-soliton\\led-display-react\\server\\node_modules\\typeorm\\util\\ImportUtils.js:34:24)\n    at async D:\\led-soliton\\led-display-react\\server\\node_modules\\typeorm\\util\\DirectoryExportedClassesLoader.js:47:41","timestamp":"2025-08-01T15:26:50.792Z"}
+{"level":"info","message":"Database connection established","timestamp":"2025-08-01T15:27:08.295Z"}
+{"level":"info","message":"Server running on port 5000","timestamp":"2025-08-01T15:27:08.303Z"}
+{"level":"info","message":"✅ Database-based file storage enabled","timestamp":"2025-08-01T15:27:08.303Z"}
+{"level":"info","message":"Database connection established","timestamp":"2025-08-01T15:28:53.498Z"}
+{"level":"info","message":"Server running on port 5000","timestamp":"2025-08-01T15:28:53.502Z"}
+{"level":"info","message":"✅ Database-based file storage enabled","timestamp":"2025-08-01T15:28:53.503Z"}
+{"level":"info","message":"Login attempt for username: test","timestamp":"2025-08-01T15:29:09.051Z"}
+{"level":"error","message":"Login failed: Invalid credentials","timestamp":"2025-08-01T15:29:09.056Z"}
+{"level":"error","message":"Login attempt details - Username: test","timestamp":"2025-08-01T15:29:09.057Z"}
+{"level":"info","message":"Login attempt for username: admin","timestamp":"2025-08-01T15:29:15.162Z"}
+{"level":"error","message":"Login failed: Invalid credentials","timestamp":"2025-08-01T15:29:15.238Z"}
+{"level":"error","message":"Login attempt details - Username: admin","timestamp":"2025-08-01T15:29:15.239Z"}
+{"level":"info","message":"Login attempt for username: test","timestamp":"2025-08-01T15:29:31.317Z"}
+{"level":"info","message":"Login successful for user: test","timestamp":"2025-08-01T15:29:31.387Z"}

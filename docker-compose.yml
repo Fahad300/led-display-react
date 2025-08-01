@@ -1,0 +1,77 @@
+version: "3.8"
+
+services:
+  # MySQL Database
+  mysql:
+    image: mysql:8.0
+    container_name: led_display_mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-rootpassword}
+      MYSQL_DATABASE: ${DB_DATABASE:-led_display_db}
+      MYSQL_USER: ${DB_USERNAME:-led_display_user}
+      MYSQL_PASSWORD: ${DB_PASSWORD:-led_display_password}
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./mysql/init:/docker-entrypoint-initdb.d
+    networks:
+      - led_display_network
+    command: --default-authentication-plugin=mysql_native_password
+    healthcheck:
+      test: [ "CMD", "mysqladmin", "ping", "-h", "localhost" ]
+      timeout: 20s
+      retries: 10
+
+  # Node.js Server
+  server:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    container_name: led_display_server
+    restart: unless-stopped
+    environment:
+      - DB_HOST=mysql
+      - DB_PORT=3306
+      - DB_USERNAME=${DB_USERNAME:-led_display_user}
+      - DB_PASSWORD=${DB_PASSWORD:-led_display_password}
+      - DB_DATABASE=${DB_DATABASE:-led_display_db}
+      - DB_SYNCHRONIZE=false
+      - JWT_SECRET=${JWT_SECRET:-your_jwt_secret_key_here}
+      - PORT=3001
+      - NODE_ENV=production
+    ports:
+      - "3001:3001"
+    volumes:
+      - ./server/uploads:/app/uploads
+    depends_on:
+      mysql:
+        condition: service_healthy
+    networks:
+      - led_display_network
+    command: sh -c "npm run setup-db && npm start"
+
+  # React Client
+  client:
+    build:
+      context: ./client
+      dockerfile: Dockerfile
+    container_name: led_display_client
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - REACT_APP_API_URL=http://localhost:3001
+    depends_on:
+      - server
+    networks:
+      - led_display_network
+
+volumes:
+  mysql_data:
+    driver: local
+
+networks:
+  led_display_network:
+    driver: bridge

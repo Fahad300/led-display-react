@@ -38,6 +38,7 @@ import { VideoSlide } from "../components/slides/VideoSlide";
 import { useNavigate } from 'react-router-dom';
 import { DigitalClock } from "../components/DigitalClock";
 import NewsSlideComponent from "../components/NewsSlideComponent";
+import { useToast } from "../contexts/ToastContext";
 
 // Type for reordering result
 interface ReorderResult {
@@ -94,6 +95,32 @@ const getSlideTypeIcon = (type: string): React.ReactElement | null => {
             );
         default:
             return null;
+    }
+};
+
+/**
+ * Get the label for a slide type
+ */
+const getSlideTypeLabel = (type: typeof SLIDE_TYPES[keyof typeof SLIDE_TYPES]) => {
+    switch (type) {
+        case SLIDE_TYPES.IMAGE:
+            return "Image";
+        case SLIDE_TYPES.VIDEO:
+            return "Video";
+        case SLIDE_TYPES.NEWS:
+            return "News";
+        case SLIDE_TYPES.EVENT:
+            return "Event";
+        case SLIDE_TYPES.DOCUMENT:
+            return "Document";
+        case SLIDE_TYPES.CURRENT_ESCALATIONS:
+            return "Escalations";
+        case SLIDE_TYPES.TEAM_COMPARISON:
+            return "Team Comparison";
+        case SLIDE_TYPES.GRAPH:
+            return "Graph";
+        default:
+            return "Unknown";
     }
 };
 
@@ -583,15 +610,19 @@ const SlideDurationIndicator: React.FC<{
 };
 
 const HomePage: React.FC = () => {
-    const { slides, updateSlide, reorderSlides } = useSlides();
+    const { slides, reorderSlides, updateSlide, isEditing } = useSlides();
     const { settings, updateSettings, forceRefresh } = useDisplaySettings();
+    const { addToast } = useToast();
+    const navigate = useNavigate();
+    const [dateTime, setDateTime] = useState(new Date().toLocaleString());
+    const [isFullscreen, setIsFullscreen] = useState(false);
+    const [activeSlideIndex, setActiveSlideIndex] = useState(0);
+    const [swiperInstance, setSwiperInstance] = useState<SwiperType | null>(null);
     const [orderedSlides, setOrderedSlides] = useState<Slide[]>([]);
     const [activeSlides, setActiveSlides] = useState<Slide[]>([]);
-    const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
     const slidesContainerRef = useRef<HTMLDivElement>(null);
-    const [, setDateTime] = useState<string>("");
+    const [, setDateTimeState] = useState<string>("");
     const [currentSlideIndex, setCurrentSlideIndex] = useState(0);
-    const navigate = useNavigate();
 
     // Helper functions for date checks
     const isBirthdayToday = (dob: string): boolean => {
@@ -725,7 +756,7 @@ const HomePage: React.FC = () => {
 
     // Date/time updater
     useEffect(() => {
-        const update = () => setDateTime(new Date().toLocaleString());
+        const update = () => setDateTimeState(new Date().toLocaleString());
         update();
         const interval = setInterval(update, 1000);
         return () => clearInterval(interval);
@@ -775,7 +806,9 @@ const HomePage: React.FC = () => {
 
     const handleForceRefreshDisplay = () => {
         forceRefresh();
-        // Show a brief success message
+        addToast("Force refresh sent to all displays", "success");
+
+        // Show a brief success message on the button
         const button = document.querySelector('[data-force-refresh]') as HTMLButtonElement;
         if (button) {
             const originalText = button.textContent;
@@ -847,6 +880,14 @@ const HomePage: React.FC = () => {
             <main className="flex-1 p-6 flex flex-col bg-persivia-white">
                 <div className="flex items-center justify-between mb-6">
                     <h2 className="text-2xl font-bold text-center text-persivia-blue">LED Preview</h2>
+                    {isEditing && (
+                        <div className="flex items-center space-x-2 text-amber-600 bg-amber-50 px-3 py-1 rounded-full text-sm">
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                            </svg>
+                            <span>Syncing paused - editing in progress</span>
+                        </div>
+                    )}
                     <button
                         onClick={handleToggleFullscreen}
                         className="flex items-center gap-2 px-4 py-2 bg-persivia-blue text-white rounded-lg hover:bg-persivia-blue/90 transition-colors"

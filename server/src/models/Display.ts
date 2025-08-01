@@ -13,7 +13,7 @@ export class Display {
     description!: string;
 
     @Column()
-    type: "slider" | "text" | "image" | "video";
+    type: "slider" | "text" | "image" | "video" | "current-escalations" | "graph" | "team-comparison" | "news" | "events";
 
     @Column("simple-json")
     content: {
@@ -25,6 +25,53 @@ export class Display {
             direction: "horizontal" | "vertical";
             transition: "fade" | "slide" | "none";
         };
+        // For current escalations
+        escalations?: Array<{
+            ticketCategory: string;
+            teamName: string;
+            clientName: string;
+            ticketSummary: string;
+            averageResponseTime: string;
+            ticketStatus: string;
+            curtentStatus: string;
+        }>;
+        // For graph slides
+        graphData?: {
+            title: string;
+            description: string;
+            graphType: string;
+            timeRange: string;
+            lastUpdated: string;
+            categories: string[];
+            data: Array<{
+                teamName: string;
+                dataPoints: Array<{
+                    date: string;
+                    value: number;
+                    category: string;
+                }>;
+            }>;
+        };
+        // For team comparison
+        teamComparison?: {
+            teams: Array<{
+                teamName: string;
+                totalTickets: number;
+                cLevelEscalations: number;
+                omegaEscalations: number;
+                codeBlueEscalations: number;
+                averageResponseTime: string;
+                averageLeadTime: string;
+            }>;
+            lastUpdated: string;
+        };
+        // For news slides
+        newsItems?: Array<{
+            title: string;
+            content: string;
+            date: string;
+            category: string;
+        }>;
     };
 
     @Column("simple-json")

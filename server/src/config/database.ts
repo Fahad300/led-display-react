@@ -2,53 +2,66 @@ import { DataSource } from "typeorm";
 import { User } from "../models/User";
 import { Display } from "../models/Display";
 import { Session } from "../models/Session";
-import path from "path";
-import fs from "fs";
+import { File } from "../models/File";
+import { config } from "./env";
 import { logger } from "../utils/logger";
 
-const dbPath = path.join(__dirname, "../../database.sqlite");
-
-// Ensure database directory exists
-const dbDir = path.dirname(dbPath);
-if (!fs.existsSync(dbDir)) {
-    fs.mkdirSync(dbDir, { recursive: true });
-}
-
+/**
+ * MySQL Database Configuration for Production
+ * Provides better scalability, performance, and concurrent access compared to SQLite
+ */
 export const AppDataSource = new DataSource({
-    type: "sqlite",
-    database: dbPath,
-    synchronize: true,
-    logging: true, // Enable logging in all environments for debugging
-    entities: [User, Display, Session],
-    migrations: [],
-    subscribers: []
+    type: "mysql",
+    host: config.database.host,
+    port: config.database.port,
+    username: config.database.username,
+    password: config.database.password,
+    database: config.database.database,
+    synchronize: config.database.synchronize, // Set to false in production
+    logging: false, // Disable verbose SQL query logging
+    entities: [User, Display, Session, File],
+    migrations: ["src/migrations/*.ts"],
+    subscribers: [],
+    charset: "utf8mb4",
+    // Connection pool settings for better performance
+    extra: {
+        connectionLimit: 10
+    }
 });
 
+/**
+ * Initialize database connection
+ */
 export const connectDB = async (): Promise<void> => {
     try {
         await AppDataSource.initialize();
-        logger.info("SQLite Database Connected...");
+        logger.info("✅ MySQL Database Connected");
 
         // Verify database state
         const userRepository = AppDataSource.getRepository(User);
         const userCount = await userRepository.count();
-        logger.info(`Current user count in database: ${userCount}`);
+        logger.info(`📊 Database ready - ${userCount} users found`);
 
-        // Log database path
-        logger.info(`Database file location: ${dbPath}`);
+    } catch (error) {
+        if (error instanceof Error) {
+            logger.error(`❌ Database connection failed: ${error.message}`);
+        }
+        process.exit(1);
+    }
+};
 
-        // Check if database file exists
-        if (fs.existsSync(dbPath)) {
-            const stats = fs.statSync(dbPath);
-            logger.info(`Database file size: ${stats.size} bytes`);
-        } else {
-            logger.warn("Database file does not exist yet. It will be created on first write.");
+/**
+ * Close database connection gracefully
+ */
+export const closeDB = async (): Promise<void> => {
+    try {
+        if (AppDataSource.isInitialized) {
+            await AppDataSource.destroy();
+            logger.info("Database connection closed successfully");
         }
     } catch (error) {
         if (error instanceof Error) {
-            logger.error(`Database connection error: ${error.message}`);
-            logger.error(`Stack trace: ${error.stack}`);
+            logger.error(`Error closing database connection: ${error.message}`);
         }
-        process.exit(1);
     }
 }; 

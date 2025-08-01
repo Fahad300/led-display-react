@@ -23,6 +23,8 @@ interface SlideContextType {
     reorderSlides: (slides: Slide[]) => void;
     refreshSlidesDataSources: () => void;
     isLoading: boolean;
+    isEditing: boolean;
+    setIsEditing: (editing: boolean) => void;
 }
 
 // Create the context with default values
@@ -38,6 +40,8 @@ const SlideContext = createContext<SlideContextType>({
     reorderSlides: () => { },
     refreshSlidesDataSources: () => { },
     isLoading: false,
+    isEditing: false,
+    setIsEditing: () => { },
 });
 
 // Props for the provider component
@@ -81,6 +85,7 @@ export const SlideProvider: React.FC<SlideProviderProps> = ({ children }) => {
     const [slides, setSlides] = useState<Slide[]>([]);
     const [activeSlide, setActiveSlide] = useState<Slide | null>(null);
     const [isLoading, setIsLoading] = useState<boolean>(true);
+    const [isEditing, setIsEditing] = useState<boolean>(false);
     const lastUpdateRef = useRef<number>(0);
     const updateTimeoutRef = useRef<NodeJS.Timeout | null>(null);
     const lastLocalChangeRef = useRef<number>(0);
@@ -246,14 +251,15 @@ export const SlideProvider: React.FC<SlideProviderProps> = ({ children }) => {
                     const timeSinceLocalChange = currentTime - lastLocalChangeRef.current;
                     if (currentSlidesJson !== newSlidesJson &&
                         (currentTime - lastUpdateRef.current) > 2000 &&
-                        timeSinceLocalChange > 5000) {
+                        timeSinceLocalChange > 5000 &&
+                        !isEditing) { // Skip syncing if user is editing
                         console.log("🔄 Slides updated from server:", validSlides.length, "slides");
                         console.log("⏰ Time since local change:", timeSinceLocalChange, "ms");
                         setSlides(validSlides);
                         lastUpdateRef.current = currentTime;
                         await debouncedSaveSlides(validSlides);
                     } else {
-                        console.log("🚫 Skipping server update - recent local changes or no changes");
+                        console.log("🚫 Skipping server update - recent local changes, no changes, or user is editing");
                     }
                 }
             } catch (error) {
@@ -273,7 +279,7 @@ export const SlideProvider: React.FC<SlideProviderProps> = ({ children }) => {
                 clearInterval(pollInterval);
             }
         };
-    }, [debouncedSaveSlides]); // Removed slides from dependency array
+    }, [debouncedSaveSlides, isEditing]); // Removed slides from dependency array
 
     // Cleanup timeout on unmount
     useEffect(() => {
@@ -378,6 +384,8 @@ export const SlideProvider: React.FC<SlideProviderProps> = ({ children }) => {
         reorderSlides,
         refreshSlidesDataSources,
         isLoading,
+        isEditing,
+        setIsEditing,
     };
 
     return (

@@ -36,19 +36,18 @@ const AnimatedLogo: React.FC = () => {
                 style={{ zIndex: 2 }}
             />
 
-            {/* Logo */}
+            {/* Pulsating Logo */}
             <motion.div
                 className="relative z-10"
-                initial={{ scale: 0.8, opacity: 0 }}
                 animate={{
-                    scale: [0.8, 1.1, 1],
-                    opacity: [0, 1, 1]
+                    scale: [1, 1.2, 1],
+                    opacity: [0.8, 1, 0.8]
                 }}
                 transition={{
-                    duration: 2,
-                    ease: "easeOut",
+                    duration: 3,
+                    ease: "easeInOut",
                     repeat: Infinity,
-                    repeatDelay: 1
+                    repeatType: "reverse"
                 }}
             >
                 <img
@@ -79,8 +78,27 @@ const LoadingComponent: React.FC = () => {
  * SlidesDisplay component: shows only the active slides in a fullscreen/clean view.
  */
 const SlidesDisplay: React.FC = () => {
-    const { slides, isLoading } = useSlides();
-    const { settings } = useDisplaySettings();
+    const { slides, isLoading, loadSlides } = useSlides();
+    const { settings, onRefreshRequest } = useDisplaySettings();
+    const [isRefreshing, setIsRefreshing] = React.useState(false);
+
+    // Register refresh callback to respond to force refresh requests
+    React.useEffect(() => {
+        const cleanup = onRefreshRequest(() => {
+            // Show refreshing indicator
+            setIsRefreshing(true);
+
+            // Reload slides when force refresh is triggered
+            loadSlides();
+
+            // Hide refreshing indicator after a short delay
+            setTimeout(() => {
+                setIsRefreshing(false);
+            }, 1000);
+        });
+
+        return cleanup;
+    }, [onRefreshRequest, loadSlides]);
 
     // Helper functions for date checks
     const isBirthdayToday = (dob: string): boolean => {
@@ -99,8 +117,12 @@ const SlidesDisplay: React.FC = () => {
     const processedSlides = useMemo(() => {
         if (isLoading) return [];
 
+        console.log("🔄 SlidesDisplay: Processing slides for display");
+        console.log(`🔄 SlidesDisplay: Input slides count: ${slides.length}`);
+
         // Remove any existing event slides
         const nonEventSlides = slides.filter(slide => slide.type !== SLIDE_TYPES.EVENT);
+        console.log(`🔄 SlidesDisplay: Non-event slides: ${nonEventSlides.length}`);
 
         // Birthday event slide
         const birthdayEmployees = employees.filter(employee => isBirthdayToday(employee.dob));
@@ -143,7 +165,13 @@ const SlidesDisplay: React.FC = () => {
         // Add event slides if there are employees for today
         const eventSlides: EventSlideType[] = [birthdayEventSlide, anniversaryEventSlide].filter((s): s is EventSlideType => s !== null);
         const allSlides = [...nonEventSlides, ...eventSlides];
-        return allSlides.filter(slide => slide.active);
+
+        console.log(`🔄 SlidesDisplay: Total processed slides: ${allSlides.length}`);
+        allSlides.forEach((slide, index) => {
+            console.log(`🔄 SlidesDisplay: Slide ${index}: ${slide.name} - Active: ${slide.active} - Duration: ${slide.duration}s`);
+        });
+
+        return allSlides; // Let SwiperSlideshow handle the active filtering
     }, [slides, isLoading]);
 
     // Memoize the render function to prevent unnecessary re-renders
@@ -179,7 +207,23 @@ const SlidesDisplay: React.FC = () => {
 
     // Show animated logo if no slides to display (LED Display mode)
     if (processedSlides.length === 0) {
-        return <AnimatedLogo />;
+        return (
+            <div className="relative w-full h-screen bg-black">
+                <AnimatedLogo />
+
+                {/* Refresh Indicator */}
+                {isRefreshing && (
+                    <div className="absolute top-4 left-4 z-[10001] bg-blue-500 text-white px-4 py-2 rounded-lg shadow-lg">
+                        <div className="flex items-center gap-2">
+                            <svg className="w-5 h-5 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                            </svg>
+                            <span>Refreshing slides...</span>
+                        </div>
+                    </div>
+                )}
+            </div>
+        );
     }
 
     return (
@@ -198,6 +242,18 @@ const SlidesDisplay: React.FC = () => {
                 </div>
             )}
             <SlideLogoOverlay isFullscreen={true} />
+
+            {/* Refresh Indicator */}
+            {isRefreshing && (
+                <div className="absolute top-4 left-4 z-[10001] bg-blue-500 text-white px-4 py-2 rounded-lg shadow-lg">
+                    <div className="flex items-center gap-2">
+                        <svg className="w-5 h-5 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                        </svg>
+                        <span>Refreshing slides...</span>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

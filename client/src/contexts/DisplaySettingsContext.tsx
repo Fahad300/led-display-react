@@ -44,23 +44,29 @@ export const DisplaySettingsProvider: React.FC<{ children: React.ReactNode }> = 
 
     // Initialize session and sync settings from server
     useEffect(() => {
-        if (isAuthenticated && user) {
-            const initializeSession = async () => {
-                try {
-                    await sessionService.initializeSession();
+        const initializeSession = async () => {
+            try {
+                // Try to initialize session (works for both authenticated and unauthenticated)
+                await sessionService.initializeSession();
 
-                    // Try to sync settings from server
+                // Only sync settings from server if authenticated (admin users)
+                // For display pages, let the 20-minute polling handle syncing
+                if (isAuthenticated) {
+                    console.log("🔄 Admin user - syncing settings immediately");
                     const serverData = await sessionService.syncFromServer();
                     if (serverData?.displaySettings) {
                         setSettings(prev => ({ ...prev, ...serverData.displaySettings }));
                     }
-                } catch (error) {
-                    console.error("Error initializing session:", error);
+                } else {
+                    console.log("🔄 Display page - skipping initial sync to avoid timing interference");
                 }
-            };
+            } catch (error) {
+                console.error("Error initializing session:", error);
+            }
+        };
 
-            initializeSession();
-        }
+        // Initialize for both authenticated and unauthenticated users
+        initializeSession();
     }, [isAuthenticated, user]);
 
     // Listen for settings updates from other tabs and devices
@@ -86,6 +92,7 @@ export const DisplaySettingsProvider: React.FC<{ children: React.ReactNode }> = 
         let pollInterval: NodeJS.Timeout | null = null;
 
         const pollForUpdates = async () => {
+            console.log("🔄 Polling for settings updates from server...");
             try {
                 // Try to get latest settings from server (works for both authenticated and unauthenticated)
                 const serverData = await sessionService.syncFromServer();
@@ -101,16 +108,17 @@ export const DisplaySettingsProvider: React.FC<{ children: React.ReactNode }> = 
                     });
                 }
             } catch (error) {
-                // Silently handle errors for polling
-                console.debug("Polling for settings updates:", error);
+                // Silently handle errors for polling - this is normal for unauthenticated displays
+                console.debug("Polling for settings updates (normal for displays):", error);
             }
         };
 
-        // Poll every 5 seconds for cross-device updates
-        pollInterval = setInterval(pollForUpdates, 5000);
+        // Poll every 20 minutes for cross-device updates (for testing - normally 5 seconds)
+        console.log("🔄 Setting up 20-minute polling interval for settings sync");
+        pollInterval = setInterval(pollForUpdates, 20 * 60 * 1000); // 20 minutes
 
-        // Initial poll
-        pollForUpdates();
+        // No initial poll - let the display run without interference
+        console.log("🔄 Skipping initial poll to avoid timing interference");
 
         return () => {
             if (pollInterval) {
@@ -132,6 +140,10 @@ export const DisplaySettingsProvider: React.FC<{ children: React.ReactNode }> = 
             } catch (error) {
                 console.error("Error syncing settings to server:", error);
             }
+        } else {
+            // For unauthenticated displays, we can't update server settings
+            // but we can still save locally and broadcast to other tabs
+            console.debug("Settings saved locally (unauthenticated display)");
         }
 
         // Broadcast to other tabs
@@ -144,7 +156,23 @@ export const DisplaySettingsProvider: React.FC<{ children: React.ReactNode }> = 
     }, [settings, broadcastChannel, isAuthenticated]);
 
     // Force refresh all display pages
-    const forceRefresh = useCallback(() => {
+    const forceRefresh = useCallback(async () => {
+        console.log("🔄 Force refresh triggered - immediately syncing with server");
+
+        // Immediately sync with server
+        try {
+            const serverData = await sessionService.syncFromServer();
+            if (serverData?.displaySettings) {
+                setSettings(prev => {
+                    const newSettings = { ...prev, ...serverData.displaySettings };
+                    console.log("🔄 Force refresh: Settings updated from server:", newSettings);
+                    return newSettings;
+                });
+            }
+        } catch (error) {
+            console.error("Error during force refresh sync:", error);
+        }
+
         // Broadcast refresh request to other tabs
         if (broadcastChannel) {
             broadcastChannel.postMessage({

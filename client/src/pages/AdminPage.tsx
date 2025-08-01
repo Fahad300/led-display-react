@@ -49,6 +49,7 @@ interface EditModalProps {
     onClose: () => void;
     slide: Slide | null;
     onSave: (slide: Slide) => void;
+    onOpen: () => void;
 }
 
 /** Type for slide tabs */
@@ -102,7 +103,7 @@ const uploadFile = async (file: File): Promise<string> => {
     }
 };
 
-const EditModal: React.FC<EditModalProps> = ({ isOpen, onClose, slide, onSave }) => {
+const EditModal: React.FC<EditModalProps> = ({ isOpen, onClose, slide, onSave, onOpen }) => {
     const { addToast } = useToast();
     const [editedSlide, setEditedSlide] = useState<Slide | null>(null);
     const [isUploading, setIsUploading] = useState<boolean>(false);
@@ -119,13 +120,16 @@ const EditModal: React.FC<EditModalProps> = ({ isOpen, onClose, slide, onSave })
     }, [slide]);
 
     useEffect(() => {
+        if (isOpen) {
+            onOpen(); // Set editing state when modal opens
+        }
         if (!isOpen) {
             setErrors({});
             setIsUploading(false);
             setPendingFile(null);
             setPendingPreviewUrl(null);
         }
-    }, [isOpen]);
+    }, [isOpen, onOpen]);
 
     const handleFileInput = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
@@ -490,7 +494,7 @@ const getSlideTypeLabel = (type: typeof SLIDE_TYPES[keyof typeof SLIDE_TYPES]) =
 };
 
 const AdminPage: React.FC = () => {
-    const { slides, addSlide, updateSlide, deleteSlide, isLoading } = useSlides();
+    const { slides, addSlide, updateSlide, deleteSlide, isLoading, isEditing, setIsEditing } = useSlides();
     const { addToast } = useToast();
     const [selectedSlide, setSelectedSlide] = useState<Slide | null>(null);
     const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
@@ -514,7 +518,7 @@ const AdminPage: React.FC = () => {
                         id: crypto.randomUUID(),
                         type: SLIDE_TYPES.IMAGE,
                         name: "New Image Slide",
-                        active: true,
+                        active: false, // Start as inactive
                         duration: 5,
                         data: {
                             imageUrl: "",
@@ -527,7 +531,7 @@ const AdminPage: React.FC = () => {
                         id: crypto.randomUUID(),
                         type: SLIDE_TYPES.VIDEO,
                         name: "New Video Slide",
-                        active: true,
+                        active: false, // Start as inactive
                         duration: 0,
                         data: {
                             videoUrl: "",
@@ -543,7 +547,7 @@ const AdminPage: React.FC = () => {
                         id: crypto.randomUUID(),
                         type: SLIDE_TYPES.NEWS,
                         name: "New News Slide",
-                        active: true,
+                        active: false, // Start as inactive
                         duration: 10,
                         data: {
                             title: "",
@@ -562,7 +566,7 @@ const AdminPage: React.FC = () => {
                         id: crypto.randomUUID(),
                         type: SLIDE_TYPES.DOCUMENT,
                         name: "New Document Slide",
-                        active: true,
+                        active: false, // Start as inactive
                         duration: 10,
                         data: {
                             fileUrl: "",
@@ -631,8 +635,21 @@ const AdminPage: React.FC = () => {
 
     return (
         <div className="container mx-auto px-4 py-8">
-            <div className="flex justify-between items-center mb-8">
-                <h1 className="text-3xl font-bold text-gray-900">Slide Management</h1>
+            {/* Add New Slide Button */}
+            <div className="flex justify-between items-center mb-6">
+                <div>
+                    <h1 className="text-2xl font-bold text-gray-900">Slide Management</h1>
+                    <p className="text-sm text-gray-600 mt-1">
+                        Create and edit slides. New slides start as inactive and can be activated from the home page.
+                    </p>
+                </div>
+                <button
+                    onClick={handleCreateSlide}
+                    disabled={isProcessing}
+                    className="px-4 py-2 bg-persivia-blue text-white rounded-lg hover:bg-persivia-blue/90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-persivia-blue disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                    Add New Slide
+                </button>
             </div>
 
             {/* Tabs */}
@@ -723,9 +740,11 @@ const AdminPage: React.FC = () => {
                 onClose={() => {
                     setIsModalOpen(false);
                     setSelectedSlide(null);
+                    setIsEditing(false); // Stop editing when modal closes
                 }}
                 slide={selectedSlide}
                 onSave={handleSaveSlide}
+                onOpen={() => setIsEditing(true)} // Start editing when modal opens
             />
 
             {/* Delete Confirmation Modal */}

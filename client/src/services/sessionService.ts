@@ -54,7 +54,8 @@ class SessionService {
             return this.sessionToken;
         } catch (error) {
             console.error("Error creating session:", error);
-            throw error;
+            // For display purposes, we don't need to throw - just return a fallback
+            return "display-session";
         }
     }
 
@@ -148,17 +149,7 @@ class SessionService {
         appSettings: any;
     } | null> {
         try {
-            // First try to get current session data (for authenticated users)
-            const sessionData = await this.getCurrentSession();
-            if (sessionData) {
-                return {
-                    displaySettings: sessionData.displaySettings,
-                    slideData: sessionData.slideData,
-                    appSettings: sessionData.appSettings
-                };
-            }
-
-            // If no authenticated session, try to get the most recent active session
+            // For LED displays, we primarily use the latest session (public access)
             try {
                 const response = await axios.get(`${API_BASE_URL}/api/sessions/latest`);
                 if (response.data) {
@@ -170,6 +161,20 @@ class SessionService {
                 }
             } catch (error) {
                 console.debug("No latest session available:", error);
+            }
+
+            // Fallback: try to get current session data (for authenticated users)
+            try {
+                const sessionData = await this.getCurrentSession();
+                if (sessionData) {
+                    return {
+                        displaySettings: sessionData.displaySettings,
+                        slideData: sessionData.slideData,
+                        appSettings: sessionData.appSettings
+                    };
+                }
+            } catch (error) {
+                console.debug("No authenticated session available:", error);
             }
 
             return null;
@@ -218,6 +223,8 @@ class SessionService {
             console.log("Session initialized successfully");
         } catch (error) {
             console.error("Error initializing session:", error);
+            // For display purposes, we don't need to fail completely
+            console.log("Continuing without session initialization");
         }
     }
 }

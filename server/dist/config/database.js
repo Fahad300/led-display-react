@@ -1,55 +1,69 @@
 "use strict";
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.connectDB = exports.AppDataSource = void 0;
+exports.closeDB = exports.connectDB = exports.AppDataSource = void 0;
 const typeorm_1 = require("typeorm");
 const User_1 = require("../models/User");
 const Display_1 = require("../models/Display");
-const path_1 = __importDefault(require("path"));
-const fs_1 = __importDefault(require("fs"));
+const Session_1 = require("../models/Session");
+const File_1 = require("../models/File");
+const env_1 = require("./env");
 const logger_1 = require("../utils/logger");
-const dbPath = path_1.default.join(__dirname, "../../database.sqlite");
-// Ensure database directory exists
-const dbDir = path_1.default.dirname(dbPath);
-if (!fs_1.default.existsSync(dbDir)) {
-    fs_1.default.mkdirSync(dbDir, { recursive: true });
-}
+/**
+ * MySQL Database Configuration for Production
+ * Provides better scalability, performance, and concurrent access compared to SQLite
+ */
 exports.AppDataSource = new typeorm_1.DataSource({
-    type: "sqlite",
-    database: dbPath,
-    synchronize: true,
-    logging: true, // Enable logging in all environments for debugging
-    entities: [User_1.User, Display_1.Display],
-    migrations: [],
-    subscribers: []
+    type: "mysql",
+    host: env_1.config.database.host,
+    port: env_1.config.database.port,
+    username: env_1.config.database.username,
+    password: env_1.config.database.password,
+    database: env_1.config.database.database,
+    synchronize: env_1.config.database.synchronize, // Set to false in production
+    logging: false, // Disable verbose SQL query logging
+    entities: [User_1.User, Display_1.Display, Session_1.Session, File_1.File],
+    migrations: ["src/migrations/*.ts"],
+    subscribers: [],
+    charset: "utf8mb4",
+    // Connection pool settings for better performance
+    extra: {
+        connectionLimit: 10
+    }
 });
+/**
+ * Initialize database connection
+ */
 const connectDB = async () => {
     try {
         await exports.AppDataSource.initialize();
-        logger_1.logger.info("SQLite Database Connected...");
+        logger_1.logger.info("✅ MySQL Database Connected");
         // Verify database state
         const userRepository = exports.AppDataSource.getRepository(User_1.User);
         const userCount = await userRepository.count();
-        logger_1.logger.info(`Current user count in database: ${userCount}`);
-        // Log database path
-        logger_1.logger.info(`Database file location: ${dbPath}`);
-        // Check if database file exists
-        if (fs_1.default.existsSync(dbPath)) {
-            const stats = fs_1.default.statSync(dbPath);
-            logger_1.logger.info(`Database file size: ${stats.size} bytes`);
-        }
-        else {
-            logger_1.logger.warn("Database file does not exist yet. It will be created on first write.");
-        }
+        logger_1.logger.info(`📊 Database ready - ${userCount} users found`);
     }
     catch (error) {
         if (error instanceof Error) {
-            logger_1.logger.error(`Database connection error: ${error.message}`);
-            logger_1.logger.error(`Stack trace: ${error.stack}`);
+            logger_1.logger.error(`❌ Database connection failed: ${error.message}`);
         }
         process.exit(1);
     }
 };
 exports.connectDB = connectDB;
+/**
+ * Close database connection gracefully
+ */
+const closeDB = async () => {
+    try {
+        if (exports.AppDataSource.isInitialized) {
+            await exports.AppDataSource.destroy();
+            logger_1.logger.info("Database connection closed successfully");
+        }
+    }
+    catch (error) {
+        if (error instanceof Error) {
+            logger_1.logger.error(`Error closing database connection: ${error.message}`);
+        }
+    }
+};
+exports.closeDB = closeDB;
