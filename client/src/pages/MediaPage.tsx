@@ -6,11 +6,18 @@ import MediaModal from "../components/MediaModal";
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || "http://localhost:5000";
 
 interface MediaFile {
-    name: string;
-    url: string;
+    id: string;
+    filename: string;
+    originalName: string;
+    mimeType: string;
     size: number;
-    type: string;
-    lastModified: string;
+    description?: string;
+    url: string;
+    uploadedBy: {
+        id: string;
+        username: string;
+    };
+    createdAt: string;
 }
 
 interface SelectedMedia {
@@ -23,15 +30,16 @@ const MediaPage: React.FC = () => {
     const { addToast } = useToast();
     const [files, setFiles] = useState<MediaFile[]>([]);
     const [isLoading, setIsLoading] = useState(true);
-    const [isUploading, setIsUploading] = useState(false);
     const [isPurging, setIsPurging] = useState(false);
     const [selectedFiles, setSelectedFiles] = useState<string[]>([]);
     const [searchTerm, setSearchTerm] = useState("");
     const [sortBy, setSortBy] = useState<"name" | "size" | "date">("date");
     const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
     const [selectedMedia, setSelectedMedia] = useState<SelectedMedia | null>(null);
+    const [currentPage, setCurrentPage] = useState(1);
+    const [totalPages, setTotalPages] = useState(1);
 
-    // Fetch media files
+    // Fetch media files from database
     const fetchFiles = useCallback(async () => {
         try {
             const token = localStorage.getItem("token");
@@ -39,7 +47,7 @@ const MediaPage: React.FC = () => {
                 throw new Error("No authentication token found");
             }
 
-            const response = await fetch(`${BACKEND_URL}/api/admin/uploads/stats`, {
+            const response = await fetch(`${BACKEND_URL}/api/files?page=${currentPage}&limit=50`, {
                 headers: {
                     "Authorization": `Bearer ${token}`,
                     "Content-Type": "application/json"
@@ -48,7 +56,7 @@ const MediaPage: React.FC = () => {
 
             if (!response.ok) {
                 const errorData = await response.json().catch(() => ({}));
-                throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+                throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
             }
 
             const data = await response.json();
@@ -56,27 +64,27 @@ const MediaPage: React.FC = () => {
                 throw new Error("Invalid response format: files array is missing");
             }
 
-            // Log the files data for debugging
-            console.log("Received files:", data.files);
-
+            console.log("Received files from database:", data.files);
             setFiles(data.files);
+            setTotalPages(data.totalPages || 1);
         } catch (error) {
             console.error("Error fetching files:", error);
             addToast(error instanceof Error ? error.message : "Failed to fetch media files", "error");
-            setFiles([]); // Reset files array on error
+            setFiles([]);
         } finally {
             setIsLoading(false);
         }
-    }, [addToast]);
+    }, [addToast, currentPage]);
 
     useEffect(() => {
         fetchFiles();
     }, [fetchFiles]);
 
-    // Handle file upload
-    const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-        const files = e.target.files;
-        if (!files || files.length === 0) return;
+    // Handle purge all files
+    const handlePurgeAll = async () => {
+        if (!window.confirm("Are you sure you want to delete ALL files? This action cannot be undone and will remove all uploaded images, videos, and documents.")) {
+            return;
+        }
 
         const token = localStorage.getItem("token");
         if (!token) {
@@ -84,55 +92,54 @@ const MediaPage: React.FC = () => {
             return;
         }
 
-        setIsUploading(true);
-        const uploadPromises = Array.from(files).map(async (file) => {
-            // Validate file type
-            const isVideo = file.type.startsWith("video/");
-            const isImage = file.type.startsWith("image/");
-            if (!isVideo && !isImage) {
-                throw new Error(`${file.name} is not a valid image or video file`);
+        setIsPurging(true);
+        try {
+            // Get all files first
+            const response = await fetch(`${BACKEND_URL}/api/files?page=1&limit=1000`, {
+                headers: {
+                    "Authorization": `Bearer ${token}`,
+                    "Content-Type": "application/json"
+                }
+            });
+
+            if (!response.ok) {
+                throw new Error("Failed to fetch files for deletion");
             }
 
-            // Validate file size
-            const maxSize = 100 * 1024 * 1024; // 100MB
-            if (file.size > maxSize) {
-                throw new Error(`${file.name} exceeds the maximum file size of 100MB`);
+            const data = await response.json();
+            const allFileIds = data.files.map((file: MediaFile) => file.id);
+
+            if (allFileIds.length === 0) {
+                addToast("No files to delete", "info");
+                return;
             }
 
-            const formData = new FormData();
-            formData.append("file", file);
-
-            try {
-                const response = await fetch(`${BACKEND_URL}/api/files/upload`, {
-                    method: "POST",
-                    body: formData,
+            // Delete all files
+            const deletePromises = allFileIds.map(async (fileId: string) => {
+                const deleteResponse = await fetch(`${BACKEND_URL}/api/files/${fileId}`, {
+                    method: "DELETE",
                     headers: {
-                        "Authorization": `Bearer ${token}`
+                        "Authorization": `Bearer ${token}`,
+                        "Content-Type": "application/json"
                     }
                 });
 
-                if (!response.ok) {
-                    const errorData = await response.json().catch(() => ({}));
-                    throw new Error(errorData.error || `Failed to upload ${file.name}`);
+                if (!deleteResponse.ok) {
+                    throw new Error(`Failed to delete file ${fileId}`);
                 }
 
-                return response.json();
-            } catch (error) {
-                throw new Error(`Failed to upload ${file.name}: ${error instanceof Error ? error.message : "Unknown error"}`);
-            }
-        });
+                return deleteResponse.json();
+            });
 
-        try {
-            await Promise.all(uploadPromises);
-            addToast("Files uploaded successfully", "success");
+            await Promise.all(deletePromises);
+            addToast(`Successfully deleted ${allFileIds.length} files`, "success");
+            setSelectedFiles([]);
             fetchFiles(); // Refresh the file list
         } catch (error) {
-            console.error("Upload error:", error);
-            addToast(error instanceof Error ? error.message : "Failed to upload files", "error");
+            console.error("Purge error:", error);
+            addToast("Failed to delete all files", "error");
         } finally {
-            setIsUploading(false);
-            // Reset the file input
-            e.target.value = "";
+            setIsPurging(false);
         }
     };
 
@@ -144,20 +151,31 @@ const MediaPage: React.FC = () => {
             return;
         }
 
+        const token = localStorage.getItem("token");
+        if (!token) {
+            addToast("No authentication token found", "error");
+            return;
+        }
+
         try {
-            const response = await fetch(`${BACKEND_URL}/api/admin/uploads/delete`, {
-                method: "POST",
-                headers: {
-                    "Authorization": `Bearer ${localStorage.getItem("token")}`,
-                    "Content-Type": "application/json"
-                },
-                body: JSON.stringify({ files: selectedFiles })
+            // Delete files one by one
+            const deletePromises = selectedFiles.map(async (fileId) => {
+                const response = await fetch(`${BACKEND_URL}/api/files/${fileId}`, {
+                    method: "DELETE",
+                    headers: {
+                        "Authorization": `Bearer ${token}`,
+                        "Content-Type": "application/json"
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error(`Failed to delete file ${fileId}`);
+                }
+
+                return response.json();
             });
 
-            if (!response.ok) {
-                throw new Error("Failed to delete files");
-            }
-
+            await Promise.all(deletePromises);
             addToast("Files deleted successfully", "success");
             setSelectedFiles([]);
             fetchFiles(); // Refresh the file list
@@ -167,61 +185,71 @@ const MediaPage: React.FC = () => {
         }
     };
 
-    // Handle purge all files
-    const handlePurgeAll = async () => {
-        if (!window.confirm("Are you sure you want to delete all files? This action cannot be undone.")) {
+    // Handle single file deletion
+    const handleDeleteFile = async (fileId: string, fileName: string) => {
+        if (!window.confirm(`Are you sure you want to delete ${fileName}?`)) {
             return;
         }
 
-        setIsPurging(true);
+        const token = localStorage.getItem("token");
+        if (!token) {
+            addToast("No authentication token found", "error");
+            return;
+        }
+
         try {
-            const response = await fetch(`${BACKEND_URL}/api/admin/uploads/purge-all`, {
-                method: "POST",
+            const response = await fetch(`${BACKEND_URL}/api/files/${fileId}`, {
+                method: "DELETE",
                 headers: {
-                    "Authorization": `Bearer ${localStorage.getItem("token")}`,
+                    "Authorization": `Bearer ${token}`,
                     "Content-Type": "application/json"
                 }
             });
 
             if (!response.ok) {
-                throw new Error("Failed to purge files");
+                throw new Error("Failed to delete file");
             }
 
-            addToast("All files purged successfully", "success");
-            setSelectedFiles([]);
+            addToast("File deleted successfully", "success");
             fetchFiles(); // Refresh the file list
         } catch (error) {
-            console.error("Purge error:", error);
-            addToast("Failed to purge files", "error");
-        } finally {
-            setIsPurging(false);
+            console.error("Delete error:", error);
+            addToast("Failed to delete file", "error");
         }
     };
 
     // Filter and sort files
     const filteredAndSortedFiles = files
-        .filter(file => file.name.toLowerCase().includes(searchTerm.toLowerCase()))
+        .filter(file => file.originalName.toLowerCase().includes(searchTerm.toLowerCase()))
         .sort((a, b) => {
             const order = sortOrder === "asc" ? 1 : -1;
             switch (sortBy) {
                 case "name":
-                    return order * a.name.localeCompare(b.name);
+                    return order * a.originalName.localeCompare(b.originalName);
                 case "size":
                     return order * (a.size - b.size);
                 case "date":
-                    return order * (new Date(a.lastModified).getTime() - new Date(b.lastModified).getTime());
+                    return order * (new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
                 default:
                     return 0;
             }
         });
 
     const handleMediaPreview = (file: MediaFile) => {
-        console.log("Previewing media:", file); // Debug log
+        console.log("Previewing media:", file);
         setSelectedMedia({
-            url: file.url,
-            type: file.type,
-            name: file.name
+            url: `${BACKEND_URL}${file.url}`,
+            type: file.mimeType,
+            name: file.originalName
         });
+    };
+
+    const formatFileSize = (bytes: number): string => {
+        if (bytes === 0) return "0 Bytes";
+        const k = 1024;
+        const sizes = ["Bytes", "KB", "MB", "GB"];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
     };
 
     return (
@@ -229,31 +257,6 @@ const MediaPage: React.FC = () => {
             <div className="flex justify-between items-center mb-8">
                 <h1 className="text-3xl font-bold text-gray-900">Media Management</h1>
                 <div className="flex items-center space-x-4">
-                    <label className="relative">
-                        <input
-                            type="file"
-                            multiple
-                            onChange={handleFileUpload}
-                            className="hidden"
-                            accept="image/*,video/*"
-                        />
-                        <button
-                            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                            disabled={isUploading}
-                        >
-                            {isUploading ? (
-                                <div className="flex items-center">
-                                    <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                    </svg>
-                                    Uploading...
-                                </div>
-                            ) : (
-                                "Upload Files"
-                            )}
-                        </button>
-                    </label>
                     <button
                         onClick={handlePurgeAll}
                         disabled={isPurging}
@@ -265,7 +268,7 @@ const MediaPage: React.FC = () => {
                                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                                 </svg>
-                                Purging...
+                                Deleting...
                             </div>
                         ) : (
                             "Purge All"
@@ -319,35 +322,35 @@ const MediaPage: React.FC = () => {
                     <div className="divide-y divide-gray-200">
                         {filteredAndSortedFiles.map((file) => (
                             <div
-                                key={file.name}
+                                key={file.id}
                                 className="flex items-center justify-between p-4 hover:bg-gray-50 transition-colors"
                             >
                                 <div className="flex items-center space-x-4">
                                     <input
                                         type="checkbox"
-                                        checked={selectedFiles.includes(file.name)}
+                                        checked={selectedFiles.includes(file.id)}
                                         onChange={(e) => {
                                             if (e.target.checked) {
-                                                setSelectedFiles([...selectedFiles, file.name]);
+                                                setSelectedFiles([...selectedFiles, file.id]);
                                             } else {
-                                                setSelectedFiles(selectedFiles.filter(name => name !== file.name));
+                                                setSelectedFiles(selectedFiles.filter(id => id !== file.id));
                                             }
                                         }}
                                         className="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
                                     />
                                     <div className="flex items-center space-x-4">
-                                        {file.type.startsWith("image/") ? (
+                                        {file.mimeType.startsWith("image/") ? (
                                             <img
-                                                src={file.url}
-                                                alt={file.name}
+                                                src={`${BACKEND_URL}${file.url}`}
+                                                alt={file.originalName}
                                                 className="h-12 w-12 object-cover rounded cursor-pointer"
                                                 onClick={() => handleMediaPreview(file)}
                                                 onError={(e) => {
-                                                    console.error("Error loading image:", file.url);
+                                                    console.error("Error loading image:", `${BACKEND_URL}${file.url}`);
                                                     e.currentTarget.src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%23999999'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z'%3E%3C/path%3E%3C/svg%3E";
                                                 }}
                                             />
-                                        ) : file.type.startsWith("video/") ? (
+                                        ) : file.mimeType.startsWith("video/") ? (
                                             <div
                                                 className="h-12 w-12 bg-gray-100 rounded flex items-center justify-center cursor-pointer"
                                                 onClick={() => handleMediaPreview(file)}
@@ -356,12 +359,21 @@ const MediaPage: React.FC = () => {
                                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 4v16M17 4v16M3 8h4m10 0h4M3 12h18M3 16h4m10 0h4M4 20h16a1 1 0 001-1V5a1 1 0 00-1-1H4a1 1 0 00-1 1v14a1 1 0 001 1z" />
                                                 </svg>
                                             </div>
-                                        ) : null}
+                                        ) : (
+                                            <div
+                                                className="h-12 w-12 bg-gray-100 rounded flex items-center justify-center cursor-pointer"
+                                                onClick={() => handleMediaPreview(file)}
+                                            >
+                                                <svg className="h-6 w-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                                </svg>
+                                            </div>
+                                        )}
                                     </div>
                                     <div>
-                                        <p className="text-sm font-medium text-gray-900">{file.name}</p>
+                                        <p className="text-sm font-medium text-gray-900">{file.originalName}</p>
                                         <p className="text-sm text-gray-500">
-                                            {(file.size / 1024 / 1024).toFixed(2)} MB • {new Date(file.lastModified).toLocaleDateString()}
+                                            {formatFileSize(file.size)} • {new Date(file.createdAt).toLocaleDateString()} • Uploaded by {file.uploadedBy.username}
                                         </p>
                                     </div>
                                 </div>
@@ -369,7 +381,7 @@ const MediaPage: React.FC = () => {
                                     <button
                                         onClick={() => handleMediaPreview(file)}
                                         className="p-2 text-gray-400 hover:text-gray-500"
-                                        aria-label={`Preview ${file.name}`}
+                                        aria-label={`Preview ${file.originalName}`}
                                     >
                                         <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
@@ -377,13 +389,9 @@ const MediaPage: React.FC = () => {
                                         </svg>
                                     </button>
                                     <button
-                                        onClick={() => {
-                                            if (window.confirm(`Are you sure you want to delete ${file.name}?`)) {
-                                                handleDeleteFiles();
-                                            }
-                                        }}
+                                        onClick={() => handleDeleteFile(file.id, file.originalName)}
                                         className="p-2 text-gray-400 hover:text-red-500"
-                                        aria-label={`Delete ${file.name}`}
+                                        aria-label={`Delete ${file.originalName}`}
                                     >
                                         <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />

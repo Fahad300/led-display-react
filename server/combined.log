@@ -815,3 +815,33 @@
 {"level":"info","message":"Database connection established","timestamp":"2025-08-04T11:13:26.296Z"}
 {"level":"info","message":"Server running on port 5000","timestamp":"2025-08-04T11:13:26.300Z"}
 {"level":"info","message":"✅ Database-based file storage enabled","timestamp":"2025-08-04T11:13:26.300Z"}
+{"level":"info","message":"Login attempt for username: test","timestamp":"2025-08-04T11:40:53.349Z"}
+{"level":"info","message":"Login successful for user: test","timestamp":"2025-08-04T11:40:53.403Z"}
+{"level":"info","message":"Login attempt for username: test","timestamp":"2025-08-04T11:41:29.681Z"}
+{"level":"info","message":"Login successful for user: test","timestamp":"2025-08-04T11:41:29.732Z"}
+{"level":"info","message":"Database connection established","timestamp":"2025-08-04T11:44:49.220Z"}
+{"level":"info","message":"Server running on port 5000","timestamp":"2025-08-04T11:44:49.224Z"}
+{"level":"info","message":"✅ Database-based file storage enabled","timestamp":"2025-08-04T11:44:49.224Z"}
+{"level":"info","message":"Attempting to serve file from: D:\\led-soliton\\led-display-react\\server\\public\\index.html","timestamp":"2025-08-04T11:45:09.217Z"}
+{"level":"info","message":"File deleted from database: 7a83c21e-a7ce-4d6c-83a0-79f92e03494a","timestamp":"2025-08-04T11:45:32.819Z"}
+{"level":"info","message":"File deleted from database: 7a83c21e-a7ce-4d6c-83a0-79f92e03494a by user test","timestamp":"2025-08-04T11:45:32.819Z"}
+{"level":"info","message":"File uploaded to database: 1754307947811-934872207.jpg (21731055 bytes)","timestamp":"2025-08-04T11:45:48.405Z"}
+{"level":"info","message":"File uploaded to database: 1754307947811-934872207.jpg by user test","timestamp":"2025-08-04T11:45:48.405Z"}
+{"level":"info","message":"File uploaded to database: 1754308203917-164603469.jpg (13223988 bytes)","timestamp":"2025-08-04T11:50:04.674Z"}
+{"level":"info","message":"File uploaded to database: 1754308203917-164603469.jpg by user test","timestamp":"2025-08-04T11:50:04.679Z"}
+{"level":"info","message":"File uploaded to database: 1754308208136-784585482.jpg (3253062 bytes)","timestamp":"2025-08-04T11:50:08.303Z"}
+{"level":"info","message":"File uploaded to database: 1754308208136-784585482.jpg by user test","timestamp":"2025-08-04T11:50:08.304Z"}
+{"level":"info","message":"File uploaded to database: 1754308486916-560667327.pdf (1768424 bytes)","timestamp":"2025-08-04T11:54:47.037Z"}
+{"level":"info","message":"File uploaded to database: 1754308486916-560667327.pdf by user test","timestamp":"2025-08-04T11:54:47.039Z"}
+{"level":"info","message":"File deleted from database: b94ae8c9-a45b-45ae-b6ac-0288e9ff0bf0","timestamp":"2025-08-04T11:56:42.677Z"}
+{"level":"info","message":"File deleted from database: b94ae8c9-a45b-45ae-b6ac-0288e9ff0bf0 by user test","timestamp":"2025-08-04T11:56:42.679Z"}
+{"level":"info","message":"File uploaded to database: 1754310102815-855370476.mp4 (5809782 bytes)","timestamp":"2025-08-04T12:21:43.051Z"}
+{"level":"info","message":"File uploaded to database: 1754310102815-855370476.mp4 by user test","timestamp":"2025-08-04T12:21:43.055Z"}
+{"level":"info","message":"File deleted from database: e17d4514-0c07-4d34-bd82-cd78a281cf48","timestamp":"2025-08-04T12:22:51.944Z"}
+{"level":"info","message":"File deleted from database: e17d4514-0c07-4d34-bd82-cd78a281cf48 by user test","timestamp":"2025-08-04T12:22:51.948Z"}
+{"level":"info","message":"File deleted from database: fd00bc0b-1a1a-4a4c-8b30-5809d598fbf6","timestamp":"2025-08-04T12:22:51.981Z"}
+{"level":"info","message":"File deleted from database: fd00bc0b-1a1a-4a4c-8b30-5809d598fbf6 by user test","timestamp":"2025-08-04T12:22:51.982Z"}
+{"level":"info","message":"File deleted from database: 1778c0ab-7a70-4b82-9379-9f8f0dd15d4b","timestamp":"2025-08-04T12:22:52.134Z"}
+{"level":"info","message":"File deleted from database: 1778c0ab-7a70-4b82-9379-9f8f0dd15d4b by user test","timestamp":"2025-08-04T12:22:52.135Z"}
+{"level":"info","message":"File deleted from database: 549a401e-18c7-4f09-b396-da4a9a1a396c","timestamp":"2025-08-04T12:22:52.206Z"}
+{"level":"info","message":"File deleted from database: 549a401e-18c7-4f09-b396-da4a9a1a396c by user test","timestamp":"2025-08-04T12:22:52.206Z"}

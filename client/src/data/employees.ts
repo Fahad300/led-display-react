@@ -46,6 +46,6 @@ export const employees: Employee[] = [
         isBirthday: true,
         isAnniversary: false
     }
-]; 
+];
 
 
