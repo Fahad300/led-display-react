@@ -127,7 +127,7 @@ export const MediaSelector: React.FC<MediaSelectorProps> = ({
             const formData = new FormData();
             formData.append("file", file);
 
-            const response = await fetch(`${BACKEND_URL}/api/upload`, {
+            const response = await fetch(`${BACKEND_URL}/api/files/upload`, {
                 method: "POST",
                 body: formData,
                 headers: {

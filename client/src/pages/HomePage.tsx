@@ -571,49 +571,14 @@ const VideoSlideComponent: React.FC<{ slide: VideoSlideType }> = ({ slide }) => 
 /**
  * Home Page Component - Displays the slideshow
  */
-/**
- * Slide Duration Indicator Component
- */
-const SlideDurationIndicator: React.FC<{
-    currentSlide: Slide;
-    currentIndex: number;
-    totalSlides: number;
-}> = ({ currentSlide, currentIndex, totalSlides }) => {
-    const [timeRemaining, setTimeRemaining] = useState(currentSlide.duration);
 
-    useEffect(() => {
-        setTimeRemaining(currentSlide.duration);
-
-        const interval = setInterval(() => {
-            setTimeRemaining(prev => {
-                if (prev <= 1) {
-                    return currentSlide.duration; // Reset for next slide
-                }
-                return prev - 1;
-            });
-        }, 1000);
-
-        return () => clearInterval(interval);
-    }, [currentSlide, currentIndex]);
-
-    return (
-        <div className="absolute bottom-4 left-4 z-[10000] bg-black/50 text-white px-3 py-1 rounded-lg text-sm">
-            <div className="flex items-center gap-2">
-                <span>{currentIndex + 1}/{totalSlides}</span>
-                <span>•</span>
-                <span>{timeRemaining}s</span>
-                <span>•</span>
-                <span>{currentSlide.name}</span>
-            </div>
-        </div>
-    );
-};
 
 const HomePage: React.FC = () => {
     const { slides, reorderSlides, updateSlide, isEditing } = useSlides();
     const { settings, updateSettings, forceRefresh } = useDisplaySettings();
     const { addToast } = useToast();
     const navigate = useNavigate();
+    const [syncStatus, setSyncStatus] = useState<"idle" | "syncing" | "success" | "error">("idle");
     const [dateTime, setDateTime] = useState(new Date().toLocaleString());
     const [isFullscreen, setIsFullscreen] = useState(false);
     const [activeSlideIndex, setActiveSlideIndex] = useState(0);
@@ -804,20 +769,38 @@ const HomePage: React.FC = () => {
         navigate(0); // This will trigger a re-render without a full page reload
     };
 
-    const handleForceRefreshDisplay = () => {
-        forceRefresh();
-        addToast("Force refresh sent to all displays", "success");
+    const handleForceRefreshDisplay = async () => {
+        console.log("🔄 Force refresh triggered from homepage");
 
-        // Show a brief success message on the button
+        // Show immediate feedback
         const button = document.querySelector('[data-force-refresh]') as HTMLButtonElement;
         if (button) {
             const originalText = button.textContent;
             button.textContent = "Refreshing...";
             button.disabled = true;
-            setTimeout(() => {
-                button.textContent = originalText;
-                button.disabled = false;
-            }, 2000);
+
+            try {
+                // Trigger force refresh
+                await forceRefresh();
+                addToast("Force refresh sent to all displays", "success");
+
+                // Keep button state for 3 seconds to show completion
+                setTimeout(() => {
+                    button.textContent = "✓ Refreshed";
+                    setTimeout(() => {
+                        button.textContent = originalText;
+                        button.disabled = false;
+                    }, 1000);
+                }, 2000);
+            } catch (error) {
+                console.error("Force refresh error:", error);
+                addToast("Failed to refresh displays", "error");
+                button.textContent = "Error";
+                setTimeout(() => {
+                    button.textContent = originalText;
+                    button.disabled = false;
+                }, 2000);
+            }
         }
     };
 
@@ -848,20 +831,52 @@ const HomePage: React.FC = () => {
     };
 
     // Update settings handlers
-    const handleEffectChange = (effect: string) => {
-        updateSettings({ swiperEffect: effect });
+    const handleEffectChange = async (effect: string) => {
+        setSyncStatus("syncing");
+        try {
+            await updateSettings({ swiperEffect: effect });
+            setSyncStatus("success");
+            setTimeout(() => setSyncStatus("idle"), 2000);
+        } catch (error) {
+            setSyncStatus("error");
+            setTimeout(() => setSyncStatus("idle"), 3000);
+        }
     };
 
-    const handleDateStampToggle = () => {
-        updateSettings({ showDateStamp: !settings.showDateStamp });
+    const handleDateStampToggle = async () => {
+        setSyncStatus("syncing");
+        try {
+            await updateSettings({ showDateStamp: !settings.showDateStamp });
+            setSyncStatus("success");
+            setTimeout(() => setSyncStatus("idle"), 2000);
+        } catch (error) {
+            setSyncStatus("error");
+            setTimeout(() => setSyncStatus("idle"), 3000);
+        }
     };
 
-    const handlePaginationToggle = () => {
-        updateSettings({ hidePagination: !settings.hidePagination });
+    const handlePaginationToggle = async () => {
+        setSyncStatus("syncing");
+        try {
+            await updateSettings({ hidePagination: !settings.hidePagination });
+            setSyncStatus("success");
+            setTimeout(() => setSyncStatus("idle"), 2000);
+        } catch (error) {
+            setSyncStatus("error");
+            setTimeout(() => setSyncStatus("idle"), 3000);
+        }
     };
 
-    const handleArrowsToggle = () => {
-        updateSettings({ hideArrows: !settings.hideArrows });
+    const handleArrowsToggle = async () => {
+        setSyncStatus("syncing");
+        try {
+            await updateSettings({ hideArrows: !settings.hideArrows });
+            setSyncStatus("success");
+            setTimeout(() => setSyncStatus("idle"), 2000);
+        } catch (error) {
+            setSyncStatus("error");
+            setTimeout(() => setSyncStatus("idle"), 3000);
+        }
     };
 
     // Show controls even when there are no active slides
@@ -982,14 +997,7 @@ const HomePage: React.FC = () => {
                                     <DigitalClock />
                                 </div>
                             )}
-                            {/* Slide Duration Indicator */}
-                            {activeSlides.length > 0 && activeSlides[currentSlideIndex] && (
-                                <SlideDurationIndicator
-                                    currentSlide={activeSlides[currentSlideIndex]}
-                                    currentIndex={currentSlideIndex}
-                                    totalSlides={activeSlides.length}
-                                />
-                            )}
+
                             <SlideLogoOverlay isFullscreen={isFullscreen} />
                         </div>
                     </div>
@@ -1114,6 +1122,18 @@ const HomePage: React.FC = () => {
                 >
                     Refresh Display
                 </button>
+
+                {/* Sync Status Indicator */}
+                {syncStatus !== "idle" && (
+                    <div className={`w-full p-2 rounded-lg text-white text-sm font-medium text-center mt-2 ${syncStatus === "syncing" ? "bg-blue-500" :
+                        syncStatus === "success" ? "bg-green-500" :
+                            "bg-red-500"
+                        }`}>
+                        {syncStatus === "syncing" && "🔄 Syncing to displays..."}
+                        {syncStatus === "success" && "✅ Synced successfully"}
+                        {syncStatus === "error" && "❌ Sync failed"}
+                    </div>
+                )}
 
                 {/* Force Refresh Display Button */}
                 <button

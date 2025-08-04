@@ -792,3 +792,26 @@
 {"level":"error","message":"Login attempt details - Username: admin","timestamp":"2025-08-01T15:29:15.239Z"}
 {"level":"info","message":"Login attempt for username: test","timestamp":"2025-08-01T15:29:31.317Z"}
 {"level":"info","message":"Login successful for user: test","timestamp":"2025-08-01T15:29:31.387Z"}
+{"level":"info","message":"Database connection established","timestamp":"2025-08-04T10:49:24.603Z"}
+{"level":"info","message":"Server running on port 3001","timestamp":"2025-08-04T10:49:24.607Z"}
+{"level":"info","message":"✅ Database-based file storage enabled","timestamp":"2025-08-04T10:49:24.607Z"}
+{"level":"info","message":"Database connection established","timestamp":"2025-08-04T10:52:58.109Z"}
+{"level":"info","message":"Server running on port 5000","timestamp":"2025-08-04T10:52:58.114Z"}
+{"level":"info","message":"✅ Database-based file storage enabled","timestamp":"2025-08-04T10:52:58.115Z"}
+{"level":"info","message":"Database connection established","timestamp":"2025-08-04T10:55:11.430Z"}
+{"level":"info","message":"Server running on port 5000","timestamp":"2025-08-04T10:55:11.434Z"}
+{"level":"info","message":"✅ Database-based file storage enabled","timestamp":"2025-08-04T10:55:11.435Z"}
+{"level":"info","message":"Database connection established","timestamp":"2025-08-04T11:01:19.399Z"}
+{"level":"info","message":"Server running on port 5000","timestamp":"2025-08-04T11:01:19.403Z"}
+{"level":"info","message":"✅ Database-based file storage enabled","timestamp":"2025-08-04T11:01:19.403Z"}
+{"level":"info","message":"Attempting to serve file from: D:\\led-soliton\\led-display-react\\server\\public\\index.html","timestamp":"2025-08-04T11:01:35.259Z"}
+{"level":"info","message":"Attempting to serve file from: D:\\led-soliton\\led-display-react\\server\\public\\index.html","timestamp":"2025-08-04T11:01:40.872Z"}
+{"level":"info","message":"Attempting to serve file from: D:\\led-soliton\\led-display-react\\server\\public\\index.html","timestamp":"2025-08-04T11:01:41.005Z"}
+{"level":"info","message":"Attempting to serve file from: D:\\led-soliton\\led-display-react\\server\\public\\index.html","timestamp":"2025-08-04T11:01:41.145Z"}
+{"level":"info","message":"Login attempt for username: test","timestamp":"2025-08-04T11:02:08.133Z"}
+{"level":"info","message":"Login successful for user: test","timestamp":"2025-08-04T11:02:08.186Z"}
+{"level":"info","message":"File uploaded to database: 1754305718025-668718671.jpg (13223988 bytes)","timestamp":"2025-08-04T11:08:38.756Z"}
+{"level":"info","message":"File uploaded to database: 1754305718025-668718671.jpg by user test","timestamp":"2025-08-04T11:08:38.757Z"}
+{"level":"info","message":"Database connection established","timestamp":"2025-08-04T11:13:26.296Z"}
+{"level":"info","message":"Server running on port 5000","timestamp":"2025-08-04T11:13:26.300Z"}
+{"level":"info","message":"✅ Database-based file storage enabled","timestamp":"2025-08-04T11:13:26.300Z"}

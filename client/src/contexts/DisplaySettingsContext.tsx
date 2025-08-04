@@ -33,6 +33,7 @@ export const DisplaySettingsProvider: React.FC<{ children: React.ReactNode }> = 
     });
 
     const [refreshCallbacks, setRefreshCallbacks] = useState<(() => void)[]>([]);
+    const [lastSyncTime, setLastSyncTime] = useState<number>(0);
 
     // BroadcastChannel for cross-tab communication
     const [broadcastChannel] = useState(() => {
@@ -49,16 +50,13 @@ export const DisplaySettingsProvider: React.FC<{ children: React.ReactNode }> = 
                 // Try to initialize session (works for both authenticated and unauthenticated)
                 await sessionService.initializeSession();
 
-                // Only sync settings from server if authenticated (admin users)
-                // For display pages, let the 20-minute polling handle syncing
-                if (isAuthenticated) {
-                    console.log("🔄 Admin user - syncing settings immediately");
-                    const serverData = await sessionService.syncFromServer();
-                    if (serverData?.displaySettings) {
-                        setSettings(prev => ({ ...prev, ...serverData.displaySettings }));
-                    }
-                } else {
-                    console.log("🔄 Display page - skipping initial sync to avoid timing interference");
+                // Sync settings from server immediately for both admin and display
+                console.log("🔄 Initial sync from server...");
+                const serverData = await sessionService.syncFromServer();
+                if (serverData?.displaySettings) {
+                    setSettings(prev => ({ ...prev, ...serverData.displaySettings }));
+                    setLastSyncTime(Date.now());
+                    console.log("🔄 Initial settings loaded:", serverData.displaySettings);
                 }
             } catch (error) {
                 console.error("Error initializing session:", error);
@@ -75,8 +73,10 @@ export const DisplaySettingsProvider: React.FC<{ children: React.ReactNode }> = 
         if (broadcastChannel) {
             const handleMessage = (event: MessageEvent) => {
                 if (event.data.type === "SETTINGS_UPDATE") {
+                    console.log("🔄 Received settings update from other tab:", event.data.settings);
                     setSettings(event.data.settings);
                 } else if (event.data.type === "FORCE_REFRESH") {
+                    console.log("🔄 Force refresh received from other tab");
                     // Trigger all refresh callbacks
                     refreshCallbacks.forEach(callback => callback());
                 }
@@ -102,6 +102,7 @@ export const DisplaySettingsProvider: React.FC<{ children: React.ReactNode }> = 
                         // Only update if there are actual changes
                         if (JSON.stringify(prev) !== JSON.stringify(newSettings)) {
                             console.log("🔄 Display settings updated from server:", newSettings);
+                            setLastSyncTime(Date.now());
                             return newSettings;
                         }
                         return prev;
@@ -113,17 +114,18 @@ export const DisplaySettingsProvider: React.FC<{ children: React.ReactNode }> = 
             }
         };
 
-        // Poll every 20 minutes for cross-device updates (for testing - normally 5 seconds)
-        console.log("🔄 Setting up 20-minute polling interval for settings sync");
-        pollInterval = setInterval(pollForUpdates, 20 * 60 * 1000); // 20 minutes
+        // Poll every 5 seconds for cross-device updates (much more responsive)
+        console.log("🔄 Setting up 5-second polling interval for settings sync");
+        pollInterval = setInterval(pollForUpdates, 5 * 1000); // 5 seconds
 
-        // No initial poll - let the display run without interference
-        console.log("🔄 Skipping initial poll to avoid timing interference");
+        // Initial poll after 2 seconds to avoid interference with initial load
+        const initialPoll = setTimeout(pollForUpdates, 2000);
 
         return () => {
             if (pollInterval) {
                 clearInterval(pollInterval);
             }
+            clearTimeout(initialPoll);
         };
     }, []);
 
@@ -137,6 +139,7 @@ export const DisplaySettingsProvider: React.FC<{ children: React.ReactNode }> = 
         if (isAuthenticated) {
             try {
                 await sessionService.updateDisplaySettings(updatedSettings);
+                console.log("🔄 Settings synced to server");
             } catch (error) {
                 console.error("Error syncing settings to server:", error);
             }
@@ -166,6 +169,7 @@ export const DisplaySettingsProvider: React.FC<{ children: React.ReactNode }> = 
                 setSettings(prev => {
                     const newSettings = { ...prev, ...serverData.displaySettings };
                     console.log("🔄 Force refresh: Settings updated from server:", newSettings);
+                    setLastSyncTime(Date.now());
                     return newSettings;
                 });
             }

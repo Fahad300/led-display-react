@@ -58,6 +58,7 @@ jspm_packages/
 *.swp
 *.swo
 *~
+.cursorrules
 
 # OS generated files
 .DS_Store

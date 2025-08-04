@@ -233,12 +233,7 @@ const SwiperSlideshow: React.FC<{
 
     return (
         <div className="relative w-full h-full">
-            {/* Timing Indicator */}
-            {isFullscreen && activeSlides.length > 1 && (
-                <div className="absolute top-4 left-4 z-[10000] bg-black/70 text-white px-3 py-1 rounded-lg text-sm font-mono">
-                    {timeRemaining}s / {currentSlideDuration}s
-                </div>
-            )}
+
 
             <Swiper
                 modules={modules}

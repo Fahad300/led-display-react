@@ -78,7 +78,7 @@ const uploadFile = async (file: File): Promise<string> => {
     formData.append("file", file);
 
     try {
-        const response = await fetch(`${BACKEND_URL}/api/upload`, {
+        const response = await fetch(`${BACKEND_URL}/api/files/upload`, {
             method: "POST",
             body: formData,
             headers: {

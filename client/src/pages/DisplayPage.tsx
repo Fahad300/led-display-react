@@ -8,17 +8,20 @@ import { useDisplaySettings } from "../contexts/DisplaySettingsContext";
  * It can be controlled remotely from the home page (admin machine).
  */
 const DisplayPage: React.FC = () => {
-    const { onRefreshRequest } = useDisplaySettings();
+    const { onRefreshRequest, settings } = useDisplaySettings();
     const [showSyncIndicator, setShowSyncIndicator] = useState(false);
 
     // Register refresh callback
     useEffect(() => {
         const cleanup = onRefreshRequest(() => {
+            console.log("🔄 Display page received refresh request");
             // Show sync indicator briefly
             setShowSyncIndicator(true);
+
             setTimeout(() => {
                 setShowSyncIndicator(false);
                 // Force a hard refresh of the page
+                console.log("🔄 Performing hard refresh of display page");
                 window.location.reload();
             }, 1000);
         });
@@ -26,24 +29,34 @@ const DisplayPage: React.FC = () => {
         return cleanup;
     }, [onRefreshRequest]);
 
+    // Show sync indicator when settings change
+    useEffect(() => {
+        setShowSyncIndicator(true);
+        const timer = setTimeout(() => {
+            setShowSyncIndicator(false);
+        }, 2000);
+        return () => clearTimeout(timer);
+    }, [settings]);
+
     return (
         <div className="w-full h-screen bg-black relative">
-            <SlidesDisplay />
-
             {/* Sync Indicator */}
             {showSyncIndicator && (
-                <div className="absolute top-4 left-4 z-[10001] bg-green-500 text-white px-4 py-2 rounded-lg shadow-lg">
-                    <div className="flex items-center gap-2">
-                        <svg className="w-5 h-5 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                        </svg>
-                        <span>Refreshing...</span>
+                <div className="absolute top-4 left-4 z-50 bg-green-500 text-white px-3 py-1 rounded-lg shadow-lg animate-pulse">
+                    <div className="flex items-center space-x-2">
+                        <div className="w-2 h-2 bg-white rounded-full animate-ping"></div>
+                        <span className="text-sm font-medium">Syncing...</span>
                     </div>
                 </div>
             )}
 
+
+
+            {/* Main Display */}
+            <SlidesDisplay />
+
             {/* Cross-Device Sync Indicator */}
-            <div className="absolute bottom-4 left-4 z-[10001] bg-blue-500 text-white px-3 py-1 rounded-lg shadow-lg text-sm">
+            <div className="absolute bottom-4 left-4 z-50 bg-blue-500 text-white px-3 py-1 rounded-lg shadow-lg text-sm">
                 <div className="flex items-center gap-1">
                     <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
                     <span>Live Sync</span>
