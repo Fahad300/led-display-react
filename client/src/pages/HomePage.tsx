@@ -39,6 +39,7 @@ import { useNavigate } from 'react-router-dom';
 import { DigitalClock } from "../components/DigitalClock";
 import NewsSlideComponent from "../components/NewsSlideComponent";
 import { useToast } from "../contexts/ToastContext";
+import { sessionService } from "../services/sessionService";
 
 // Type for reordering result
 interface ReorderResult {
@@ -270,9 +271,14 @@ const SortableSlideCard: React.FC<{
                         {slide.type === SLIDE_TYPES.EVENT ? (
                             <button
                                 type="button"
-                                className="relative inline-flex h-6 w-11 items-center rounded-full bg-slate-200 cursor-not-allowed"
-                                title="Event slides are automatically activated on birthdays."
-                                disabled
+                                role="switch"
+                                aria-checked={slide.active}
+                                onClick={() => onToggleActive(slide.id)}
+                                disabled={!slide.active && !(slide as EventSlideType).data.hasEvents}
+                                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${slide.active ? "bg-persivia-teal" :
+                                    (slide as EventSlideType).data.hasEvents ? "bg-slate-200" : "bg-slate-200 cursor-not-allowed opacity-50"
+                                    }`}
+                                title={!(slide as EventSlideType).data.hasEvents ? "No events today - cannot activate this slide" : ""}
                             >
                                 <span
                                     className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${slide.active ? "translate-x-5" : "translate-x-1"}`}
@@ -588,6 +594,7 @@ const HomePage: React.FC = () => {
     const slidesContainerRef = useRef<HTMLDivElement>(null);
     const [, setDateTimeState] = useState<string>("");
     const [currentSlideIndex, setCurrentSlideIndex] = useState(0);
+    const [eventSlideStates, setEventSlideStates] = useState<{ [key: string]: boolean }>({});
 
     // Helper functions for date checks
     const isBirthdayToday = (dob: string): boolean => {
@@ -612,8 +619,8 @@ const HomePage: React.FC = () => {
                     const hasBirthdays = birthdayEmployees.length > 0;
                     return {
                         ...slide,
-                        duration: hasBirthdays ? 10 : 0,
-                        active: hasBirthdays,
+                        duration: hasBirthdays && slide.active ? 10 : 0,
+                        active: slide.active, // Respect the manual toggle state
                         data: {
                             ...slide.data,
                             employees: birthdayEmployees,
@@ -627,8 +634,8 @@ const HomePage: React.FC = () => {
                     const hasAnniversaries = anniversaryEmployees.length > 0;
                     return {
                         ...slide,
-                        duration: hasAnniversaries ? 10 : 0,
-                        active: hasAnniversaries,
+                        duration: hasAnniversaries && slide.active ? 10 : 0,
+                        active: slide.active, // Respect the manual toggle state
                         data: {
                             ...slide.data,
                             employees: anniversaryEmployees,
@@ -641,53 +648,95 @@ const HomePage: React.FC = () => {
         });
     }, [orderedSlides]);
 
+    // Load event slide states from database app settings
+    useEffect(() => {
+        const loadEventSlideStates = async () => {
+            try {
+                const sessionData = await sessionService.syncFromServer();
+                if (sessionData?.appSettings?.eventSlideStates) {
+                    setEventSlideStates(sessionData.appSettings.eventSlideStates);
+                } else {
+                    // Initialize with default values if none exist
+                    const defaultStates = {
+                        "birthday-event-slide": true,
+                        "anniversary-event-slide": true
+                    };
+                    setEventSlideStates(defaultStates);
+                    // Save default states to database
+                    await sessionService.updateAppSettings({ eventSlideStates: defaultStates });
+                }
+            } catch (error) {
+                console.error("Error loading event slide states:", error);
+                // Fallback to default states
+                const defaultStates = {
+                    "birthday-event-slide": true,
+                    "anniversary-event-slide": true
+                };
+                setEventSlideStates(defaultStates);
+            }
+        };
+
+        loadEventSlideStates();
+    }, []);
+
     // Initialize ordered slides and update active slides
     useEffect(() => {
+
         // Remove any existing event slides
         const nonEventSlides = slides.filter(slide => slide.type !== SLIDE_TYPES.EVENT);
 
-        // Birthday event slide
+        // Birthday event slide - always create it
         const birthdayEmployees = employees.filter(employee => isBirthdayToday(employee.dob));
-        const birthdayEventSlide: EventSlideType | null = birthdayEmployees.length > 0 ? {
+        const birthdayActiveState = eventSlideStates["birthday-event-slide"];
+
+        const birthdayEventSlide: EventSlideType = {
             id: "birthday-event-slide",
             name: "Birthday Celebrations",
             type: SLIDE_TYPES.EVENT,
-            active: true,
-            duration: 10,
+            active: birthdayEmployees.length > 0 ? (birthdayActiveState ?? true) : false, // Only active if there are birthdays
+            duration: birthdayEmployees.length > 0 ? 10 : 0, // Only show duration if there are birthdays
             data: {
                 title: "Birthday Celebrations",
-                description: "Celebrating our team members' birthdays",
+                description: birthdayEmployees.length > 0
+                    ? "Celebrating our team members' birthdays"
+                    : "No birthdays today - cannot activate this slide",
                 date: new Date().toISOString(),
                 isEmployeeSlide: true,
                 employees: birthdayEmployees,
-                eventType: "birthday"
+                eventType: "birthday",
+                hasEvents: birthdayEmployees.length > 0
             },
             dataSource: "manual"
-        } : null;
+        };
 
-        // Anniversary event slide
+        // Anniversary event slide - always create it
         const anniversaryEmployees = employees.filter(employee => isAnniversaryToday(employee.dateOfJoining));
-        const anniversaryEventSlide: EventSlideType | null = anniversaryEmployees.length > 0 ? {
+        const anniversaryActiveState = eventSlideStates["anniversary-event-slide"];
+
+        const anniversaryEventSlide: EventSlideType = {
             id: "anniversary-event-slide",
             name: "Work Anniversaries",
             type: SLIDE_TYPES.EVENT,
-            active: true,
-            duration: 10,
+            active: anniversaryEmployees.length > 0 ? (anniversaryActiveState ?? true) : false, // Only active if there are anniversaries
+            duration: anniversaryEmployees.length > 0 ? 10 : 0, // Only show duration if there are anniversaries
             data: {
                 title: "Work Anniversaries",
-                description: "Celebrating our team members' work anniversaries",
+                description: anniversaryEmployees.length > 0
+                    ? "Celebrating our team members' work anniversaries"
+                    : "No work anniversaries today - cannot activate this slide",
                 date: new Date().toISOString(),
                 isEmployeeSlide: true,
                 employees: anniversaryEmployees,
-                eventType: "anniversary"
+                eventType: "anniversary",
+                hasEvents: anniversaryEmployees.length > 0
             },
             dataSource: "manual"
-        } : null;
+        };
 
-        // Add event slides if there are employees for today
-        const eventSlides: EventSlideType[] = [birthdayEventSlide, anniversaryEventSlide].filter((s): s is EventSlideType => s !== null);
+        // Always add both event slides
+        const eventSlides: EventSlideType[] = [birthdayEventSlide, anniversaryEventSlide];
         setOrderedSlides([...nonEventSlides, ...eventSlides]);
-    }, [slides]);
+    }, [slides, eventSlideStates]);
 
     // Update active slides when processedActiveSlides change
     useEffect(() => {
@@ -705,9 +754,20 @@ const HomePage: React.FC = () => {
     };
 
     // Handle slide activation toggle
-    const handleToggleActive = (slideId: string) => {
+    const handleToggleActive = async (slideId: string) => {
         const slideToUpdate = orderedSlides.find(s => s.id === slideId);
         if (slideToUpdate) {
+            // For event slides, check if there are actual events before allowing activation
+            if (slideToUpdate.type === SLIDE_TYPES.EVENT) {
+                const eventSlide = slideToUpdate as EventSlideType;
+                const hasEvents = eventSlide.data.hasEvents;
+
+                // If trying to activate but no events, prevent it
+                if (!slideToUpdate.active && !hasEvents) {
+                    return;
+                }
+            }
+
             const updatedSlide = { ...slideToUpdate, active: !slideToUpdate.active };
             updateSlide(updatedSlide);
 
@@ -716,6 +776,22 @@ const HomePage: React.FC = () => {
                 slide.id === slideId ? updatedSlide : slide
             );
             setOrderedSlides(newSlides);
+
+            // Store event slide state separately for persistence
+            if (slideId === "birthday-event-slide" || slideId === "anniversary-event-slide") {
+                const newEventStates = {
+                    ...eventSlideStates,
+                    [slideId]: updatedSlide.active
+                };
+                setEventSlideStates(newEventStates);
+
+                // Save to database via app settings
+                try {
+                    await sessionService.updateAppSettings({ eventSlideStates: newEventStates });
+                } catch (error) {
+                    console.error("Error saving event slide states to database:", error);
+                }
+            }
         }
     };
 
@@ -972,6 +1048,7 @@ const HomePage: React.FC = () => {
                         <div className={`absolute inset-[1px] bg-persivia-white rounded-lg overflow-hidden ${isFullscreen ? "rounded-none" : ""}`}>
                             {activeSlides.length > 0 ? (
                                 <SwiperSlideshow
+                                    key={`swiper-${settings.swiperEffect}`}
                                     slides={processedActiveSlides.filter(slide => slide.active)}
                                     renderSlideContent={renderSlideContent}
                                     onSlideChange={(index) => {
@@ -1143,6 +1220,8 @@ const HomePage: React.FC = () => {
                 >
                     Force Refresh All Displays
                 </button>
+
+
             </aside>
         </div>
     );

@@ -111,6 +111,10 @@ export interface EventSlideData {
      * Event type for employee event slides
      */
     eventType?: "birthday" | "anniversary";
+    /**
+     * Whether there are actual events today for this slide
+     */
+    hasEvents?: boolean;
 }
 
 /**

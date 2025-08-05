@@ -37,13 +37,13 @@ app.use(errorHandler_1.errorHandler);
 // Initialize database connection
 database_1.AppDataSource.initialize()
     .then(() => {
-    logger_1.logger.info("Database connection established");
-    const PORT = process.env.PORT || 5000;
-    app.listen(PORT, () => {
-        logger_1.logger.info(`Server running on port ${PORT}`);
-        logger_1.logger.info("✅ Database-based file storage enabled");
-    });
-})
+        logger_1.logger.info("Database connection established");
+        const PORT = process.env.PORT || 5000;
+        app.listen(PORT, () => {
+            logger_1.logger.info(`Server running on port ${PORT}`);
+            logger_1.logger.info("✅ Database-based file storage enabled");
+        });
+    })
     .catch((error) => {
-    logger_1.logger.error("Error during database initialization:", error);
-});
+        logger_1.logger.error("Error during database initialization:", error);
+    });

@@ -15,7 +15,6 @@
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            min-height: 100vh;
             background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
         }
 
@@ -26,6 +25,7 @@
             border-radius: 10px;
             box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
             text-align: center;
+            content-align: center;
         }
 
         h1 {
@@ -67,15 +67,18 @@
     <div class="container">
         <h1>LED Display Server</h1>
         <div class="status">Server Running</div>
-        <p class="info">The server is up and running successfully.</p>
+        <p class="info">The server is up and running successfully on Port <span id="port-number">5000</span></p>
         <div class="endpoints">
-            <h3>Available Endpoints:</h3>
-            <div class="endpoint">GET /api/admin/uploads/stats - Get media files statistics</div>
-            <div class="endpoint">POST /api/upload - Upload media files</div>
-            <div class="endpoint">POST /api/admin/uploads/delete - Delete media files</div>
-            <div class="endpoint">POST /api/admin/uploads/purge-all - Delete all media files</div>
+            <h2>Available Paths</h2>
+            <p class="endpoint">/api/auth - Authentication routes</p>
+            <p class="endpoint">/api/admin - Administrative routes</p>
+            <p class="endpoint">/api/display - Display routes</p>
+            <p class="endpoint">/api/sessions - Session management routes</p>
+            <p class="endpoint">/api/files - File management routes</p>
+            <p class="endpoint">/ - Main application routes</p>
         </div>
     </div>
+
 </body>
 
 </html>

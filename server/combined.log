@@ -845,3 +845,35 @@
 {"level":"info","message":"File deleted from database: 1778c0ab-7a70-4b82-9379-9f8f0dd15d4b by user test","timestamp":"2025-08-04T12:22:52.135Z"}
 {"level":"info","message":"File deleted from database: 549a401e-18c7-4f09-b396-da4a9a1a396c","timestamp":"2025-08-04T12:22:52.206Z"}
 {"level":"info","message":"File deleted from database: 549a401e-18c7-4f09-b396-da4a9a1a396c by user test","timestamp":"2025-08-04T12:22:52.206Z"}
+{"level":"info","message":"Attempting to serve file from: D:\\led-soliton\\led-display-react\\server\\public\\index.html","timestamp":"2025-08-04T12:36:48.185Z"}
+{"level":"info","message":"Login attempt for username: demo","timestamp":"2025-08-04T14:03:13.768Z"}
+{"level":"error","message":"Login failed: Invalid credentials","timestamp":"2025-08-04T14:03:13.823Z"}
+{"level":"error","message":"Login attempt details - Username: demo","timestamp":"2025-08-04T14:03:13.824Z"}
+{"level":"info","message":"Login attempt for username: test","timestamp":"2025-08-04T14:03:24.463Z"}
+{"level":"info","message":"Login successful for user: test","timestamp":"2025-08-04T14:03:24.516Z"}
+{"level":"info","message":"Database connection established","timestamp":"2025-08-05T09:39:07.817Z"}
+{"level":"info","message":"Server running on port 5000","timestamp":"2025-08-05T09:39:07.823Z"}
+{"level":"info","message":"✅ Database-based file storage enabled","timestamp":"2025-08-05T09:39:07.823Z"}
+{"level":"info","message":"Attempting to serve file from: D:\\led-soliton\\led-display-react\\server\\public\\index.html","timestamp":"2025-08-05T09:40:33.667Z"}
+{"level":"info","message":"Attempting to serve file from: D:\\led-soliton\\led-display-react\\server\\public\\index.html","timestamp":"2025-08-05T09:43:15.906Z"}
+{"level":"info","message":"Attempting to serve file from: D:\\led-soliton\\led-display-react\\server\\public\\index.html","timestamp":"2025-08-05T09:43:16.041Z"}
+{"level":"info","message":"Attempting to serve file from: D:\\led-soliton\\led-display-react\\server\\public\\index.html","timestamp":"2025-08-05T09:43:16.159Z"}
+{"level":"info","message":"Attempting to serve file from: D:\\led-soliton\\led-display-react\\server\\public\\index.html","timestamp":"2025-08-05T09:44:10.789Z"}
+{"level":"info","message":"Attempting to serve file from: D:\\led-soliton\\led-display-react\\server\\public\\index.html","timestamp":"2025-08-05T09:44:10.929Z"}
+{"level":"info","message":"Attempting to serve file from: D:\\led-soliton\\led-display-react\\server\\public\\index.html","timestamp":"2025-08-05T09:44:11.069Z"}
+{"level":"info","message":"Attempting to serve file from: D:\\led-soliton\\led-display-react\\server\\public\\index.html","timestamp":"2025-08-05T09:44:26.596Z"}
+{"level":"info","message":"Attempting to serve file from: D:\\led-soliton\\led-display-react\\server\\public\\index.html","timestamp":"2025-08-05T09:44:26.730Z"}
+{"level":"info","message":"Attempting to serve file from: D:\\led-soliton\\led-display-react\\server\\public\\index.html","timestamp":"2025-08-05T09:44:26.883Z"}
+{"level":"info","message":"Attempting to serve file from: D:\\led-soliton\\led-display-react\\server\\public\\index.html","timestamp":"2025-08-05T09:45:20.155Z"}
+{"level":"info","message":"Attempting to serve file from: D:\\led-soliton\\led-display-react\\server\\public\\index.html","timestamp":"2025-08-05T09:45:20.303Z"}
+{"level":"info","message":"Attempting to serve file from: D:\\led-soliton\\led-display-react\\server\\public\\index.html","timestamp":"2025-08-05T09:45:20.456Z"}
+{"level":"info","message":"Attempting to serve file from: D:\\led-soliton\\led-display-react\\server\\public\\index.html","timestamp":"2025-08-05T09:45:44.445Z"}
+{"level":"info","message":"Attempting to serve file from: D:\\led-soliton\\led-display-react\\server\\public\\index.html","timestamp":"2025-08-05T09:45:44.568Z"}
+{"level":"info","message":"Attempting to serve file from: D:\\led-soliton\\led-display-react\\server\\public\\index.html","timestamp":"2025-08-05T09:48:11.687Z"}
+{"level":"info","message":"Attempting to serve file from: D:\\led-soliton\\led-display-react\\server\\public\\index.html","timestamp":"2025-08-05T09:48:11.810Z"}
+{"level":"info","message":"Attempting to serve file from: D:\\led-soliton\\led-display-react\\server\\public\\index.html","timestamp":"2025-08-05T09:48:11.966Z"}
+{"level":"info","message":"Attempting to serve file from: D:\\led-soliton\\led-display-react\\server\\public\\index.html","timestamp":"2025-08-05T09:48:46.645Z"}
+{"level":"info","message":"Attempting to serve file from: D:\\led-soliton\\led-display-react\\server\\public\\index.html","timestamp":"2025-08-05T09:48:46.780Z"}
+{"level":"info","message":"Attempting to serve file from: D:\\led-soliton\\led-display-react\\server\\public\\index.html","timestamp":"2025-08-05T09:48:46.954Z"}
+{"level":"info","message":"Attempting to serve file from: D:\\led-soliton\\led-display-react\\server\\public\\index.html","timestamp":"2025-08-05T09:49:55.995Z"}
+{"level":"info","message":"Attempting to serve file from: D:\\led-soliton\\led-display-react\\server\\public\\index.html","timestamp":"2025-08-05T09:49:56.156Z"}

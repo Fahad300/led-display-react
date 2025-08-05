@@ -247,6 +247,7 @@ export const EventSlide: React.FC<{ slide: EventSlideType }> = ({ slide }) => {
     const filteredEmployees = eventType === "anniversary"
         ? employees.filter(e => e.isAnniversary)
         : employees.filter(e => e.isBirthday);
+
     if (filteredEmployees.length === 0) {
         return null;
     }

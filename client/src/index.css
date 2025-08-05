@@ -346,3 +346,32 @@ input#slideImageFile {
     opacity: 0.8;
   }
 }
+
+/* Display Page Fullscreen Styles */
+.display-page-fullscreen {
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  overflow: hidden !important;
+  z-index: 9999 !important;
+}
+
+.display-page-fullscreen body {
+  overflow: hidden !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+/* Hide browser UI elements when in display mode */
+.display-page-fullscreen::-webkit-scrollbar {
+  display: none;
+}
+
+.display-page-fullscreen {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}

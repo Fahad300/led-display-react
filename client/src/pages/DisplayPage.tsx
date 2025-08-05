@@ -10,6 +10,67 @@ import { useDisplaySettings } from "../contexts/DisplaySettingsContext";
 const DisplayPage: React.FC = () => {
     const { onRefreshRequest, settings } = useDisplaySettings();
     const [showSyncIndicator, setShowSyncIndicator] = useState(false);
+    const [isFullscreen, setIsFullscreen] = useState(false);
+
+    // Force fullscreen when display page loads (LED screen mode)
+    useEffect(() => {
+        const forceFullscreen = async () => {
+            try {
+                // Try multiple methods to ensure fullscreen works
+                if (!document.fullscreenElement) {
+                    // Method 1: Try document.documentElement
+                    try {
+                        await document.documentElement.requestFullscreen();
+                        console.log("LED Display: Entered fullscreen via documentElement");
+                        return;
+                    } catch (error) {
+                        console.log("documentElement fullscreen failed, trying body...");
+                    }
+
+                    // Method 2: Try document.body
+                    try {
+                        await document.body.requestFullscreen();
+                        console.log("LED Display: Entered fullscreen via body");
+                        return;
+                    } catch (error) {
+                        console.log("body fullscreen failed");
+                    }
+                }
+            } catch (error) {
+                console.log("Could not enter fullscreen automatically:", error);
+            }
+        };
+
+        // Try immediately and then retry after delays
+        forceFullscreen();
+
+        // Retry after 500ms
+        const timer1 = setTimeout(forceFullscreen, 500);
+
+        // Retry after 1 second
+        const timer2 = setTimeout(forceFullscreen, 1000);
+
+        // Retry after 2 seconds
+        const timer3 = setTimeout(forceFullscreen, 2000);
+
+        return () => {
+            clearTimeout(timer1);
+            clearTimeout(timer2);
+            clearTimeout(timer3);
+        };
+    }, []);
+
+    // Monitor fullscreen state
+    useEffect(() => {
+        const handleFullscreenChange = () => {
+            setIsFullscreen(!!document.fullscreenElement);
+        };
+
+        document.addEventListener("fullscreenchange", handleFullscreenChange);
+        return () => document.removeEventListener("fullscreenchange", handleFullscreenChange);
+    }, []);
+
+
 
     // Register refresh callback
     useEffect(() => {
@@ -38,8 +99,25 @@ const DisplayPage: React.FC = () => {
         return () => clearTimeout(timer);
     }, [settings]);
 
+    // Force fullscreen on any user interaction
+    const handleForceFullscreen = async () => {
+        try {
+            if (!document.fullscreenElement) {
+                await document.documentElement.requestFullscreen();
+                console.log("LED Display: Forced fullscreen on interaction");
+            }
+        } catch (error) {
+            console.log("Force fullscreen failed:", error);
+        }
+    };
+
     return (
-        <div className="w-full h-screen bg-black relative">
+        <div
+            className="display-page-fullscreen bg-black relative"
+            onClick={handleForceFullscreen}
+            onKeyDown={handleForceFullscreen}
+            tabIndex={0}
+        >
             {/* Sync Indicator */}
             {showSyncIndicator && (
                 <div className="absolute top-4 left-4 z-50 bg-green-500 text-white px-3 py-1 rounded-lg shadow-lg animate-pulse">
@@ -62,6 +140,20 @@ const DisplayPage: React.FC = () => {
                     <span>Live Sync</span>
                 </div>
             </div>
+
+            {/* Fullscreen Status Indicator */}
+            {!isFullscreen && (
+                <div className="absolute top-4 right-4 z-50 bg-yellow-500 text-black px-3 py-1 rounded-lg shadow-lg text-sm animate-pulse">
+                    <div className="flex items-center gap-1">
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
+                        </svg>
+                        <span>Click to Enter Fullscreen</span>
+                    </div>
+                </div>
+            )}
+
+
         </div>
     );
 };

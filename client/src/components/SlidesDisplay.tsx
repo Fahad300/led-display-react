@@ -1,6 +1,7 @@
-import React, { useMemo } from "react";
+import React, { useMemo, useState, useEffect } from "react";
 import { useSlides } from "../contexts/SlideContext";
 import { useDisplaySettings } from "../contexts/DisplaySettingsContext";
+import { sessionService } from "../services/sessionService";
 import { Slide, SLIDE_TYPES, ImageSlide as ImageSlideType, VideoSlide as VideoSlideType, NewsSlide, EventSlide as EventSlideType, TeamComparisonSlide as TeamComparisonSlideType, GraphSlide as GraphSlideType, DocumentSlide as DocumentSlideType } from "../types";
 import { EventSlide, ImageSlide, CurrentEscalationsSlideComponent, TeamComparisonSlideComponent, GraphSlide, DocumentSlide } from "./slides";
 import { VideoSlide } from "./slides/VideoSlide";
@@ -15,20 +16,30 @@ import { motion } from "framer-motion";
  * Simple Animated Logo Component for LED Display with Video Background
  */
 const AnimatedLogo: React.FC = () => {
+    const [videoError, setVideoError] = useState(false);
+
     return (
         <div className="w-full h-screen bg-black flex items-center justify-center relative overflow-hidden">
             {/* Video Background */}
-            <video
-                autoPlay
-                muted
-                loop
-                playsInline
-                className="absolute inset-0 w-full h-full object-cover opacity-20"
-                style={{ zIndex: 1 }}
-            >
-                <source src="https://solitontechnologies.com/assets/img/video-slider.mp4" type="video/mp4" />
-                Your browser does not support the video tag.
-            </video>
+            {!videoError && (
+                <video
+                    autoPlay
+                    muted
+                    loop
+                    playsInline
+                    className="absolute inset-0 w-full h-full object-cover opacity-20"
+                    style={{ zIndex: 1 }}
+                    onError={(e) => {
+                        console.error("Video playback error in AnimatedLogo:", e);
+                        setVideoError(true);
+                    }}
+                    onLoadStart={() => console.log("Video loading started: /videos/soliton-bg.mp4")}
+                    onCanPlay={() => console.log("Video can play: /videos/soliton-bg.mp4")}
+                >
+                    <source src="/videos/soliton-bg.mp4" type="video/mp4" />
+                    Your browser does not support the video tag.
+                </video>
+            )}
 
             {/* Overlay for better logo visibility */}
             <div
@@ -81,6 +92,36 @@ const SlidesDisplay: React.FC = () => {
     const { slides, isLoading, loadSlides } = useSlides();
     const { settings, onRefreshRequest } = useDisplaySettings();
     const [isRefreshing, setIsRefreshing] = React.useState(false);
+    const [eventSlideStates, setEventSlideStates] = useState<{ [key: string]: boolean }>({});
+
+    // Load event slide states from database
+    useEffect(() => {
+        const loadEventSlideStates = async () => {
+            try {
+                const sessionData = await sessionService.syncFromServer();
+                if (sessionData?.appSettings?.eventSlideStates) {
+                    setEventSlideStates(sessionData.appSettings.eventSlideStates);
+                } else {
+                    // Default to active if no states are saved
+                    const defaultStates = {
+                        "birthday-event-slide": true,
+                        "anniversary-event-slide": true
+                    };
+                    setEventSlideStates(defaultStates);
+                }
+            } catch (error) {
+                console.error("Error loading event slide states in SlidesDisplay:", error);
+                // Fallback to default states
+                const defaultStates = {
+                    "birthday-event-slide": true,
+                    "anniversary-event-slide": true
+                };
+                setEventSlideStates(defaultStates);
+            }
+        };
+
+        loadEventSlideStates();
+    }, []);
 
     // Register refresh callback to respond to force refresh requests
     React.useEffect(() => {
@@ -117,20 +158,17 @@ const SlidesDisplay: React.FC = () => {
     const processedSlides = useMemo(() => {
         if (isLoading) return [];
 
-        console.log("🔄 SlidesDisplay: Processing slides for display");
-        console.log(`🔄 SlidesDisplay: Input slides count: ${slides.length}`);
-
         // Remove any existing event slides
         const nonEventSlides = slides.filter(slide => slide.type !== SLIDE_TYPES.EVENT);
-        console.log(`🔄 SlidesDisplay: Non-event slides: ${nonEventSlides.length}`);
 
         // Birthday event slide
         const birthdayEmployees = employees.filter(employee => isBirthdayToday(employee.dob));
+        const birthdayActiveState = eventSlideStates["birthday-event-slide"] ?? true;
         const birthdayEventSlide: EventSlideType | null = birthdayEmployees.length > 0 ? {
             id: "birthday-event-slide",
             name: "Birthday Celebrations",
             type: SLIDE_TYPES.EVENT,
-            active: true,
+            active: birthdayActiveState,
             duration: 10,
             data: {
                 title: "Birthday Celebrations",
@@ -138,18 +176,20 @@ const SlidesDisplay: React.FC = () => {
                 date: new Date().toISOString(),
                 isEmployeeSlide: true,
                 employees: birthdayEmployees,
-                eventType: "birthday"
+                eventType: "birthday",
+                hasEvents: true
             },
             dataSource: "manual"
         } : null;
 
         // Anniversary event slide
         const anniversaryEmployees = employees.filter(employee => isAnniversaryToday(employee.dateOfJoining));
+        const anniversaryActiveState = eventSlideStates["anniversary-event-slide"] ?? true;
         const anniversaryEventSlide: EventSlideType | null = anniversaryEmployees.length > 0 ? {
             id: "anniversary-event-slide",
             name: "Work Anniversaries",
             type: SLIDE_TYPES.EVENT,
-            active: true,
+            active: anniversaryActiveState,
             duration: 10,
             data: {
                 title: "Work Anniversaries",
@@ -157,7 +197,8 @@ const SlidesDisplay: React.FC = () => {
                 date: new Date().toISOString(),
                 isEmployeeSlide: true,
                 employees: anniversaryEmployees,
-                eventType: "anniversary"
+                eventType: "anniversary",
+                hasEvents: true
             },
             dataSource: "manual"
         } : null;
@@ -166,13 +207,8 @@ const SlidesDisplay: React.FC = () => {
         const eventSlides: EventSlideType[] = [birthdayEventSlide, anniversaryEventSlide].filter((s): s is EventSlideType => s !== null);
         const allSlides = [...nonEventSlides, ...eventSlides];
 
-        console.log(`🔄 SlidesDisplay: Total processed slides: ${allSlides.length}`);
-        allSlides.forEach((slide, index) => {
-            console.log(`🔄 SlidesDisplay: Slide ${index}: ${slide.name} - Active: ${slide.active} - Duration: ${slide.duration}s`);
-        });
-
         return allSlides; // Let SwiperSlideshow handle the active filtering
-    }, [slides, isLoading]);
+    }, [slides, isLoading, eventSlideStates]);
 
     // Memoize the render function to prevent unnecessary re-renders
     const renderSlideContent = useMemo(() => {
@@ -229,6 +265,7 @@ const SlidesDisplay: React.FC = () => {
     return (
         <div className="relative w-full h-screen bg-black">
             <SwiperSlideshow
+                key={`swiper-${settings.swiperEffect}`}
                 slides={processedSlides}
                 renderSlideContent={renderSlideContent}
                 hidePagination={settings.hidePagination}

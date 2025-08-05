@@ -65,3 +65,5 @@
 {"level":"error","message":"Login attempt details - Username: test","timestamp":"2025-08-01T15:29:09.057Z"}
 {"level":"error","message":"Login failed: Invalid credentials","timestamp":"2025-08-01T15:29:15.238Z"}
 {"level":"error","message":"Login attempt details - Username: admin","timestamp":"2025-08-01T15:29:15.239Z"}
+{"level":"error","message":"Login failed: Invalid credentials","timestamp":"2025-08-04T14:03:13.823Z"}
+{"level":"error","message":"Login attempt details - Username: demo","timestamp":"2025-08-04T14:03:13.824Z"}

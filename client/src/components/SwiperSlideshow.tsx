@@ -27,6 +27,7 @@ const SwiperSlideshow: React.FC<{
     const [timeRemaining, setTimeRemaining] = useState<number>(0);
     const [currentSlideDuration, setCurrentSlideDuration] = useState<number>(0);
     const [currentSlideIndex, setCurrentSlideIndex] = useState<number>(0);
+    const [videoError, setVideoError] = useState<boolean>(false);
 
     const swiperRef = useRef<SwiperType | null>(null);
     const countdownRef = useRef<NodeJS.Timeout | null>(null);
@@ -198,17 +199,25 @@ const SwiperSlideshow: React.FC<{
         return (
             <div className="w-full h-full bg-black flex items-center justify-center relative overflow-hidden">
                 {/* Video Background */}
-                <video
-                    autoPlay
-                    muted
-                    loop
-                    playsInline
-                    className="absolute inset-0 w-full h-full object-cover opacity-20"
-                    style={{ zIndex: 1 }}
-                >
-                    <source src="https://solitontechnologies.com/assets/img/video-slider.mp4" type="video/mp4" />
-                    Your browser does not support the video tag.
-                </video>
+                {!videoError && (
+                    <video
+                        autoPlay
+                        muted
+                        loop
+                        playsInline
+                        className="absolute inset-0 w-full h-full object-cover opacity-20"
+                        style={{ zIndex: 1 }}
+                        onError={(e) => {
+                            console.error("Video playback error in SwiperSlideshow:", e);
+                            setVideoError(true);
+                        }}
+                        onLoadStart={() => console.log("Video loading started: /videos/soliton-bg.mp4")}
+                        onCanPlay={() => console.log("Video can play: /videos/soliton-bg.mp4")}
+                    >
+                        <source src="/videos/soliton-bg.mp4" type="video/mp4" />
+                        Your browser does not support the video tag.
+                    </video>
+                )}
 
                 {/* Overlay for better logo visibility */}
                 <div
@@ -233,9 +242,8 @@ const SwiperSlideshow: React.FC<{
 
     return (
         <div className="relative w-full h-full">
-
-
             <Swiper
+                key={`swiper-${effect}`}
                 modules={modules}
                 effect={effect}
                 {...effectConfig}
@@ -254,8 +262,8 @@ const SwiperSlideshow: React.FC<{
                 speed={800}
                 grabCursor={false}
                 allowTouchMove={false}
-                observer={false}
-                observeParents={false}
+                observer={true}
+                observeParents={true}
                 loop={true}
             >
                 {activeSlides.map((slide) => (

@@ -27,10 +27,7 @@ const DisplaySettingsContext = createContext<DisplaySettingsContextType | undefi
 
 export const DisplaySettingsProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     const { user, isAuthenticated } = useAuth();
-    const [settings, setSettings] = useState<DisplaySettings>(() => {
-        const saved = localStorage.getItem("displaySettings");
-        return saved ? { ...defaultSettings, ...JSON.parse(saved) } : defaultSettings;
-    });
+    const [settings, setSettings] = useState<DisplaySettings>(defaultSettings);
 
     const [refreshCallbacks, setRefreshCallbacks] = useState<(() => void)[]>([]);
     const [lastSyncTime, setLastSyncTime] = useState<number>(0);
@@ -129,11 +126,10 @@ export const DisplaySettingsProvider: React.FC<{ children: React.ReactNode }> = 
         };
     }, []);
 
-    // Save settings to localStorage, server, and broadcast to other tabs
+    // Save settings to server and broadcast to other tabs
     const updateSettings = useCallback(async (newSettings: Partial<DisplaySettings>) => {
         const updatedSettings = { ...settings, ...newSettings };
         setSettings(updatedSettings);
-        localStorage.setItem("displaySettings", JSON.stringify(updatedSettings));
 
         // Sync to server if authenticated
         if (isAuthenticated) {
@@ -145,8 +141,8 @@ export const DisplaySettingsProvider: React.FC<{ children: React.ReactNode }> = 
             }
         } else {
             // For unauthenticated displays, we can't update server settings
-            // but we can still save locally and broadcast to other tabs
-            console.debug("Settings saved locally (unauthenticated display)");
+            // but we can still broadcast to other tabs
+            console.debug("Settings updated (unauthenticated display)");
         }
 
         // Broadcast to other tabs
