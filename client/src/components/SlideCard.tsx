@@ -1,6 +1,6 @@
 import React, { useState, useCallback } from "react";
 import { Slide, SLIDE_TYPES, ImageSlide, VideoSlide, NewsSlide, EventSlide } from "../types";
-import { employees } from "../data/employees";
+import { useEmployees } from "../contexts/EmployeeContext";
 
 /** Props for the slide card component */
 interface SlideCardProps {
@@ -14,6 +14,7 @@ interface SlideCardProps {
 const SlideCard: React.FC<SlideCardProps> = ({ slide, onEdit, onDelete, onToggleActive }) => {
     const [mediaError, setMediaError] = useState<boolean>(false);
     const [isProcessing, setIsProcessing] = useState<boolean>(false);
+    const { employees, loading: employeesLoading, error: employeesError } = useEmployees();
 
     const getMediaUrl = useCallback(() => {
         switch (slide.type) {
@@ -69,15 +70,14 @@ const SlideCard: React.FC<SlideCardProps> = ({ slide, onEdit, onDelete, onToggle
     // Special handling for event slides
     if (slide.type === SLIDE_TYPES.EVENT) {
         const eventSlide = slide as EventSlide;
-        const employee = employees.find((emp: typeof employees[0]) => emp.id === eventSlide.data.employeeId);
 
-        if (employee) {
+        if (employeesLoading) {
             return (
                 <div className="bg-white rounded-lg shadow-md p-4">
                     <div className="flex items-center justify-between mb-4">
                         <div>
-                            <h3 className="text-lg font-semibold text-gray-900">{employee.name}</h3>
-                            <p className="text-sm text-gray-500">Birthday Slide</p>
+                            <h3 className="text-lg font-semibold text-gray-900">{slide.name}</h3>
+                            <p className="text-sm text-gray-500">Loading employees...</p>
                         </div>
                         <div className="flex items-center gap-2">
                             <button
@@ -90,35 +90,182 @@ const SlideCard: React.FC<SlideCardProps> = ({ slide, onEdit, onDelete, onToggle
                             </button>
                         </div>
                     </div>
+                </div>
+            );
+        }
 
-                    {/* Footer */}
-                    <div className="flex items-center justify-between mt-4">
-                        <div className="flex items-center gap-2 text-sm text-gray-500">
-                            <span>Automatic</span>
-                            {slide.duration > 0 && (
-                                <>
-                                    <span>•</span>
-                                    <span>{slide.duration}s</span>
-                                </>
-                            )}
+        if (employeesError) {
+            return (
+                <div className="bg-white rounded-lg shadow-md p-4">
+                    <div className="flex items-center justify-between mb-4">
+                        <div>
+                            <h3 className="text-lg font-semibold text-gray-900">{slide.name}</h3>
+                            <p className="text-sm text-red-500">Error loading employees</p>
                         </div>
-
                         <div className="flex items-center gap-2">
                             <button
                                 type="button"
-                                onClick={() => onDelete(slide.id)}
+                                onClick={() => handleToggleActive(slide.id, !slide.active)}
                                 disabled={isProcessing}
-                                className="p-2 text-gray-600 hover:text-red-500 transition-colors disabled:opacity-50"
+                                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${slide.active ? "bg-persivia-teal" : "bg-slate-200"} ${isProcessing ? "opacity-50 cursor-not-allowed" : ""}`}
                             >
-                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                </svg>
+                                <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${slide.active ? "translate-x-5" : "translate-x-1"}`} />
                             </button>
                         </div>
                     </div>
                 </div>
             );
         }
+
+        // Handle birthday/anniversary slides
+        if (eventSlide.data.eventType === "birthday" || eventSlide.data.eventType === "anniversary") {
+            const filteredEmployees = eventSlide.data.eventType === "anniversary"
+                ? employees.filter(e => e.isAnniversary)
+                : employees.filter(e => e.isBirthday);
+
+            if (filteredEmployees.length > 0) {
+                return (
+                    <div className="bg-white rounded-lg shadow-md p-4">
+                        <div className="flex items-center justify-between mb-4">
+                            <div>
+                                <h3 className="text-lg font-semibold text-gray-900">{slide.name}</h3>
+                                <p className="text-sm text-gray-500">
+                                    {eventSlide.data.eventType === "anniversary" ? "Work Anniversary" : "Birthday"} Slide
+                                    ({filteredEmployees.length} {filteredEmployees.length === 1 ? "employee" : "employees"})
+                                </p>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <button
+                                    type="button"
+                                    onClick={() => handleToggleActive(slide.id, !slide.active)}
+                                    disabled={isProcessing}
+                                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${slide.active ? "bg-persivia-teal" : "bg-slate-200"} ${isProcessing ? "opacity-50 cursor-not-allowed" : ""}`}
+                                >
+                                    <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${slide.active ? "translate-x-5" : "translate-x-1"}`} />
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* Footer */}
+                        <div className="flex items-center justify-between mt-4">
+                            <div className="flex items-center gap-2 text-sm text-gray-500">
+                                <span>Automatic</span>
+                                {slide.duration > 0 && (
+                                    <>
+                                        <span>•</span>
+                                        <span>{slide.duration}s</span>
+                                    </>
+                                )}
+                            </div>
+
+                            <div className="flex items-center gap-2">
+                                <button
+                                    type="button"
+                                    onClick={() => onEdit(slide)}
+                                    disabled={isProcessing}
+                                    className="p-2 text-gray-600 hover:text-persivia-blue transition-colors disabled:opacity-50"
+                                >
+                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                    </svg>
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => onDelete(slide.id)}
+                                    disabled={isProcessing}
+                                    className="p-2 text-gray-600 hover:text-red-500 transition-colors disabled:opacity-50"
+                                >
+                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                );
+            } else {
+                return (
+                    <div className="bg-white rounded-lg shadow-md p-4">
+                        <div className="flex items-center justify-between mb-4">
+                            <div>
+                                <h3 className="text-lg font-semibold text-gray-900">{slide.name}</h3>
+                                <p className="text-sm text-gray-500">
+                                    No {eventSlide.data.eventType === "anniversary" ? "anniversaries" : "birthdays"} today
+                                </p>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <button
+                                    type="button"
+                                    onClick={() => handleToggleActive(slide.id, !slide.active)}
+                                    disabled={isProcessing}
+                                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${slide.active ? "bg-persivia-teal" : "bg-slate-200"} ${isProcessing ? "opacity-50 cursor-not-allowed" : ""}`}
+                                >
+                                    <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${slide.active ? "translate-x-5" : "translate-x-1"}`} />
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                );
+            }
+        }
+
+        // Handle other event types (general events)
+        return (
+            <div className="bg-white rounded-lg shadow-md p-4">
+                <div className="flex items-center justify-between mb-4">
+                    <div>
+                        <h3 className="text-lg font-semibold text-gray-900">{slide.name}</h3>
+                        <p className="text-sm text-gray-500">Event Slide</p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <button
+                            type="button"
+                            onClick={() => handleToggleActive(slide.id, !slide.active)}
+                            disabled={isProcessing}
+                            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${slide.active ? "bg-persivia-teal" : "bg-slate-200"} ${isProcessing ? "opacity-50 cursor-not-allowed" : ""}`}
+                        >
+                            <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${slide.active ? "translate-x-5" : "translate-x-1"}`} />
+                        </button>
+                    </div>
+                </div>
+
+                {/* Footer */}
+                <div className="flex items-center justify-between mt-4">
+                    <div className="flex items-center gap-2 text-sm text-gray-500">
+                        <span>Event</span>
+                        {slide.duration > 0 && (
+                            <>
+                                <span>•</span>
+                                <span>{slide.duration}s</span>
+                            </>
+                        )}
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                        <button
+                            type="button"
+                            onClick={() => onEdit(slide)}
+                            disabled={isProcessing}
+                            className="p-2 text-gray-600 hover:text-persivia-blue transition-colors disabled:opacity-50"
+                        >
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                            </svg>
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => onDelete(slide.id)}
+                            disabled={isProcessing}
+                            className="p-2 text-gray-600 hover:text-red-500 transition-colors disabled:opacity-50"
+                        >
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        );
     }
 
     return (
@@ -226,6 +373,8 @@ const getSlideTypeLabel = (type: typeof SLIDE_TYPES[keyof typeof SLIDE_TYPES]) =
             return "Video";
         case SLIDE_TYPES.NEWS:
             return "News";
+        case SLIDE_TYPES.EVENT:
+            return "Event";
         case SLIDE_TYPES.DOCUMENT:
             return "Document";
         default:

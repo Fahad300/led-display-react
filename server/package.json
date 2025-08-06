@@ -4,7 +4,7 @@
   "description": "LED Display Server with Authentication and MySQL Database",
   "main": "dist/server.js",
   "scripts": {
-    "start": "node dist/server.js",
+    "start": "ts-node src/server.ts",
     "dev": "nodemon src/server.ts",
     "build": "tsc",
     "test": "jest",

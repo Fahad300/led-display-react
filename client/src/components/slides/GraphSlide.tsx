@@ -59,10 +59,6 @@ export const GraphSlide: React.FC<{ slide: GraphSlideType }> = ({ slide }) => {
         datasets
     };
 
-    // Debug log
-    // eslint-disable-next-line no-console
-    console.log("[GraphSlide] chartData:", chartData);
-
     // Chart options
     const options: ChartOptions<"bar"> = {
         responsive: true,

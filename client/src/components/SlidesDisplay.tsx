@@ -5,12 +5,12 @@ import { sessionService } from "../services/sessionService";
 import { Slide, SLIDE_TYPES, ImageSlide as ImageSlideType, VideoSlide as VideoSlideType, NewsSlide, EventSlide as EventSlideType, TeamComparisonSlide as TeamComparisonSlideType, GraphSlide as GraphSlideType, DocumentSlide as DocumentSlideType } from "../types";
 import { EventSlide, ImageSlide, CurrentEscalationsSlideComponent, TeamComparisonSlideComponent, GraphSlide, DocumentSlide } from "./slides";
 import { VideoSlide } from "./slides/VideoSlide";
-import { employees } from "../data/employees";
 import SwiperSlideshow from "./SwiperSlideshow";
 import SlideLogoOverlay from "./SlideLogoOverlay";
 import { DigitalClock } from "./DigitalClock";
 import NewsSlideComponent from "./NewsSlideComponent";
 import { motion } from "framer-motion";
+import { useEmployees } from "../contexts/EmployeeContext";
 
 /**
  * Simple Animated Logo Component for LED Display with Video Background
@@ -91,6 +91,7 @@ const LoadingComponent: React.FC = () => {
 const SlidesDisplay: React.FC = () => {
     const { slides, isLoading, loadSlides } = useSlides();
     const { settings, onRefreshRequest } = useDisplaySettings();
+    const { employees } = useEmployees();
     const [isRefreshing, setIsRefreshing] = React.useState(false);
     const [eventSlideStates, setEventSlideStates] = useState<{ [key: string]: boolean }>({});
 

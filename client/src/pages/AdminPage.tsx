@@ -2,8 +2,8 @@ import React, { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useSlides } from "../contexts/SlideContext";
 import { useToast } from "../contexts/ToastContext";
-import { employees } from "../data/employees";
 import SlideCard from "../components/SlideCard";
+import { useEmployees } from "../contexts/EmployeeContext";
 import {
     Slide,
     ImageSlide,

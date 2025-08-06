@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useSlides } from '../contexts/SlideContext';
-import { Slide, SLIDE_TYPES, ImageSlide as ImageSlideType, VideoSlide as VideoSlideType, NewsSlide, EventSlide as EventSlideType, TeamComparisonSlide as TeamComparisonSlideType, GraphSlide as GraphSlideType, DocumentSlide as DocumentSlideType } from '../types';
+import { Slide, SLIDE_TYPES, ImageSlide as ImageSlideType, VideoSlide as VideoSlideType, NewsSlide, EventSlide as EventSlideType, TeamComparisonSlide as TeamComparisonSlideType, GraphSlide as GraphSlideType, DocumentSlide as DocumentSlideType, Employee } from '../types';
 import { EventSlide, ImageSlide, CurrentEscalationsSlideComponent, TeamComparisonSlideComponent, GraphSlide, DocumentSlide } from "../components/slides";
 import {
     DndContext,
@@ -18,8 +18,8 @@ import {
     useSortable
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { employees } from "../data/employees";
 import SlideLogoOverlay from "../components/SlideLogoOverlay";
+import { useEmployees } from "../contexts/EmployeeContext";
 import { Swiper, SwiperSlide } from "swiper/react";
 import { EffectFade, EffectCube, EffectCoverflow, EffectFlip, EffectCards, Autoplay, Navigation, Pagination } from "swiper/modules";
 import type { Swiper as SwiperType } from "swiper";
@@ -206,7 +206,8 @@ const SortableSlideCard: React.FC<{
     slide: Slide;
     index: number;
     onToggleActive: (slideId: string) => void;
-}> = ({ slide, index, onToggleActive }) => {
+    employees: Employee[];
+}> = ({ slide, index, onToggleActive, employees }) => {
     const {
         attributes,
         listeners,
@@ -227,7 +228,7 @@ const SortableSlideCard: React.FC<{
         if (slide.type === SLIDE_TYPES.EVENT) {
             const eventSlide = slide as EventSlideType;
             if (eventSlide.data.isEmployeeSlide && eventSlide.data.employeeId) {
-                const employee = employees.find(emp => emp.id === eventSlide.data.employeeId);
+                const employee = employees.find((emp: Employee) => emp.id === eventSlide.data.employeeId);
                 return employee ? employee.name : slide.name;
             }
         }
@@ -334,7 +335,8 @@ const SlideManagementColumn: React.FC<{
     slides: Slide[];
     onReorder: (result: ReorderResult) => void;
     onToggleActive: (slideId: string) => void;
-}> = ({ slides, onReorder, onToggleActive }) => {
+    employees: Employee[];
+}> = ({ slides, onReorder, onToggleActive, employees }) => {
     const sensors = useSensors(
         useSensor(PointerSensor),
         useSensor(KeyboardSensor, {
@@ -375,6 +377,7 @@ const SlideManagementColumn: React.FC<{
                                 slide={slide}
                                 index={index}
                                 onToggleActive={onToggleActive}
+                                employees={employees}
                             />
                         ))}
                     </div>
@@ -582,6 +585,7 @@ const VideoSlideComponent: React.FC<{ slide: VideoSlideType }> = ({ slide }) => 
 const HomePage: React.FC = () => {
     const { slides, reorderSlides, updateSlide, isEditing } = useSlides();
     const { settings, updateSettings, forceRefresh } = useDisplaySettings();
+    const { employees } = useEmployees();
     const { addToast } = useToast();
     const navigate = useNavigate();
     const [syncStatus, setSyncStatus] = useState<"idle" | "syncing" | "success" | "error">("idle");
@@ -965,6 +969,7 @@ const HomePage: React.FC = () => {
                 slides={orderedSlides}
                 onReorder={handleReorder}
                 onToggleActive={handleToggleActive}
+                employees={employees}
             />
 
             {/* Slide Display - Middle Column */}

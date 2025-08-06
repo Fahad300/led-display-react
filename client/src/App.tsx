@@ -4,6 +4,7 @@ import { SlideProvider } from './contexts/SlideContext';
 import { SettingsProvider } from './contexts/SettingsContext';
 import { ToastProvider } from './contexts/ToastContext';
 import { DisplaySettingsProvider } from './contexts/DisplaySettingsContext';
+import { EmployeeProvider } from './contexts/EmployeeContext';
 import MainLayout from './components/layout/MainLayout';
 import { AuthProvider } from "./contexts/AuthContext";
 import { ProtectedRoute } from "./components/ProtectedRoute";
@@ -22,48 +23,50 @@ const App: React.FC = () => {
           <AuthProvider>
             <SlideProvider>
               <DisplaySettingsProvider>
-                <Routes>
-                  {/* Public Routes */}
-                  <Route path="/login" element={<Login />} />
-                  <Route path="/register" element={<Register />} />
+                <EmployeeProvider>
+                  <Routes>
+                    {/* Public Routes */}
+                    <Route path="/login" element={<Login />} />
+                    <Route path="/register" element={<Register />} />
 
-                  {/* Display Route - No Header/Footer - Public Access for LED Screen */}
-                  <Route
-                    path="/display"
-                    element={<DisplayPage />}
-                  />
+                    {/* Display Route - No Header/Footer - Public Access for LED Screen */}
+                    <Route
+                      path="/display"
+                      element={<DisplayPage />}
+                    />
 
-                  {/* Protected Routes with Header/Footer */}
-                  <Route element={<MainLayout />}>
-                    <Route
-                      path="/"
-                      element={
-                        <ProtectedRoute>
-                          <HomePage />
-                        </ProtectedRoute>
-                      }
-                    />
-                    <Route
-                      path="/admin"
-                      element={
-                        <ProtectedRoute>
-                          <AdminPage />
-                        </ProtectedRoute>
-                      }
-                    />
-                    <Route
-                      path="/media"
-                      element={
-                        <ProtectedRoute>
-                          <MediaPage />
-                        </ProtectedRoute>
-                      }
-                    />
-                  </Route>
+                    {/* Protected Routes with Header/Footer */}
+                    <Route element={<MainLayout />}>
+                      <Route
+                        path="/"
+                        element={
+                          <ProtectedRoute>
+                            <HomePage />
+                          </ProtectedRoute>
+                        }
+                      />
+                      <Route
+                        path="/admin"
+                        element={
+                          <ProtectedRoute>
+                            <AdminPage />
+                          </ProtectedRoute>
+                        }
+                      />
+                      <Route
+                        path="/media"
+                        element={
+                          <ProtectedRoute>
+                            <MediaPage />
+                          </ProtectedRoute>
+                        }
+                      />
+                    </Route>
 
-                  {/* Fallback Route */}
-                  <Route path="*" element={<Navigate to="/" replace />} />
-                </Routes>
+                    {/* Fallback Route */}
+                    <Route path="*" element={<Navigate to="/" replace />} />
+                  </Routes>
+                </EmployeeProvider>
               </DisplaySettingsProvider>
             </SlideProvider>
           </AuthProvider>

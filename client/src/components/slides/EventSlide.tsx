@@ -1,11 +1,11 @@
-import React, { useEffect, useState } from "react";
+import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import ReactConfetti from "react-confetti";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faUserTie, faUsers } from "@fortawesome/free-solid-svg-icons";
-import type { Employee } from "../../data/employees";
-import { EventSlide as EventSlideType } from "../../types";
-import { employees as sampleEmployees } from "../../data/employees";
+import { EventSlide as EventSlideType, Employee } from "../../types";
+import { useEmployees } from "../../contexts/EmployeeContext";
+
 
 const wishMessages = [
     "Wishing you a fantastic year ahead!",
@@ -208,34 +208,8 @@ const BirthdayAnniversarySlide: React.FC<{ employees: Employee[]; eventType?: "b
 };
 
 export const EventSlide: React.FC<{ slide: EventSlideType }> = ({ slide }) => {
-    const [employees, setEmployees] = useState<Employee[]>([]);
-    const [loading, setLoading] = useState<boolean>(true);
-    const [error, setError] = useState<string | null>(null);
+    const { employees, loading, error } = useEmployees();
     const eventType = slide.data.eventType;
-
-    useEffect(() => {
-        const fetchEmployees = async () => {
-            setLoading(true);
-            setError(null);
-            try {
-                const response = await fetch("/api/employees/today");
-                if (!response.ok) throw new Error("Failed to fetch employees");
-                const data: Employee[] = await response.json();
-                if (Array.isArray(data) && data.length > 0) {
-                    setEmployees(data);
-                } else {
-                    setEmployees(sampleEmployees);
-                }
-            } catch (err) {
-                console.error(err);
-                setEmployees(sampleEmployees);
-                setError(null); // clear error if using fallback
-            } finally {
-                setLoading(false);
-            }
-        };
-        fetchEmployees();
-    }, []);
 
     if (loading) {
         return <div className="flex items-center justify-center h-full w-full text-persivia-blue text-xl font-semibold">Loading {eventType === "anniversary" ? "anniversaries" : "birthdays"}...</div>;
@@ -249,7 +223,11 @@ export const EventSlide: React.FC<{ slide: EventSlideType }> = ({ slide }) => {
         : employees.filter(e => e.isBirthday);
 
     if (filteredEmployees.length === 0) {
-        return null;
+        return (
+            <div className="flex items-center justify-center h-full w-full text-persivia-blue text-xl font-semibold">
+                No {eventType === "anniversary" ? "anniversaries" : "birthdays"} today
+            </div>
+        );
     }
     return <BirthdayAnniversarySlide employees={filteredEmployees} eventType={eventType} />;
 }; 

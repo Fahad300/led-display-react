@@ -1,6 +1,4 @@
-import axios from "axios";
-
-const API_BASE_URL = process.env.REACT_APP_BACKEND_URL || "http://localhost:5000";
+import { backendApi } from './api';
 
 export interface SessionData {
     sessionId: string;
@@ -42,10 +40,13 @@ class SessionService {
      */
     async createSession(): Promise<string> {
         try {
-            const response = await axios.post(`${API_BASE_URL}/api/sessions/create`, {
+            const token = localStorage.getItem("token");
+            const headers = token ? { Authorization: `Bearer ${token}` } : {};
+
+            const response = await backendApi.post(`/api/sessions/create`, {
                 deviceInfo: this.getDeviceInfo(),
                 ipAddress: this.getIpAddress()
-            });
+            }, { headers });
 
             this.sessionToken = response.data.sessionToken;
             if (!this.sessionToken) {
@@ -64,7 +65,10 @@ class SessionService {
      */
     async getCurrentSession(): Promise<SessionData | null> {
         try {
-            const response = await axios.get(`${API_BASE_URL}/api/sessions/current`);
+            const token = localStorage.getItem("token");
+            const headers = token ? { Authorization: `Bearer ${token}` } : {};
+
+            const response = await backendApi.get(`/api/sessions/current`, { headers });
             return response.data;
         } catch (error) {
             console.error("Error getting session:", error);
@@ -77,12 +81,21 @@ class SessionService {
      */
     async updateDisplaySettings(settings: any): Promise<void> {
         try {
-            await axios.put(`${API_BASE_URL}/api/sessions/display-settings`, {
+            const token = localStorage.getItem("token");
+            if (!token) {
+                console.log("No authentication token, skipping display settings update");
+                return;
+            }
+
+            const headers = { Authorization: `Bearer ${token}` };
+
+            await backendApi.put(`/api/sessions/display-settings`, {
                 settings
-            });
+            }, { headers });
         } catch (error) {
             console.error("Error updating display settings:", error);
-            throw error;
+            // Don't throw for display purposes
+            console.log("Continuing without display settings update");
         }
     }
 
@@ -91,12 +104,21 @@ class SessionService {
      */
     async updateSlideData(slides: any[]): Promise<void> {
         try {
-            await axios.put(`${API_BASE_URL}/api/sessions/slide-data`, {
+            const token = localStorage.getItem("token");
+            if (!token) {
+                console.log("No authentication token, skipping slide data update");
+                return;
+            }
+
+            const headers = { Authorization: `Bearer ${token}` };
+
+            await backendApi.put(`/api/sessions/slide-data`, {
                 slides
-            });
+            }, { headers });
         } catch (error) {
             console.error("Error updating slide data:", error);
-            throw error;
+            // Don't throw for display purposes
+            console.log("Continuing without slide data update");
         }
     }
 
@@ -105,12 +127,21 @@ class SessionService {
      */
     async updateAppSettings(settings: any): Promise<void> {
         try {
-            await axios.put(`${API_BASE_URL}/api/sessions/app-settings`, {
+            const token = localStorage.getItem("token");
+            if (!token) {
+                console.log("No authentication token, skipping app settings update");
+                return;
+            }
+
+            const headers = { Authorization: `Bearer ${token}` };
+
+            await backendApi.put(`/api/sessions/app-settings`, {
                 settings
-            });
+            }, { headers });
         } catch (error) {
             console.error("Error updating app settings:", error);
-            throw error;
+            // Don't throw for display purposes
+            console.log("Continuing without app settings update");
         }
     }
 
@@ -119,7 +150,10 @@ class SessionService {
      */
     async logout(): Promise<void> {
         try {
-            await axios.delete(`${API_BASE_URL}/api/sessions/logout`);
+            const token = localStorage.getItem("token");
+            const headers = token ? { Authorization: `Bearer ${token}` } : {};
+
+            await backendApi.delete(`/api/sessions/logout`, { headers });
             this.sessionToken = null;
         } catch (error) {
             console.error("Error logging out:", error);
@@ -132,7 +166,10 @@ class SessionService {
      */
     async getAllSessions(): Promise<SessionInfo[]> {
         try {
-            const response = await axios.get(`${API_BASE_URL}/api/sessions/all`);
+            const token = localStorage.getItem("token");
+            const headers = token ? { Authorization: `Bearer ${token}` } : {};
+
+            const response = await backendApi.get(`/api/sessions/all`, { headers });
             return response.data;
         } catch (error) {
             console.error("Error getting sessions:", error);
@@ -151,7 +188,7 @@ class SessionService {
         try {
             // For LED displays, we primarily use the latest session (public access)
             try {
-                const response = await axios.get(`${API_BASE_URL}/api/sessions/latest`);
+                const response = await backendApi.get(`/api/sessions/latest`);
                 if (response.data) {
                     return {
                         displaySettings: response.data.displaySettings,
@@ -193,6 +230,13 @@ class SessionService {
         appSettings?: any;
     }): Promise<void> {
         try {
+            // Check if user is authenticated
+            const token = localStorage.getItem("token");
+            if (!token) {
+                console.log("User not authenticated, skipping server sync");
+                return;
+            }
+
             const promises: Promise<void>[] = [];
 
             if (data.displaySettings) {
@@ -210,7 +254,8 @@ class SessionService {
             await Promise.all(promises);
         } catch (error) {
             console.error("Error syncing to server:", error);
-            throw error;
+            // Don't throw error for display purposes - just log it
+            console.log("Continuing without server sync");
         }
     }
 

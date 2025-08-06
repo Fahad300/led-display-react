@@ -1,4 +1,17 @@
-import type { Employee } from "../data/employees";
+
+export interface Employee {
+    id: string;
+    name: string;
+    dob: string;
+    designation: string;
+    teamName: string;
+    picture: string;
+    email: string;
+    gender: string;
+    dateOfJoining: string;
+    isBirthday: boolean;
+    isAnniversary: boolean;
+}
 
 /**
  * Slide types used in the application
