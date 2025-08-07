@@ -36,12 +36,16 @@ class SessionService {
     }
 
     /**
-     * Create or update session
-     */
+ * Create or update session
+ */
     async createSession(): Promise<string> {
         try {
             const token = localStorage.getItem("token");
-            const headers = token ? { Authorization: `Bearer ${token}` } : {};
+            const headers: any = {};
+
+            if (token) {
+                headers.Authorization = `Bearer ${token}`;
+            }
 
             const response = await backendApi.post(`/api/sessions/create`, {
                 deviceInfo: this.getDeviceInfo(),
@@ -61,12 +65,16 @@ class SessionService {
     }
 
     /**
-     * Get current session data
-     */
+ * Get current session data
+ */
     async getCurrentSession(): Promise<SessionData | null> {
         try {
             const token = localStorage.getItem("token");
-            const headers = token ? { Authorization: `Bearer ${token}` } : {};
+            const headers: any = {};
+
+            if (token) {
+                headers.Authorization = `Bearer ${token}`;
+            }
 
             const response = await backendApi.get(`/api/sessions/current`, { headers });
             return response.data;
@@ -77,8 +85,8 @@ class SessionService {
     }
 
     /**
-     * Update display settings
-     */
+ * Update display settings
+ */
     async updateDisplaySettings(settings: any): Promise<void> {
         try {
             const token = localStorage.getItem("token");
@@ -100,8 +108,8 @@ class SessionService {
     }
 
     /**
-     * Update slide data
-     */
+ * Update slide data
+ */
     async updateSlideData(slides: any[]): Promise<void> {
         try {
             const token = localStorage.getItem("token");
@@ -123,8 +131,8 @@ class SessionService {
     }
 
     /**
-     * Update app settings
-     */
+ * Update app settings
+ */
     async updateAppSettings(settings: any): Promise<void> {
         try {
             const token = localStorage.getItem("token");
@@ -146,12 +154,16 @@ class SessionService {
     }
 
     /**
-     * Logout and deactivate session
-     */
+ * Logout and deactivate session
+ */
     async logout(): Promise<void> {
         try {
             const token = localStorage.getItem("token");
-            const headers = token ? { Authorization: `Bearer ${token}` } : {};
+            const headers: any = {};
+
+            if (token) {
+                headers.Authorization = `Bearer ${token}`;
+            }
 
             await backendApi.delete(`/api/sessions/logout`, { headers });
             this.sessionToken = null;
@@ -162,12 +174,16 @@ class SessionService {
     }
 
     /**
-     * Get all sessions for the user
-     */
+ * Get all sessions for the user
+ */
     async getAllSessions(): Promise<SessionInfo[]> {
         try {
             const token = localStorage.getItem("token");
-            const headers = token ? { Authorization: `Bearer ${token}` } : {};
+            const headers: any = {};
+
+            if (token) {
+                headers.Authorization = `Bearer ${token}`;
+            }
 
             const response = await backendApi.get(`/api/sessions/all`, { headers });
             return response.data;

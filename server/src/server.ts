@@ -9,43 +9,50 @@ import adminRoutes from "./routes/admin";
 import displayRoutes from "./routes/display";
 import sessionsRoutes from "./routes/sessions";
 import filesRoutes from "./routes/files";
+import proxyRoutes from "./routes/proxy";
 import mainRoutes from "./routes/main";
 import { initializePassport } from "./config/passport";
 
-// Load environment variables with UTF-16 support
+// Load environment variables
 import fs from "fs";
 import path from "path";
 
 const envPath = path.resolve('./.env');
-try {
-    // Try to read as UTF-16 first
-    const envContent = fs.readFileSync(envPath, 'utf16le');
-    console.log('server.ts: Reading .env file as UTF-16');
 
+// Try multiple encoding methods
+let envContent: string | null = null;
+
+try {
+    // Try UTF-8 first (most common)
+    envContent = fs.readFileSync(envPath, 'utf8');
+} catch (error) {
+    try {
+        // Try UTF-16 LE
+        envContent = fs.readFileSync(envPath, 'utf16le');
+    } catch (error2) {
+        // Fallback to dotenv
+        config({ path: './.env' });
+    }
+}
+
+if (envContent) {
     // Parse the content manually and set environment variables
-    const lines = envContent.split('\n');
+    const lines = envContent.split(/\r?\n/); // Handle both \r\n and \n line endings
     lines.forEach(line => {
         const trimmedLine = line.trim();
         if (trimmedLine && !trimmedLine.startsWith('#')) {
             const equalIndex = trimmedLine.indexOf('=');
             if (equalIndex > 0) {
-                const key = trimmedLine.substring(0, equalIndex);
-                const value = trimmedLine.substring(equalIndex + 1);
+                const key = trimmedLine.substring(0, equalIndex).trim();
+                const value = trimmedLine.substring(equalIndex + 1).trim();
                 process.env[key] = value;
             }
         }
     });
-} catch (error) {
-    console.log('server.ts: Error reading .env file as UTF-16, trying dotenv:', error);
+} else {
     // Fallback to dotenv
     config({ path: './.env' });
 }
-console.log('Environment variables loaded:', {
-    DB_HOST: process.env.DB_HOST,
-    DB_USERNAME: process.env.DB_USERNAME,
-    DB_DATABASE: process.env.DB_DATABASE,
-    JWT_SECRET: process.env.JWT_SECRET ? 'SET' : 'NOT SET'
-});
 
 const app = express();
 
@@ -66,6 +73,7 @@ app.use("/api/admin", adminRoutes);
 app.use("/api/display", displayRoutes);
 app.use("/api/sessions", sessionsRoutes);
 app.use("/api/files", filesRoutes);
+app.use("/api/proxy", proxyRoutes);
 app.use("/", mainRoutes);
 
 // Global error handler

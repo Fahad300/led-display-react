@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { useToast } from "../contexts/ToastContext";
-import { BACKEND_URL } from "../config";
 import MediaModal from "./MediaModal";
 
 interface MediaFile {
@@ -46,7 +45,7 @@ export const MediaSelector: React.FC<MediaSelectorProps> = ({
                 throw new Error("No authentication token found");
             }
 
-            const response = await fetch(`${BACKEND_URL}/api/admin/uploads`, {
+            const response = await fetch(`${process.env.BACKEND_URL}/api/admin/uploads`, {
                 headers: {
                     "Authorization": `Bearer ${token}`
                 }
@@ -127,7 +126,7 @@ export const MediaSelector: React.FC<MediaSelectorProps> = ({
             const formData = new FormData();
             formData.append("file", file);
 
-            const response = await fetch(`${BACKEND_URL}/api/files/upload`, {
+            const response = await fetch(`${process.env.BACKEND_URL}/api/files/upload`, {
                 method: "POST",
                 body: formData,
                 headers: {
@@ -144,7 +143,7 @@ export const MediaSelector: React.FC<MediaSelectorProps> = ({
                 throw new Error("Invalid response: missing file URL");
             }
 
-            const fileUrl = `${BACKEND_URL}${data.url}`;
+            const fileUrl = `${process.env.BACKEND_URL}${data.url}`;
             const newFile: MediaFile = {
                 name: file.name,
                 url: fileUrl,

@@ -63,7 +63,7 @@ const BirthdayAnniversarySlide: React.FC<{ employees: Employee[]; eventType?: "b
                                 whileHover={{ scale: 1.15 }}
                             >
                                 <img
-                                    src={employee.picture ? employee.picture : employee.gender === "male" ? "/images/male-default.jpg" : employee.gender === "female" ? "/images/female-default.jpg" : "/images/logo-persivia.svg"}
+                                    src={employee.picture ? employee.picture : employee.gender?.toLowerCase() === "male" ? "/images/male-default.jpg" : employee.gender?.toLowerCase() === "female" ? "/images/female-default.jpg" : "/images/logo-persivia.svg"}
                                     alt={employee.name}
                                     className="w-full h-full object-cover"
                                     onError={e => {

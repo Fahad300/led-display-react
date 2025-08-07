@@ -35,7 +35,7 @@ export const DigitalClock: React.FC = () => {
     }, []);
 
     return (
-        <div className="flex flex-col items-center justify-center select-none">
+        <div className="flex flex-col items-center justify-center select-none bg-white/10 backdrop-blur-md p-4 rounded-lg">
             <div className="flex items-end gap-2">
                 <span className="text-[2.5rem] md:text-5xl font-extralight tracking-tight text-white drop-shadow-lg" style={{ fontVariantNumeric: 'tabular-nums' }}>
                     {time.hours}
