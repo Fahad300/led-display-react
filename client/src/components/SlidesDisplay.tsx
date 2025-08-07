@@ -64,7 +64,7 @@ const AnimatedLogo: React.FC = () => {
                 <img
                     src="/images/logo-persivia.svg"
                     alt="Persivia Logo"
-                    className="h-16 w-auto"
+                    className="display-logo"
                 />
             </motion.div>
         </div>

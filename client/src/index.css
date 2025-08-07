@@ -11,11 +11,75 @@ body {
     sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  overflow-x: hidden;
 }
 
 code {
   font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
     monospace;
+}
+
+/* LED Display Responsive Scaling */
+:root {
+  --display-scale: 1;
+  --min-scale: 0.5;
+  --max-scale: 2;
+}
+
+/* Responsive font scaling for LED displays */
+.display-text {
+  font-size: clamp(0.75rem, 2.5vw, 2rem);
+  line-height: 1.2;
+}
+
+.display-text-large {
+  font-size: clamp(1rem, 4vw, 3rem);
+  line-height: 1.1;
+}
+
+.display-text-xl {
+  font-size: clamp(1.5rem, 6vw, 4rem);
+  line-height: 1;
+}
+
+.display-text-2xl {
+  font-size: clamp(2rem, 8vw, 5rem);
+  line-height: 1;
+}
+
+.display-text-3xl {
+  font-size: clamp(2.5rem, 10vw, 6rem);
+  line-height: 1;
+}
+
+/* Responsive spacing for LED displays */
+.display-padding {
+  padding: clamp(0.5rem, 2vw, 2rem);
+}
+
+.display-margin {
+  margin: clamp(0.25rem, 1vw, 1rem);
+}
+
+.display-gap {
+  gap: clamp(0.25rem, 1vw, 1rem);
+}
+
+/* Responsive image sizing for LED displays */
+.display-image {
+  width: clamp(50px, 15vw, 200px);
+  height: clamp(50px, 15vw, 200px);
+}
+
+.display-image-large {
+  width: clamp(100px, 25vw, 400px);
+  height: clamp(100px, 25vw, 400px);
+}
+
+/* Responsive logo sizing for LED displays */
+.display-logo {
+  width: clamp(60px, 20vw, 300px);
+  height: auto;
 }
 
 /* Custom CSS for the LED Display application */
@@ -114,37 +178,37 @@ input#slideImageFile {
 }
 
 .animate-in {
-  animation: slide-in 0.3s ease-out forwards;
+  animation: slide-in 0.5s ease-out forwards;
 }
 
 .animate-out {
-  animation: slide-out 0.3s ease-in forwards;
+  animation: slide-out 0.5s ease-in forwards;
 }
 
-/* Slideshow animations */
+/* Slideshow container styles */
 .slideshow-container {
+  position: relative;
   width: 100%;
   height: 100%;
-  position: relative;
-  perspective: 1000px;
-  transform: translate3d(0, 0, 0);
-  will-change: transform;
   overflow: hidden;
+  background: #000;
 }
 
 .slideshow-slide {
   position: absolute;
+  top: 0;
+  left: 0;
   width: 100%;
   height: 100%;
+  opacity: 0;
+  transition: opacity 0.5s ease-in-out;
   display: flex;
   align-items: center;
   justify-content: center;
-  transform-style: preserve-3d;
-  backface-visibility: hidden;
-  -webkit-backface-visibility: hidden;
-  will-change: transform, opacity;
-  transform: translate3d(0, 0, 0);
-  -webkit-transform: translate3d(0, 0, 0);
+}
+
+.slideshow-slide.active {
+  opacity: 1;
 }
 
 /* Navigation buttons */
@@ -152,24 +216,19 @@ input#slideImageFile {
   position: absolute;
   top: 50%;
   transform: translateY(-50%);
-  z-index: 10;
-  background-color: rgba(255, 255, 255, 0.8);
-  color: var(--persivia-blue);
-  padding: 1rem;
-  border-radius: 50%;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  backdrop-filter: blur(4px);
-  -webkit-backdrop-filter: blur(4px);
-  will-change: transform, background-color;
-  cursor: pointer;
+  background: rgba(0, 0, 0, 0.5);
+  color: white;
   border: none;
-  outline: none;
+  padding: 1rem 0.5rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  z-index: 10;
+  border-radius: 4px;
 }
 
 .slideshow-nav-button:hover {
-  background-color: rgba(255, 255, 255, 0.9);
+  background: rgba(0, 0, 0, 0.8);
   transform: translateY(-50%) scale(1.1);
-  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
 }
 
 .slideshow-nav-button.prev {
@@ -183,96 +242,87 @@ input#slideImageFile {
 /* Pagination dots */
 .slideshow-pagination {
   position: absolute;
-  bottom: 1rem;
+  bottom: 2rem;
   left: 50%;
   transform: translateX(-50%);
-  z-index: 10;
   display: flex;
   gap: 0.5rem;
+  z-index: 10;
 }
 
 .slideshow-pagination-dot {
-  width: 0.5rem;
-  height: 0.5rem;
+  width: 0.75rem;
+  height: 0.75rem;
   border-radius: 50%;
-  background-color: var(--persivia-blue);
-  opacity: 0.5;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  background: rgba(255, 255, 255, 0.5);
   cursor: pointer;
-  border: none;
-  outline: none;
-  padding: 0;
+  transition: all 0.3s ease;
+  border: 2px solid transparent;
 }
 
 .slideshow-pagination-dot:hover {
-  opacity: 0.75;
+  background: rgba(255, 255, 255, 0.8);
+  transform: scale(1.2);
 }
 
 .slideshow-pagination-dot.active {
-  opacity: 1;
-  transform: scale(1.25);
+  background: white;
+  transform: scale(1.3);
+  box-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
 }
 
-/* Hardware acceleration classes */
+/* GPU acceleration for smooth animations */
 .gpu {
-  transform: translate3d(0, 0, 0);
+  transform: translateZ(0);
   backface-visibility: hidden;
-  perspective: 1000;
-  -webkit-transform: translate3d(0, 0, 0);
-  -webkit-backface-visibility: hidden;
-  -webkit-perspective: 1000;
+  perspective: 1000px;
 }
 
 .gpu-child>* {
-  transform: translate3d(0, 0, 0);
+  transform: translateZ(0);
   backface-visibility: hidden;
-  perspective: 1000;
-  -webkit-transform: translate3d(0, 0, 0);
-  -webkit-backface-visibility: hidden;
-  -webkit-perspective: 1000;
 }
 
-/* CSS Variables for theme colors */
+/* CSS Variables for theming */
 :root {
-  --persivia-blue: rgb(19, 77, 103);
-  --persivia-teal: rgb(0, 128, 128);
-  --persivia-light-blue: rgb(100, 149, 237);
-  --persivia-light-teal: rgb(64, 224, 208);
+  --primary: #15CC93;
+  --secondary: #134D67;
+  --accent: #8CE6C9;
+  --warning: #FFD700;
+  --error: #FF69B4;
+  --info: #00FFFF;
 }
 
+/* Animated gradient background */
 @keyframes gradientBG {
-
-  0%,
-  100% {
+  0% {
     background-position: 0% 50%;
   }
 
   50% {
     background-position: 100% 50%;
   }
+
+  100% {
+    background-position: 0% 50%;
+  }
 }
 
 .animated-gradient-bg {
-  background: linear-gradient(120deg, var(--persivia-blue) 0%, var(--persivia-light-blue) 40%, var(--persivia-light-teal) 70%, var(--persivia-teal) 100%);
-  background-size: 200% 200%;
-  animation: gradientBG 12s ease-in-out infinite;
-  opacity: 1;
+  background: linear-gradient(-45deg, #0f172a, #1e3a8a, #065f46, #1e40af, #047857, #1e293b);
+  background-size: 400% 400%;
+  animation: gradientBG 15s ease infinite;
 }
 
+/* Animated card with conic gradient border */
 .animated-card {
-  margin: 0 auto;
-  padding: 2em;
-  width: 300px;
-  background: #1c1f2b;
-  text-align: center;
-  border-radius: 10px;
   position: relative;
-}
-
-@property --angle {
-  syntax: "<angle>";
-  initial-value: 0deg;
-  inherits: false;
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  border-radius: 10px;
+  padding: 1rem;
+  overflow: hidden;
+  z-index: 1;
 }
 
 .animated-card::after,
@@ -347,7 +397,7 @@ input#slideImageFile {
   }
 }
 
-/* Display Page Fullscreen Styles */
+/* Display Page Fullscreen Styles - Enhanced for LED displays */
 .display-page-fullscreen {
   position: fixed !important;
   top: 0 !important;
@@ -358,12 +408,18 @@ input#slideImageFile {
   height: 100vh !important;
   overflow: hidden !important;
   z-index: 9999 !important;
+  background: #000 !important;
+  transform: translateZ(0) !important;
+  backface-visibility: hidden !important;
 }
 
 .display-page-fullscreen body {
   overflow: hidden !important;
   margin: 0 !important;
   padding: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  background: #000 !important;
 }
 
 /* Hide browser UI elements when in display mode */
@@ -374,4 +430,72 @@ input#slideImageFile {
 .display-page-fullscreen {
   -ms-overflow-style: none;
   scrollbar-width: none;
+}
+
+/* Responsive breakpoints for LED displays */
+@media (max-width: 480px) {
+  .display-text {
+    font-size: clamp(0.5rem, 3vw, 1.5rem);
+  }
+
+  .display-text-large {
+    font-size: clamp(0.75rem, 4.5vw, 2.5rem);
+  }
+
+  .display-text-xl {
+    font-size: clamp(1rem, 6.5vw, 3.5rem);
+  }
+
+  .display-text-2xl {
+    font-size: clamp(1.25rem, 8.5vw, 4.5rem);
+  }
+
+  .display-text-3xl {
+    font-size: clamp(1.5rem, 10.5vw, 5.5rem);
+  }
+}
+
+@media (min-width: 1920px) {
+  .display-text {
+    font-size: clamp(1rem, 2vw, 2.5rem);
+  }
+
+  .display-text-large {
+    font-size: clamp(1.5rem, 3vw, 4rem);
+  }
+
+  .display-text-xl {
+    font-size: clamp(2rem, 4vw, 5rem);
+  }
+
+  .display-text-2xl {
+    font-size: clamp(2.5rem, 5vw, 6rem);
+  }
+
+  .display-text-3xl {
+    font-size: clamp(3rem, 6vw, 7rem);
+  }
+}
+
+/* Ultra-wide display support */
+@media (min-width: 2560px) {
+  .display-text {
+    font-size: clamp(1.25rem, 1.5vw, 3rem);
+  }
+
+  .display-text-large {
+    font-size: clamp(2rem, 2.5vw, 5rem);
+  }
+
+  .display-text-xl {
+    font-size: clamp(2.5rem, 3vw, 6rem);
+  }
+
+  .display-text-2xl {
+    font-size: clamp(3rem, 3.5vw, 7rem);
+  }
+
+  .display-text-3xl {
+    font-size: clamp(3.5rem, 4vw, 8rem);
+  }
 }

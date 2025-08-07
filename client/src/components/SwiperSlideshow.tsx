@@ -198,6 +198,19 @@ const SwiperSlideshow: React.FC<{
     if (activeSlides.length === 0) {
         return (
             <div className="w-full h-full bg-black flex items-center justify-center relative overflow-hidden">
+                {/* Technology-themed background */}
+                <div className="tech-background absolute inset-0"></div>
+                <div className="data-stream"></div>
+                <div className="hexagon-grid"></div>
+                <div className="tech-elements">
+                    <div className="tech-element"></div>
+                    <div className="tech-element"></div>
+                    <div className="tech-element"></div>
+                    <div className="tech-element"></div>
+                    <div className="tech-element"></div>
+                    <div className="tech-element"></div>
+                </div>
+
                 {/* Video Background */}
                 {!videoError && (
                     <video
@@ -230,7 +243,7 @@ const SwiperSlideshow: React.FC<{
                     <img
                         src="/images/logo-persivia.svg"
                         alt="Persivia Logo"
-                        className="h-16 w-auto"
+                        className="display-logo"
                         style={{
                             animation: "pulse 3s ease-in-out infinite"
                         }}
@@ -258,7 +271,7 @@ const SwiperSlideshow: React.FC<{
                 }}
                 onSlideChange={handleSlideChange}
                 onSwiper={handleSwiperInit}
-                className="w-full h-full"
+                className="w-full h-full relative z-10"
                 speed={800}
                 grabCursor={false}
                 allowTouchMove={false}
