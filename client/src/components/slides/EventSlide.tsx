@@ -6,9 +6,14 @@ import { faUserTie, faUsers } from "@fortawesome/free-solid-svg-icons";
 import { EventSlide as EventSlideType, Employee } from "../../types";
 import { useEmployees } from "../../contexts/EmployeeContext";
 
-/**
- * Custom hook to get window size for responsive design
- */
+const wishMessages = [
+    "Wishing you a fantastic year ahead!",
+    "May your day be filled with joy and laughter!",
+    "Hope all your dreams come true!",
+    "Have a wonderful birthday celebration!",
+    "Cheers to another amazing year!"
+];
+
 const useWindowSize = () => {
     const [size, setSize] = useState({ width: window.innerWidth, height: window.innerHeight });
     useEffect(() => {
@@ -19,139 +24,189 @@ const useWindowSize = () => {
     return size;
 };
 
-/**
- * Birthday/Anniversary Slide Component with responsive scaling
- */
 const BirthdayAnniversarySlide: React.FC<{ employees: Employee[]; eventType?: "birthday" | "anniversary" }> = ({ employees, eventType }) => {
     const { width, height } = useWindowSize();
     const today = new Date();
     if (employees.length === 0) return null;
 
     return (
-        <div className="w-full h-full bg-gradient-to-br from-slate-900 via-blue-900 to-emerald-900 flex flex-col items-center justify-center relative overflow-hidden">
-            {/* Confetti for celebrations */}
-            <ReactConfetti
-                width={width}
-                height={height}
-                recycle={true}
-                numberOfPieces={200}
-                gravity={0.1}
-                colors={['#15CC93', '#134D67', '#8CE6C9', '#FFD700', '#FF69B4', '#00FFFF']}
-            />
-
-            {/* Main Content */}
-            <div className="relative z-10 text-center text-white display-padding">
-                {/* Event Type Icon */}
-                <div className="mb-4 sm:mb-6 md:mb-8">
-                    <FontAwesomeIcon
-                        icon={eventType === "anniversary" ? faUserTie : faUsers}
-                        className="display-text-2xl text-emerald-400 drop-shadow-lg"
-                        style={{ fontSize: 'clamp(2rem, 8vw, 4rem)' }}
-                    />
-                </div>
-
-                {/* Event Title */}
-                <h1 className="display-text-3xl font-bold mb-2 sm:mb-4 md:mb-6 text-shadow-lg text-white">
-                    {eventType === "anniversary" ? "Work Anniversary" : "Birthday"} Celebrations
-                </h1>
-
-                {/* Subtitle */}
-                <p className="display-text-large mb-6 sm:mb-8 md:mb-10 text-blue-100">
-                    {eventType === "anniversary"
-                        ? "Congratulations on your work milestone!"
-                        : "Happy Birthday to our amazing team members!"
-                    }
-                </p>
-
-                {/* Employees Grid */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6 md:gap-8 max-w-6xl mx-auto">
-                    {employees.map((employee, index) => (
+        <>
+            {employees.map((employee, index) => {
+                if (eventType === "anniversary") {
+                    const years = today.getFullYear() - new Date(employee.dateOfJoining).getFullYear();
+                    return (
                         <motion.div
-                            key={employee.id}
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ delay: index * 0.1, duration: 0.5 }}
-                            className="bg-slate-800/80 backdrop-blur-md rounded-lg display-padding text-center hover:bg-slate-700/80 transition-all duration-300 shadow-lg border border-slate-600"
+                            key={employee.id + "-anniversary"}
+                            className="flex flex-col items-center justify-center h-full w-full relative overflow-hidden animated-gradient-bg"
+                            initial={{ opacity: 0, scale: 0.9 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            transition={{ duration: 0.7, ease: "easeOut" }}
+                            tabIndex={0}
+                            aria-label={`Anniversary slide for ${employee.name}`}
+                            role="region"
                         >
-                            {/* Employee Photo */}
-                            <div className="mb-3 sm:mb-4">
-                                <div className="display-image mx-auto rounded-full overflow-hidden border-4 border-emerald-600 shadow-lg">
-                                    <img
-                                        src={employee.picture ? employee.picture : employee.gender?.toLowerCase() === "male" ? "/images/male-default.jpg" : employee.gender?.toLowerCase() === "female" ? "/images/female-default.jpg" : "/images/logo-persivia.svg"}
-                                        alt={employee.name}
-                                        className="w-full h-full object-cover"
-                                        onError={e => {
-                                            const target = e.target as HTMLImageElement;
-                                            target.onerror = null;
-                                            target.src = "/images/logo-persivia.svg";
-                                        }}
-                                        tabIndex={0}
-                                        aria-label={`Photo of ${employee.name}`}
-                                    />
+                            <ReactConfetti width={width} height={height} numberOfPieces={120} recycle opacity={0.7} />
+                            <motion.h2
+                                className="font-bold text-white mb-4 md:mb-8 font-cursive text-[clamp(2.5rem,7vw,5rem)] leading-tight text-center"
+                                initial={{ y: -60, opacity: 0 }}
+                                animate={{ y: 0, opacity: 1 }}
+                                transition={{ type: 'spring', stiffness: 120, delay: 0.2 }}
+                            >
+                                Happy Work Anniversary!
+                            </motion.h2>
+                            <motion.div
+                                className="rounded-full border-4 border-emerald-600 overflow-hidden mb-4 md:mb-6 shadow-lg"
+                                style={{ width: "clamp(120px, 22vw, 320px)", height: "clamp(120px, 22vw, 320px)" }}
+                                initial={{ scale: 0.7, opacity: 0 }}
+                                animate={{ scale: 1.1, opacity: 1 }}
+                                transition={{ type: "spring", stiffness: 200, damping: 10, delay: 0.5 }}
+                                whileHover={{ scale: 1.15 }}
+                            >
+                                <img
+                                    src={employee.picture ? employee.picture : employee.gender?.toLowerCase() === "male" ? "/images/male-default.jpg" : employee.gender?.toLowerCase() === "female" ? "/images/female-default.jpg" : "/images/logo-persivia.svg"}
+                                    alt={employee.name}
+                                    className="w-full h-full object-cover"
+                                    onError={e => {
+                                        const target = e.target as HTMLImageElement;
+                                        target.onerror = null;
+                                        target.src = "/images/logo-persivia.svg";
+                                    }}
+                                    tabIndex={0}
+                                    aria-label={`Photo of ${employee.name}`}
+                                />
+                            </motion.div>
+                            <motion.div
+                                className="flex flex-col items-center mt-4"
+                                initial={{ opacity: 0, y: 30 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ delay: 0.8 }}
+                            >
+                                <div className="bg-slate-800 px-6 md:px-12 py-2 md:py-3 rounded-full mb-2 shadow">
+                                    <span className="text-white font-semibold text-[clamp(1.2rem,3vw,2.5rem)]">{employee.name}</span>
+                                </div>
+                                <div className="flex items-center gap-2 mt-2">
+                                    <div className="text-white font-semibold text-[clamp(1.5rem,1vw,2.5rem)]">
+                                        <span className="mr-2">
+                                            <FontAwesomeIcon icon={faUserTie} />
+                                        </span>
+                                        {employee.designation}
+                                    </div>
+                                    <div className="text-white font-semibold text-[clamp(1.5rem,1vw,2.5rem)] ml-5">
+                                        <span className="mr-2">
+                                            <FontAwesomeIcon icon={faUsers} />
+                                        </span>
+                                        {employee.teamName}
+                                    </div>
+                                </div>
+                            </motion.div>
+                            <motion.div
+                                className="flex justify-center mt-10 absolute bottom-4 left-0 right-0"
+                                initial={{ opacity: 0, y: 40 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ delay: 1.2 }}
+                            >
+                                <span className="bg-slate-700 text-white px-4 md:px-8 py-2 md:py-3 rounded-full text-[clamp(1rem,2vw,1.5rem)] font-medium shadow text-center">
+                                    {`Congratulations on ${years} year${years !== 1 ? "s" : ""} with us!`}
+                                </span>
+                            </motion.div>
+                        </motion.div>
+
+                    );
+                }
+                // Default to birthday
+                const wish = wishMessages[index % wishMessages.length];
+                return (
+                    <motion.div
+                        key={employee.id + "-birthday"}
+                        className="flex flex-col items-center justify-center h-full w-full relative overflow-hidden animated-gradient-bg"
+                        initial={{ opacity: 0, scale: 0.9 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        transition={{ duration: 0.7, ease: "easeOut" }}
+                        tabIndex={0}
+                        aria-label={`Birthday slide for ${employee.name}`}
+                        role="region"
+                    >
+                        <ReactConfetti width={width} height={height} numberOfPieces={120} recycle opacity={0.7} />
+                        <motion.h2
+                            className="font-bold text-white mb-4 md:mb-8 font-cursive text-[clamp(2.5rem,7vw,5rem)] leading-tight text-center"
+                            initial={{ y: -60, opacity: 0 }}
+                            animate={{ y: 0, opacity: 1 }}
+                            transition={{ type: 'spring', stiffness: 120, delay: 0.2 }}
+                        >
+                            Happy Birthday!
+                        </motion.h2>
+                        <motion.div
+                            className="rounded-full border-4 border-emerald-600 overflow-hidden mb-4 md:mb-6 shadow-lg"
+                            style={{ width: "clamp(120px, 22vw, 320px)", height: "clamp(120px, 22vw, 320px)" }}
+                            initial={{ scale: 0.7, opacity: 0 }}
+                            animate={{ scale: 1.1, opacity: 1 }}
+                            transition={{ type: "spring", stiffness: 200, damping: 10, delay: 0.5 }}
+                            whileHover={{ scale: 1.15 }}
+                        >
+                            <img
+                                src={employee.picture ? employee.picture : employee.gender?.toLowerCase() === "male" ? "/images/male-default.jpg" : employee.gender?.toLowerCase() === "female" ? "/images/female-default.jpg" : "/images/logo-persivia.svg"}
+                                alt={employee.name}
+                                className="w-full h-full object-cover"
+                                onError={e => {
+                                    const target = e.target as HTMLImageElement;
+                                    target.onerror = null;
+                                    target.src = "/images/logo-persivia.svg";
+                                }}
+                                tabIndex={0}
+                                aria-label={`Photo of ${employee.name}`}
+                            />
+                        </motion.div>
+                        <motion.div
+                            className="flex flex-col items-center"
+                            initial={{ opacity: 0, y: 30 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: 0.8 }}
+                        >
+                            <div className="bg-slate-800 px-6 md:px-12 py-2 md:py-3 rounded-full mb-2 shadow">
+                                <span className="text-white font-semibold text-[clamp(1.2rem,3vw,2.5rem)]">{employee.name}</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <div className="text-emerald-400 font-semibold text-[clamp(1.5rem,1vw,2.5rem)]">
+                                    <span className="mr-2">
+                                        <FontAwesomeIcon icon={faUserTie} />
+                                    </span>
+                                    {employee.designation}
+                                </div>
+                                <div className="text-blue-300 font-semibold text-[clamp(1.5rem,1vw,2.5rem)] ml-5">
+                                    <span className="mr-2">
+                                        <FontAwesomeIcon icon={faUsers} />
+                                    </span>
+                                    {employee.teamName}
                                 </div>
                             </div>
-
-                            {/* Employee Name */}
-                            <h3 className="display-text font-semibold mb-1 sm:mb-2 text-white">
-                                {employee.name}
-                            </h3>
-
-                            {/* Employee Details */}
-                            <p className="display-text text-blue-200 mb-2">
-                                {employee.designation || "Team Member"}
-                            </p>
-
-                            {/* Celebration Details */}
-                            <div className="display-text text-emerald-400 font-medium">
-                                {eventType === "anniversary"
-                                    ? `${today.getFullYear() - new Date(employee.dateOfJoining).getFullYear()} Year${(today.getFullYear() - new Date(employee.dateOfJoining).getFullYear()) > 1 ? 's' : ''}`
-                                    : `${today.getFullYear() - new Date(employee.dob).getFullYear()} Years`
-                                }
-                            </div>
                         </motion.div>
-                    ))}
-                </div>
-
-                {/* Footer Message */}
-                <div className="mt-6 sm:mt-8 md:mt-10">
-                    <p className="display-text text-blue-100 italic">
-                        Thank you for your dedication and contribution to our team!
-                    </p>
-                </div>
-            </div>
-        </div>
+                        <motion.div
+                            className="absolute bottom-16 md:bottom-10 left-0 right-0 flex justify-center"
+                            initial={{ opacity: 0, y: 40 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: 1.2 }}
+                        >
+                            <span className="bg-slate-700 text-white px-4 md:px-8 py-2 md:py-3 rounded-full text-[clamp(1rem,2vw,1.5rem)] font-medium shadow text-center">
+                                {wish}
+                            </span>
+                        </motion.div>
+                    </motion.div>
+                );
+            })}
+        </>
     );
 };
 
-/**
- * EventSlide Component - Main component for birthday and anniversary slides
- */
 export const EventSlide: React.FC<{ slide: EventSlideType }> = ({ slide }) => {
     const { employees, loading, error } = useEmployees();
     const eventType = slide.data.eventType;
 
     if (loading) {
-        return (
-            <div className="w-full h-full bg-gradient-to-br from-slate-900 to-blue-900 flex items-center justify-center relative overflow-hidden">
-                <div className="text-center text-white relative z-10">
-                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-400 mx-auto mb-4"></div>
-                    <p className="display-text">Loading celebrations...</p>
-                </div>
-            </div>
-        );
+        return <div className="flex items-center justify-center h-full w-full text-emerald-400 text-xl font-semibold">Loading {eventType === "anniversary" ? "anniversaries" : "birthdays"}...</div>;
     }
-
     if (error) {
-        return (
-            <div className="w-full h-full bg-gradient-to-br from-slate-900 to-blue-900 flex items-center justify-center relative overflow-hidden">
-                <div className="text-center text-white relative z-10">
-                    <p className="display-text-large mb-2">Unable to load celebrations</p>
-                    <p className="display-text">Please try again later</p>
-                </div>
-            </div>
-        );
+        return <div className="flex items-center justify-center h-full w-full text-red-600 text-xl font-semibold">{error}</div>;
     }
-
     // Filter employees based on eventType
     const filteredEmployees = eventType === "anniversary"
         ? employees.filter(e => e.isAnniversary)
@@ -159,16 +214,10 @@ export const EventSlide: React.FC<{ slide: EventSlideType }> = ({ slide }) => {
 
     if (filteredEmployees.length === 0) {
         return (
-            <div className="w-full h-full bg-gradient-to-br from-slate-800 to-slate-900 flex items-center justify-center relative overflow-hidden">
-                <div className="text-center text-white relative z-10">
-                    <p className="display-text-large mb-2">
-                        No {eventType === "anniversary" ? "Anniversaries" : "Birthdays"} Today
-                    </p>
-                    <p className="display-text">Check back tomorrow for celebrations!</p>
-                </div>
+            <div className="flex items-center justify-center h-full w-full text-emerald-400 text-xl font-semibold">
+                No {eventType === "anniversary" ? "anniversaries" : "birthdays"} today
             </div>
         );
     }
-
     return <BirthdayAnniversarySlide employees={filteredEmployees} eventType={eventType} />;
 }; 
