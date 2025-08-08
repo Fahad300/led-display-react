@@ -134,7 +134,7 @@ const DisplayPage: React.FC = () => {
             <SlidesDisplay />
 
             {/* Cross-Device Sync Indicator */}
-            <div className="absolute bottom-4 left-4 z-50 bg-blue-500 text-white px-3 py-1 rounded-lg shadow-lg text-sm">
+            <div className="absolute bottom-4 left-4 z-50 text-white text-sm">
                 <div className="flex items-center gap-1">
                     <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
                     <span>Live Sync</span>

@@ -280,6 +280,11 @@ const SlidesDisplay: React.FC = () => {
         };
     }, []);
 
+    // Check if there are active slides (slides with duration > 0 and active = true)
+    const hasActiveSlides = useMemo(() => {
+        return processedSlides.some(slide => slide.active && (slide.duration || 0) > 0);
+    }, [processedSlides]);
+
     // Show loading component while slides are being loaded
     if (isLoading) {
         return <LoadingComponent />;
@@ -322,7 +327,8 @@ const SlidesDisplay: React.FC = () => {
                     <DigitalClock />
                 </div>
             )}
-            <SlideLogoOverlay isFullscreen={true} />
+            {/* Only show logo overlay when there are active slides */}
+            {hasActiveSlides && <SlideLogoOverlay isFullscreen={true} />}
         </div>
     );
 };
