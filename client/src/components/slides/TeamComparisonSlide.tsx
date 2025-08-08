@@ -7,7 +7,7 @@ import type { TeamComparisonSlide } from "../../types";
  */
 export const TeamComparisonSlideComponent: React.FC<{ slide: TeamComparisonSlide }> = ({ slide }) => {
     return (
-        <div className="w-full h-full flex flex-col items-center justify-center bg-persivia-white p-8 rounded-lg shadow animated-gradient-bg">
+        <div className="w-full h-full flex flex-col items-center justify-center bg-persivia-white p-8 pb-16 rounded-lg shadow animated-gradient-bg">
             <h2 className="text-5xl md:text-6xl font-bold text-persivia-white mb-8">Team Performance Comparison</h2>
             <div className="w-full max-w-8xl overflow-x-auto rounded-2xl backdrop-blur-md bg-white/20 bg-opacity-70 shadow-lg p-8">
                 <table className="min-w-full rounded-lg">

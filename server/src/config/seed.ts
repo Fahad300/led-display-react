@@ -7,6 +7,13 @@ import { logger } from "../utils/logger";
 import bcrypt from "bcrypt";
 
 /**
+ * Get current year for dynamic title
+ */
+const getCurrentYear = (): number => {
+    return new Date().getFullYear();
+};
+
+/**
  * Database Seeding Script
  * Populates the MySQL database with initial data
  */
@@ -99,6 +106,7 @@ const seedDisplays = async (): Promise<void> => {
         }
 
         // Create sample displays
+        const currentYear = getCurrentYear();
         const sampleDisplays = [
             {
                 name: "Main Lobby Display",
@@ -149,12 +157,12 @@ const seedDisplays = async (): Promise<void> => {
                 createdBy: adminUser
             },
             {
-                name: "Escalation Trend Graph",
+                name: `Team Wise Data ${currentYear}`,
                 description: "Visual graph comparing escalation volumes across teams",
                 type: "graph" as const,
                 content: {
                     graphData: {
-                        title: "Escalation Trend Graph",
+                        title: `Team Wise Data ${currentYear}`,
                         description: "A visual graph comparing escalation volumes and types across teams.",
                         graphType: "bar",
                         timeRange: "monthly",

@@ -26,7 +26,7 @@ router.get("/celebrations", async (req, res) => {
                 "Authorization": `Bearer ${externalApiToken}`,
                 "Content-Type": "application/json"
             },
-            timeout: 10000
+            timeout: 30000 // Increased from 10000ms to 30000ms (30 seconds)
         });
 
         res.json(response.data);
@@ -78,7 +78,7 @@ router.all("/*", async (req, res) => {
                 "Authorization": `Bearer ${externalApiToken}`,
                 "Content-Type": "application/json"
             },
-            timeout: 10000
+            timeout: 30000 // Increased from 10000ms to 30000ms (30 seconds)
         };
 
         if (req.method !== "GET") {

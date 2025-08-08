@@ -1,11 +1,10 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback, useRef } from 'react';
-import { Slide, SLIDE_TYPES, CurrentEscalationsSlide } from '../types';
+import React, { createContext, useContext, useState, useEffect, useRef, useCallback, ReactNode } from "react";
+import { Slide, SLIDE_TYPES, CurrentEscalationsSlide, TeamComparisonSlide, GraphSlide } from "../types";
+import { sessionService } from "../services/sessionService";
 import { currentEscalations } from '../data/currentEscalations';
 import { getTeamComparisonSlide } from '../data/teamComparison';
-import { getDefaultGraphSlide } from '../data/graphData';
-import { useAuth } from './AuthContext';
-import sessionService from '../services/sessionService';
 import { SLIDE_DATA_SOURCES } from '../config/slideDefaults';
+import { useAuth } from './AuthContext';
 
 // Local storage key for slides
 const STORAGE_KEY = 'led-display-templates-config';
@@ -54,6 +53,13 @@ interface SlideProviderProps {
  */
 const generateUniqueId = (): string => {
     return `slide-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+};
+
+/**
+ * Get current year for dynamic title
+ */
+const getCurrentYear = (): number => {
+    return new Date().getFullYear();
 };
 
 /**
@@ -188,7 +194,26 @@ export const SlideProvider: React.FC<SlideProviderProps> = ({ children }) => {
             // Get default slides
             const escalationsSlide = getCurrentEscalationsSlide();
             const comparisonSlide = getTeamComparisonSlide();
-            const graphSlide = getDefaultGraphSlide();
+
+            // Create graph slide with API data source instead of sample data
+            const currentYear = getCurrentYear();
+            const graphSlide: GraphSlide = {
+                id: "graph-1",
+                name: `Team Wise Data ${currentYear}`,
+                type: SLIDE_TYPES.GRAPH,
+                dataSource: "api",
+                duration: 10,
+                active: true,
+                data: {
+                    title: `Team Wise Data ${currentYear}`,
+                    description: "Current escalation distribution across teams by priority level",
+                    graphType: "bar",
+                    timeRange: "monthly",
+                    lastUpdated: new Date().toISOString(),
+                    categories: ["C-Level (Top Priority: fix immediately)", "P1 - Blocker (fix immediately)", "P2 - Critical (must fix)", "P3 - Major (really should fix)", "P4 - Minor (should fix)"],
+                    data: []
+                }
+            };
 
             // Check which default slides already exist
             const hasEscalationsSlide = updatedValidSlides.some(s => s.type === SLIDE_TYPES.CURRENT_ESCALATIONS);
@@ -208,6 +233,27 @@ export const SlideProvider: React.FC<SlideProviderProps> = ({ children }) => {
 
             if (!hasGraphSlide) {
                 finalSlides = [...finalSlides, graphSlide];
+            } else {
+                // Update existing graph slide with new name and data
+                finalSlides = finalSlides.map(slide => {
+                    if (slide.type === SLIDE_TYPES.GRAPH) {
+                        return {
+                            ...slide,
+                            name: `Team Wise Data ${currentYear}`,
+                            data: {
+                                ...slide.data,
+                                title: `Team Wise Data ${currentYear}`,
+                                description: "Current escalation distribution across teams by priority level",
+                                graphType: "bar",
+                                timeRange: "monthly",
+                                lastUpdated: new Date().toISOString(),
+                                categories: ["C-Level (Top Priority: fix immediately)", "P1 - Blocker (fix immediately)", "P2 - Critical (must fix)", "P3 - Major (really should fix)", "P4 - Minor (should fix)"],
+                                data: slide.data?.data || []
+                            }
+                        };
+                    }
+                    return slide;
+                });
             }
 
             // Always update slides to ensure data sources are current
