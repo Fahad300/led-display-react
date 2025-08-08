@@ -32,7 +32,7 @@ const TYPE_COLORS = [
 
 /**
  * GraphSlide Component
- * Styled to match TeamComparisonSlideComponent
+ * Styled to match TeamComparisonSlideComponent and CurrentEscalationsSlideComponent
  */
 export const GraphSlide: React.FC<{ slide: GraphSlideType }> = ({ slide }) => {
     const chartRef = useRef<ChartJS<"bar">>(null);
@@ -110,7 +110,7 @@ export const GraphSlide: React.FC<{ slide: GraphSlideType }> = ({ slide }) => {
             <h2 className="text-5xl md:text-6xl font-bold text-persivia-white mb-8">{slide.data.title}</h2>
             <div className="w-full max-w-8xl overflow-x-auto rounded-2xl backdrop-blur-md bg-white/20 bg-opacity-70 shadow-lg p-8">
                 <div className="mb-4">
-                    <p className="text-lg text-white font-light mb-2">{slide.data.description}</p>
+                    <p className="text-xl text-white font-light mb-2">{slide.data.description}</p>
                 </div>
                 <div className="relative min-h-[320px]">
                     {(chartData.labels && chartData.labels.length > 0 && chartData.datasets && chartData.datasets.length > 0) ? (
@@ -120,10 +120,10 @@ export const GraphSlide: React.FC<{ slide: GraphSlideType }> = ({ slide }) => {
                             options={options as ChartOptions<"bar">}
                         />
                     ) : (
-                        <div className="text-white text-center text-lg">No data available for graph.</div>
+                        <div className="text-white text-center text-xl">No data available for graph.</div>
                     )}
                 </div>
-                <div className="mt-6 text-xs text-white flex flex-row items-center justify-between">
+                <div className="mt-6 text-sm text-white flex flex-row items-center justify-between">
                     <span>Last updated: {new Date(slide.data.lastUpdated).toLocaleString()}</span>
                     <span>Time range: {slide.data.timeRange.charAt(0).toUpperCase() + slide.data.timeRange.slice(1)}</span>
                 </div>

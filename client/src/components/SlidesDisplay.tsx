@@ -99,8 +99,10 @@ const SlidesDisplay: React.FC = () => {
     useEffect(() => {
         const loadEventSlideStates = async () => {
             try {
+                console.log("🔄 Loading event slide states in SlidesDisplay...");
                 const sessionData = await sessionService.syncFromServer();
                 if (sessionData?.appSettings?.eventSlideStates) {
+                    console.log("📊 Event slide states loaded from server:", sessionData.appSettings.eventSlideStates);
                     setEventSlideStates(sessionData.appSettings.eventSlideStates);
                 } else {
                     // Default to active if no states are saved
@@ -108,6 +110,7 @@ const SlidesDisplay: React.FC = () => {
                         "birthday-event-slide": true,
                         "anniversary-event-slide": true
                     };
+                    console.log("📊 Using default event slide states:", defaultStates);
                     setEventSlideStates(defaultStates);
                 }
             } catch (error) {
@@ -142,6 +145,31 @@ const SlidesDisplay: React.FC = () => {
         return cleanup;
     }, [onRefreshRequest, loadSlides]);
 
+    // Poll for event slide state updates
+    useEffect(() => {
+        const pollEventSlideStates = async () => {
+            try {
+                const sessionData = await sessionService.syncFromServer();
+                if (sessionData?.appSettings?.eventSlideStates) {
+                    console.log("🔄 Event slide states updated from polling:", sessionData.appSettings.eventSlideStates);
+                    setEventSlideStates(sessionData.appSettings.eventSlideStates);
+                }
+            } catch (error) {
+                console.debug("Error polling event slide states:", error);
+            }
+        };
+
+        // Poll every 5 seconds for event slide state updates
+        const pollInterval = setInterval(pollEventSlideStates, 5000);
+
+        // Initial poll
+        pollEventSlideStates();
+
+        return () => {
+            clearInterval(pollInterval);
+        };
+    }, []);
+
     // Helper functions for date checks
     const isBirthdayToday = (dob: string): boolean => {
         const today = new Date();
@@ -159,12 +187,19 @@ const SlidesDisplay: React.FC = () => {
     const processedSlides = useMemo(() => {
         if (isLoading) return [];
 
+        console.log("🔄 Processing slides in SlidesDisplay...");
+        console.log("📊 Current eventSlideStates:", eventSlideStates);
+        console.log("📊 Total slides from context:", slides.length);
+
         // Remove any existing event slides
         const nonEventSlides = slides.filter(slide => slide.type !== SLIDE_TYPES.EVENT);
+        console.log("📊 Non-event slides:", nonEventSlides.length);
 
         // Birthday event slide
         const birthdayEmployees = employees.filter(employee => isBirthdayToday(employee.dob));
         const birthdayActiveState = eventSlideStates["birthday-event-slide"] ?? true;
+        console.log("🎂 Birthday employees:", birthdayEmployees.length, "Active state:", birthdayActiveState);
+
         const birthdayEventSlide: EventSlideType | null = birthdayEmployees.length > 0 ? {
             id: "birthday-event-slide",
             name: "Birthday Celebrations",
@@ -186,6 +221,8 @@ const SlidesDisplay: React.FC = () => {
         // Anniversary event slide
         const anniversaryEmployees = employees.filter(employee => isAnniversaryToday(employee.dateOfJoining));
         const anniversaryActiveState = eventSlideStates["anniversary-event-slide"] ?? true;
+        console.log("🎉 Anniversary employees:", anniversaryEmployees.length, "Active state:", anniversaryActiveState);
+
         const anniversaryEventSlide: EventSlideType | null = anniversaryEmployees.length > 0 ? {
             id: "anniversary-event-slide",
             name: "Work Anniversaries",
@@ -208,8 +245,14 @@ const SlidesDisplay: React.FC = () => {
         const eventSlides: EventSlideType[] = [birthdayEventSlide, anniversaryEventSlide].filter((s): s is EventSlideType => s !== null);
         const allSlides = [...nonEventSlides, ...eventSlides];
 
+        console.log("📊 Final processed slides:", allSlides.length);
+        console.log("📊 Event slides created:", eventSlides.length);
+        eventSlides.forEach(slide => {
+            console.log(`📊 Event slide: ${slide.name} - Active: ${slide.active}`);
+        });
+
         return allSlides; // Let SwiperSlideshow handle the active filtering
-    }, [slides, isLoading, eventSlideStates]);
+    }, [slides, isLoading, eventSlideStates, employees]);
 
     // Memoize the render function to prevent unnecessary re-renders
     const renderSlideContent = useMemo(() => {

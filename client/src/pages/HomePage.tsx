@@ -600,6 +600,10 @@ const HomePage: React.FC = () => {
     const [currentSlideIndex, setCurrentSlideIndex] = useState(0);
     const [eventSlideStates, setEventSlideStates] = useState<{ [key: string]: boolean }>({});
 
+    // Force refresh button state
+    const [isForceRefreshing, setIsForceRefreshing] = useState(false);
+    const [forceRefreshText, setForceRefreshText] = useState("Force Refresh All Displays");
+
     // Helper functions for date checks
     const isBirthdayToday = (dob: string): boolean => {
         const today = new Date();
@@ -787,11 +791,13 @@ const HomePage: React.FC = () => {
                     ...eventSlideStates,
                     [slideId]: updatedSlide.active
                 };
+                console.log("🔄 Updating event slide states in HomePage:", newEventStates);
                 setEventSlideStates(newEventStates);
 
                 // Save to database via app settings
                 try {
                     await sessionService.updateAppSettings({ eventSlideStates: newEventStates });
+                    console.log("✅ Event slide states saved to database successfully");
                 } catch (error) {
                     console.error("Error saving event slide states to database:", error);
                 }
@@ -852,35 +858,41 @@ const HomePage: React.FC = () => {
     const handleForceRefreshDisplay = async () => {
         console.log("🔄 Force refresh triggered from homepage");
 
-        // Show immediate feedback
-        const button = document.querySelector('[data-force-refresh]') as HTMLButtonElement;
-        if (button) {
-            const originalText = button.textContent;
-            button.textContent = "Refreshing...";
-            button.disabled = true;
+        // Prevent multiple simultaneous refreshes
+        if (isForceRefreshing) {
+            console.log("🔄 Force refresh already in progress, ignoring request");
+            return;
+        }
 
-            try {
-                // Trigger force refresh
-                await forceRefresh();
-                addToast("Force refresh sent to all displays", "success");
+        // Set button state
+        setIsForceRefreshing(true);
+        setForceRefreshText("Refreshing...");
 
-                // Keep button state for 3 seconds to show completion
-                setTimeout(() => {
-                    button.textContent = "✓ Refreshed";
-                    setTimeout(() => {
-                        button.textContent = originalText;
-                        button.disabled = false;
-                    }, 1000);
-                }, 2000);
-            } catch (error) {
-                console.error("Force refresh error:", error);
-                addToast("Failed to refresh displays", "error");
-                button.textContent = "Error";
-                setTimeout(() => {
-                    button.textContent = originalText;
-                    button.disabled = false;
-                }, 2000);
-            }
+        try {
+            // Trigger force refresh
+            await forceRefresh();
+            addToast("Force refresh sent to all displays", "success");
+
+            // Show success state
+            setForceRefreshText("✓ Refreshed");
+
+            // Reset button after delay
+            setTimeout(() => {
+                setForceRefreshText("Force Refresh All Displays");
+                setIsForceRefreshing(false);
+            }, 3000);
+        } catch (error) {
+            console.error("Force refresh error:", error);
+            addToast("Failed to refresh displays", "error");
+
+            // Show error state
+            setForceRefreshText("Error - Try Again");
+
+            // Reset button after delay
+            setTimeout(() => {
+                setForceRefreshText("Force Refresh All Displays");
+                setIsForceRefreshing(false);
+            }, 3000);
         }
     };
 
@@ -1220,10 +1232,18 @@ const HomePage: React.FC = () => {
                 {/* Force Refresh Display Button */}
                 <button
                     onClick={handleForceRefreshDisplay}
-                    className="w-full bg-red-600 hover:bg-red-700 text-white font-medium py-2 px-4 rounded-lg transition-colors mt-2"
-                    data-force-refresh
+                    disabled={isForceRefreshing}
+                    className={`w-full font-medium py-2 px-4 rounded-lg transition-colors mt-2 flex items-center justify-center gap-2 ${isForceRefreshing
+                        ? "bg-gray-500 cursor-not-allowed"
+                        : "bg-red-600 hover:bg-red-700"
+                        } text-white`}
                 >
-                    Force Refresh All Displays
+                    {isForceRefreshing && (
+                        <svg className="w-4 h-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                        </svg>
+                    )}
+                    {forceRefreshText}
                 </button>
 
 

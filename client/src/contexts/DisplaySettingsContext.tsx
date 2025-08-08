@@ -158,9 +158,22 @@ export const DisplaySettingsProvider: React.FC<{ children: React.ReactNode }> = 
     const forceRefresh = useCallback(async () => {
         console.log("🔄 Force refresh triggered - immediately syncing with server");
 
-        // Immediately sync with server
+        // Create a timeout promise to prevent hanging
+        const timeoutPromise = new Promise((_, reject) => {
+            setTimeout(() => reject(new Error("Force refresh timeout")), 10000); // 10 second timeout
+        });
+
         try {
-            const serverData = await sessionService.syncFromServer();
+            // Immediately sync with server with timeout protection
+            const serverData = await Promise.race([
+                sessionService.syncFromServer(),
+                timeoutPromise
+            ]) as {
+                displaySettings: any;
+                slideData: any[];
+                appSettings: any;
+            } | null;
+
             if (serverData?.displaySettings) {
                 setSettings(prev => {
                     const newSettings = { ...prev, ...serverData.displaySettings };
@@ -171,17 +184,36 @@ export const DisplaySettingsProvider: React.FC<{ children: React.ReactNode }> = 
             }
         } catch (error) {
             console.error("Error during force refresh sync:", error);
+            // Don't throw the error, continue with local refresh
         }
 
         // Broadcast refresh request to other tabs
         if (broadcastChannel) {
-            broadcastChannel.postMessage({
-                type: "FORCE_REFRESH",
-            });
+            try {
+                broadcastChannel.postMessage({
+                    type: "FORCE_REFRESH",
+                });
+                console.log("🔄 Force refresh broadcast sent to other tabs");
+            } catch (error) {
+                console.error("Error broadcasting force refresh:", error);
+            }
         }
 
         // Also refresh current tab if it's a display page
-        refreshCallbacks.forEach(callback => callback());
+        try {
+            refreshCallbacks.forEach((callback, index) => {
+                try {
+                    callback();
+                    console.log(`🔄 Force refresh callback ${index} executed`);
+                } catch (error) {
+                    console.error(`Error in force refresh callback ${index}:`, error);
+                }
+            });
+        } catch (error) {
+            console.error("Error executing refresh callbacks:", error);
+        }
+
+        console.log("🔄 Force refresh completed successfully");
     }, [broadcastChannel, refreshCallbacks]);
 
     // Register refresh callback
