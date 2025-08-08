@@ -69,7 +69,7 @@ export const fetchTeamWiseData = async (): Promise<GraphSlideData> => {
 
         return {
             title: `Team Wise Data ${currentYear}`,
-            description: "Current escalation distribution across teams by priority level",
+            description: "",
             graphType: 'bar',
             data: transformedData,
             timeRange: 'monthly',
@@ -84,7 +84,7 @@ export const fetchTeamWiseData = async (): Promise<GraphSlideData> => {
         // Return fallback data structure
         return {
             title: `Team Wise Data ${currentYear}`,
-            description: "Current escalation distribution across teams by priority level",
+            description: "",
             graphType: 'bar',
             data: [],
             timeRange: 'monthly',

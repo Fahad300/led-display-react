@@ -30,17 +30,17 @@ const PRIORITY_COLORS: { [key: string]: string } = {
     'P1 - Blocker (fix immediately)': '#FF6B35', // Bright Orange
     'P2 - Critical (must fix)': '#D4AF37', // Light Yellow/Camel
     'P3 - Major (really should fix)': '#4ECDC4', // Bright Teal
-    'P4 - Minor (should fix)': '#2ED573', // Bright Green
+    'P4 - Minor (should fix)': '#00FF88', // Vibrant Green
     // Fallback colors for other categories
     'Critical': '#FF0000',
     'High': '#FF6B35',
     'Medium': '#4ECDC4',
-    'Low': '#2ED573',
+    'Low': '#00FF88',
     'C-Level': '#FF0000',
     'P1': '#FF6B35',
     'P2': '#D4AF37',
     'P3': '#4ECDC4',
-    'P4': '#2ED573',
+    'P4': '#00FF88',
 };
 
 /**
