@@ -17,7 +17,7 @@ export const AppDataSource = new DataSource({
     username: config.database.username,
     password: config.database.password,
     database: config.database.database,
-    synchronize: config.database.synchronize, // Set to false in production
+    synchronize: false, // Disable synchronize - use migrations instead
     logging: false, // Disable verbose SQL query logging
     entities: [User, Display, Session, File],
     migrations: ["src/migrations/*.ts"],

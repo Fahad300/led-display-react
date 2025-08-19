@@ -25,6 +25,21 @@ const seedDatabase = async (): Promise<void> => {
         await AppDataSource.initialize();
         logger.info("Database connection established");
 
+        // Check database connection status
+        if (!AppDataSource.isInitialized) {
+            logger.error("Database connection failed to initialize");
+            return;
+        }
+
+        // Check if we can query the database
+        try {
+            const testQuery = await AppDataSource.query("SELECT 1 as test");
+            logger.info("Database query test successful");
+        } catch (error) {
+            logger.error("Database query test failed:", error);
+            return;
+        }
+
         // Seed users
         await seedUsers();
 
@@ -76,6 +91,13 @@ const seedUsers = async (): Promise<void> => {
         await userRepository.save(demoUser);
         logger.info("👥 Default users created - admin/admin123, demo/demo123");
 
+        // Verify users were created
+        const createdUsers = await userRepository.find();
+        logger.info(`Created ${createdUsers.length} users:`);
+        createdUsers.forEach(user => {
+            logger.info(`- ${user.username} (ID: ${user.id})`);
+        });
+
     } catch (error) {
         if (error instanceof Error) {
             logger.error(`User seeding error: ${error.message}`);
@@ -102,8 +124,28 @@ const seedDisplays = async (): Promise<void> => {
         const adminUser = await userRepository.findOne({ where: { username: "admin" } });
         if (!adminUser) {
             logger.warn("Admin user not found, skipping display seeding");
+            logger.warn("Available users:");
+            const allUsers = await userRepository.find();
+            allUsers.forEach(user => {
+                logger.warn(`- User ID: ${user.id}, Username: ${user.username}`);
+            });
+
+            // Check if users table exists and has data
+            const userCount = await userRepository.count();
+            logger.warn(`Total users in database: ${userCount}`);
+
+            // Try to find any user
+            const anyUser = await userRepository.findOne({});
+            if (anyUser) {
+                logger.warn(`Found a user: ${anyUser.username} with ID: ${anyUser.id}`);
+            } else {
+                logger.warn("No users found at all in the database");
+            }
+
             return;
         }
+
+        logger.info(`Found admin user: ${adminUser.username} with ID: ${adminUser.id}`);
 
         // Create sample displays
         const currentYear = getCurrentYear();
