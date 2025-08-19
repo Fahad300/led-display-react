@@ -4,105 +4,6 @@ export class CreateDisplaysTable1700000000002 implements MigrationInterface {
     name = 'CreateDisplaysTable1700000000002'
 
     public async up(queryRunner: QueryRunner): Promise<void> {
-<<<<<<< HEAD
-        await queryRunner.createTable(
-            new Table({
-                name: "displays",
-                columns: [
-                    {
-                        name: "id",
-                        type: "varchar",
-                        length: "36",
-                        isPrimary: true,
-                        generationStrategy: "uuid"
-                    },
-                    {
-                        name: "name",
-                        type: "varchar",
-                        length: "255",
-                        isNullable: false
-                    },
-                    {
-                        name: "description",
-                        type: "text",
-                        isNullable: true
-                    },
-                    {
-                        name: "type",
-                        type: "varchar",
-                        length: "50",
-                        isNullable: false
-                    },
-                    {
-                        name: "content",
-                        type: "json",
-                        isNullable: false
-                    },
-                    {
-                        name: "settings",
-                        type: "json",
-                        isNullable: false
-                    },
-                    {
-                        name: "isActive",
-                        type: "boolean",
-                        default: true
-                    },
-                    {
-                        name: "created_by",
-                        type: "varchar",
-                        length: "36",
-                        isNullable: false
-                    },
-                    {
-                        name: "updatedById",
-                        type: "varchar",
-                        length: "36",
-                        isNullable: true
-                    },
-                    {
-                        name: "createdAt",
-                        type: "timestamp",
-                        default: "CURRENT_TIMESTAMP"
-                    },
-                    {
-                        name: "updatedAt",
-                        type: "timestamp",
-                        default: "CURRENT_TIMESTAMP",
-                        onUpdate: "CURRENT_TIMESTAMP"
-                    }
-                ]
-            }),
-            true
-        );
-
-        // Add foreign key constraint for created_by
-        await queryRunner.createForeignKey(
-            "displays",
-            new TableForeignKey({
-                columnNames: ["created_by"],
-                referencedColumnNames: ["id"],
-                referencedTableName: "users",
-                onDelete: "CASCADE"
-            })
-        );
-
-        // Add foreign key constraint for updatedBy
-        await queryRunner.createForeignKey(
-            "displays",
-            new TableForeignKey({
-                columnNames: ["updatedById"],
-                referencedColumnNames: ["id"],
-                referencedTableName: "users",
-                onDelete: "SET NULL"
-            })
-        );
-
-        // Add indexes
-        await queryRunner.query(`CREATE INDEX idx_displays_created_by ON displays(created_by)`);
-        await queryRunner.query(`CREATE INDEX idx_displays_is_active ON displays(isActive)`);
-        await queryRunner.query(`CREATE INDEX idx_displays_type ON displays(type)`);
-=======
         // Check if displays table already exists
         const tableExists = await queryRunner.hasTable("displays");
 
@@ -130,20 +31,37 @@ export class CreateDisplaysTable1700000000002 implements MigrationInterface {
                             isNullable: true
                         },
                         {
-                            name: "isActive",
-                            type: "boolean",
-                            default: true
+                            name: "type",
+                            type: "varchar",
+                            length: "50",
+                            isNullable: false
+                        },
+                        {
+                            name: "content",
+                            type: "json",
+                            isNullable: false
                         },
                         {
                             name: "settings",
                             type: "json",
-                            isNullable: true
+                            isNullable: false
+                        },
+                        {
+                            name: "isActive",
+                            type: "boolean",
+                            default: true
                         },
                         {
                             name: "created_by",
                             type: "varchar",
                             length: "36",
                             isNullable: false
+                        },
+                        {
+                            name: "updatedById",
+                            type: "varchar",
+                            length: "36",
+                            isNullable: true
                         },
                         {
                             name: "createdAt",
@@ -162,14 +80,14 @@ export class CreateDisplaysTable1700000000002 implements MigrationInterface {
             );
         }
 
-        // Check if foreign key already exists
+        // Check if foreign key already exists for created_by
         const foreignKeys = await queryRunner.getTable("displays");
-        const fkExists = foreignKeys?.foreignKeys.some(fk =>
+        const fkCreatedByExists = foreignKeys?.foreignKeys.some(fk =>
             fk.columnNames.includes("created_by") && fk.referencedTableName === "users"
         );
 
-        if (!fkExists) {
-            // Add foreign key constraint
+        if (!fkCreatedByExists) {
+            // Add foreign key constraint for created_by
             await queryRunner.createForeignKey(
                 "displays",
                 new TableForeignKey({
@@ -177,6 +95,24 @@ export class CreateDisplaysTable1700000000002 implements MigrationInterface {
                     referencedColumnNames: ["id"],
                     referencedTableName: "users",
                     onDelete: "CASCADE"
+                })
+            );
+        }
+
+        // Check if foreign key already exists for updatedById
+        const fkUpdatedByExists = foreignKeys?.foreignKeys.some(fk =>
+            fk.columnNames.includes("updatedById") && fk.referencedTableName === "users"
+        );
+
+        if (!fkUpdatedByExists) {
+            // Add foreign key constraint for updatedBy
+            await queryRunner.createForeignKey(
+                "displays",
+                new TableForeignKey({
+                    columnNames: ["updatedById"],
+                    referencedColumnNames: ["id"],
+                    referencedTableName: "users",
+                    onDelete: "SET NULL"
                 })
             );
         }
@@ -193,7 +129,12 @@ export class CreateDisplaysTable1700000000002 implements MigrationInterface {
         } catch (error) {
             // Index might already exist, continue
         }
->>>>>>> a46cf8ac23aba6c39fb14cf40a636d87d37b56cc
+
+        try {
+            await queryRunner.query(`CREATE INDEX IF NOT EXISTS idx_displays_type ON displays(type)`);
+        } catch (error) {
+            // Index might already exist, continue
+        }
     }
 
     public async down(queryRunner: QueryRunner): Promise<void> {
