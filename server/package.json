@@ -12,6 +12,7 @@
     "seed": "ts-node src/config/seed.ts",
     "setup-db": "ts-node src/scripts/setupDatabase.ts",
     "db:reset": "ts-node src/scripts/resetDb.ts",
+    "db:reset-migrate": "ts-node src/scripts/resetDatabase.ts",
     "cleanup-sqlite": "node cleanup-sqlite.js"
   },
   "keywords": [],
