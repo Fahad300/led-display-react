@@ -45,7 +45,7 @@ export const MediaSelector: React.FC<MediaSelectorProps> = ({
                 throw new Error("No authentication token found");
             }
 
-            const response = await fetch(`${process.env.BACKEND_URL}/api/admin/uploads`, {
+            const response = await fetch(`/api/files`, {
                 headers: {
                     "Authorization": `Bearer ${token}`
                 }
@@ -126,7 +126,7 @@ export const MediaSelector: React.FC<MediaSelectorProps> = ({
             const formData = new FormData();
             formData.append("file", file);
 
-            const response = await fetch(`${process.env.BACKEND_URL}/api/files/upload`, {
+            const response = await fetch(`/api/files/upload`, {
                 method: "POST",
                 body: formData,
                 headers: {
@@ -143,12 +143,26 @@ export const MediaSelector: React.FC<MediaSelectorProps> = ({
                 throw new Error("Invalid response: missing file URL");
             }
 
-            const fileUrl = `${process.env.BACKEND_URL}${data.url}`;
+            // Determine file type from MIME type
+            let fileType: "image" | "video";
+            if (data.mimeType) {
+                if (data.mimeType.startsWith("video/")) {
+                    fileType = "video";
+                } else if (data.mimeType.startsWith("image/")) {
+                    fileType = "image";
+                } else {
+                    fileType = "image"; // Default fallback
+                }
+            } else {
+                // Fallback to checking the original file type
+                fileType = isVideo ? "video" : "image";
+            }
+
             const newFile: MediaFile = {
-                name: file.name,
-                url: fileUrl,
-                type: isVideo ? "video" : "image",
-                size: file.size,
+                name: data.originalName || file.name,
+                url: data.url,
+                type: fileType,
+                size: data.size || file.size,
                 lastModified: file.lastModified
             };
 

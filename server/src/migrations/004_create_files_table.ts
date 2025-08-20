@@ -34,18 +34,22 @@ export class CreateFilesTable1700000000004 implements MigrationInterface {
                         isNullable: false
                     },
                     {
+                        name: "data",
+                        type: "longtext",
+                        isNullable: false
+                    },
+                    {
                         name: "size",
                         type: "bigint",
                         isNullable: false
                     },
                     {
-                        name: "path",
-                        type: "varchar",
-                        length: "500",
-                        isNullable: false
+                        name: "description",
+                        type: "text",
+                        isNullable: true
                     },
                     {
-                        name: "uploadedBy",
+                        name: "uploaded_by",
                         type: "varchar",
                         length: "36",
                         isNullable: false
@@ -66,11 +70,11 @@ export class CreateFilesTable1700000000004 implements MigrationInterface {
             true
         );
 
-        // Add foreign key constraint for uploadedBy
+        // Add foreign key constraint for uploaded_by
         await queryRunner.createForeignKey(
             "files",
             new TableForeignKey({
-                columnNames: ["uploadedBy"],
+                columnNames: ["uploaded_by"],
                 referencedColumnNames: ["id"],
                 referencedTableName: "users",
                 onDelete: "CASCADE"
@@ -78,7 +82,7 @@ export class CreateFilesTable1700000000004 implements MigrationInterface {
         );
 
         // Add indexes
-        await queryRunner.query(`CREATE INDEX idx_files_uploaded_by ON files(uploadedBy)`);
+        await queryRunner.query(`CREATE INDEX idx_files_uploaded_by ON files(uploaded_by)`);
         await queryRunner.query(`CREATE INDEX idx_files_mime_type ON files(mimeType)`);
     }
 

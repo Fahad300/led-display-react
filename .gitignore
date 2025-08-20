@@ -13,10 +13,6 @@
 
 # misc
 .DS_Store
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
 .cursorrules
 
 npm-debug.log*
@@ -30,3 +26,5 @@ server/.env
 .node_modules
 client/node_modules/
 server/node_modules/
+error.log
+combined.log

@@ -49,15 +49,19 @@ const handleMulterError = (err: any, req: express.Request, res: express.Response
 router.post("/upload", isAuthenticated, upload.single("file"), handleMulterError, async (req: express.Request, res: express.Response) => {
     try {
         if (!req.file) {
+            logger.warn("File upload attempt without file");
             return res.status(400).json({ error: "No file uploaded" });
         }
 
         if (!req.user) {
+            logger.warn("File upload attempt without authentication");
             return res.status(401).json({ error: "User not authenticated" });
         }
 
-        const { buffer, originalname, mimetype } = req.file;
+        const { buffer, originalname, mimetype, size } = req.file;
         const description = req.body.description;
+
+        logger.info(`File upload attempt: ${originalname} (${mimetype}, ${size} bytes) by user ${(req.user as User).username}`);
 
         // Upload file to database
         const file = await FileService.uploadFile(
@@ -68,7 +72,8 @@ router.post("/upload", isAuthenticated, upload.single("file"), handleMulterError
             description
         );
 
-        logger.info(`File uploaded to database: ${file.filename} by user ${(req.user as User).username}`);
+        logger.info(`File uploaded successfully: ${file.filename} (${file.size} bytes) by user ${(req.user as User).username}`);
+
         res.json({
             url: file.getUrl(),
             id: file.id,
@@ -80,6 +85,10 @@ router.post("/upload", isAuthenticated, upload.single("file"), handleMulterError
 
     } catch (error) {
         logger.error("Error in file upload endpoint:", error);
+        if (error instanceof Error) {
+            logger.error(`Error details: ${error.message}`);
+            logger.error(`Stack trace: ${error.stack}`);
+        }
         res.status(500).json({ error: "Failed to upload file" });
     }
 });
@@ -88,11 +97,16 @@ router.post("/upload", isAuthenticated, upload.single("file"), handleMulterError
 router.get("/:id", async (req, res) => {
     try {
         const fileId = req.params.id;
+        logger.info(`File serving request: ${fileId}`);
+
         const fileData = await FileService.getFileBuffer(fileId);
 
         if (!fileData) {
+            logger.warn(`File not found: ${fileId}`);
             return res.status(404).json({ error: "File not found" });
         }
+
+        logger.info(`File served successfully: ${fileData.filename} (${fileData.buffer.length} bytes)`);
 
         // Set appropriate headers
         res.setHeader("Content-Type", fileData.mimeType);
@@ -104,6 +118,10 @@ router.get("/:id", async (req, res) => {
 
     } catch (error) {
         logger.error("Error serving file:", error);
+        if (error instanceof Error) {
+            logger.error(`Error details: ${error.message}`);
+            logger.error(`Stack trace: ${error.stack}`);
+        }
         res.status(500).json({ error: "Failed to serve file" });
     }
 });
