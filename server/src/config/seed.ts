@@ -4,7 +4,6 @@ import { Display } from "../models/Display";
 import { Session } from "../models/Session";
 import { File } from "../models/File";
 import { logger } from "../utils/logger";
-import bcrypt from "bcrypt";
 
 /**
  * Get current year for dynamic title
@@ -79,14 +78,14 @@ const seedUsers = async (): Promise<void> => {
         // Create default admin user
         const adminUser = new User();
         adminUser.username = "admin";
-        adminUser.password = await bcrypt.hash("admin123", 10);
+        adminUser.password = "admin123";
 
         await userRepository.save(adminUser);
 
         // Create demo user
         const demoUser = new User();
         demoUser.username = "demo";
-        demoUser.password = await bcrypt.hash("demo123", 10);
+        demoUser.password = "demo123";
 
         await userRepository.save(demoUser);
         logger.info("👥 Default users created - admin/admin123, demo/demo123");

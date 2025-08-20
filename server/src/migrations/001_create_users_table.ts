@@ -19,8 +19,8 @@ export class CreateUsersTable1700000000001 implements MigrationInterface {
                         name: "username",
                         type: "varchar",
                         length: "255",
-                        isUnique: true,
-                        isNullable: false
+                        isNullable: false,
+                        isUnique: true
                     },
                     {
                         name: "password",
@@ -37,9 +37,6 @@ export class CreateUsersTable1700000000001 implements MigrationInterface {
             }),
             true
         );
-
-        // Add index for username
-        await queryRunner.query(`CREATE INDEX idx_users_username ON users(username)`);
     }
 
     public async down(queryRunner: QueryRunner): Promise<void> {

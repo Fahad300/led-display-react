@@ -34,22 +34,18 @@ export class CreateFilesTable1700000000004 implements MigrationInterface {
                         isNullable: false
                     },
                     {
-                        name: "data",
-                        type: "longtext",
-                        isNullable: false
-                    },
-                    {
                         name: "size",
-                        type: "int",
+                        type: "bigint",
                         isNullable: false
                     },
                     {
-                        name: "description",
-                        type: "text",
-                        isNullable: true
+                        name: "path",
+                        type: "varchar",
+                        length: "500",
+                        isNullable: false
                     },
                     {
-                        name: "uploaded_by",
+                        name: "uploadedBy",
                         type: "varchar",
                         length: "36",
                         isNullable: false
@@ -70,11 +66,11 @@ export class CreateFilesTable1700000000004 implements MigrationInterface {
             true
         );
 
-        // Add foreign key constraint
+        // Add foreign key constraint for uploadedBy
         await queryRunner.createForeignKey(
             "files",
             new TableForeignKey({
-                columnNames: ["uploaded_by"],
+                columnNames: ["uploadedBy"],
                 referencedColumnNames: ["id"],
                 referencedTableName: "users",
                 onDelete: "CASCADE"
@@ -82,8 +78,7 @@ export class CreateFilesTable1700000000004 implements MigrationInterface {
         );
 
         // Add indexes
-        await queryRunner.query(`CREATE INDEX idx_files_uploaded_by ON files(uploaded_by)`);
-        await queryRunner.query(`CREATE INDEX idx_files_created_at ON files(createdAt)`);
+        await queryRunner.query(`CREATE INDEX idx_files_uploaded_by ON files(uploadedBy)`);
         await queryRunner.query(`CREATE INDEX idx_files_mime_type ON files(mimeType)`);
     }
 

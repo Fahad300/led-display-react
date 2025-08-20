@@ -16,16 +16,16 @@ export class CreateSessionsTable1700000000003 implements MigrationInterface {
                         generationStrategy: "uuid"
                     },
                     {
-                        name: "userId",
-                        type: "varchar",
-                        length: "36",
-                        isNullable: false
-                    },
-                    {
                         name: "sessionToken",
                         type: "varchar",
                         length: "255",
-                        isUnique: true,
+                        isNullable: false,
+                        isUnique: true
+                    },
+                    {
+                        name: "userId",
+                        type: "varchar",
+                        length: "36",
                         isNullable: false
                     },
                     {
@@ -51,12 +51,11 @@ export class CreateSessionsTable1700000000003 implements MigrationInterface {
                     {
                         name: "lastActivity",
                         type: "timestamp",
-                        isNullable: true
+                        default: "CURRENT_TIMESTAMP"
                     },
                     {
                         name: "deviceInfo",
-                        type: "varchar",
-                        length: "500",
+                        type: "text",
                         isNullable: true
                     },
                     {
@@ -81,7 +80,7 @@ export class CreateSessionsTable1700000000003 implements MigrationInterface {
             true
         );
 
-        // Add foreign key constraint
+        // Add foreign key constraint for userId
         await queryRunner.createForeignKey(
             "sessions",
             new TableForeignKey({

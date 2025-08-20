@@ -106,21 +106,32 @@ router.put("/display-settings", isAuthenticated, async (req, res) => {
         const userId = (req as any).user.id;
         const { settings } = req.body;
 
+        logger.info(`Updating display settings for user ${userId}:`, settings);
+
         const session = await AppDataSource.getRepository(Session).findOne({
             where: { userId, isActive: true }
         });
 
         if (!session) {
+            logger.warn(`No active session found for user ${userId}`);
             return res.status(404).json({ error: "No active session found" });
         }
 
+        logger.info(`Found session ${session.id}, updating display settings`);
+
         session.setDisplaySettings(settings);
         session.lastActivity = new Date();
-        await AppDataSource.getRepository(Session).save(session);
+
+        const savedSession = await AppDataSource.getRepository(Session).save(session);
+        logger.info(`Session ${savedSession.id} updated successfully`);
 
         res.json({ message: "Display settings updated" });
     } catch (error) {
         logger.error("Error updating display settings:", error);
+        if (error instanceof Error) {
+            logger.error(`Error details: ${error.message}`);
+            logger.error(`Stack trace: ${error.stack}`);
+        }
         res.status(500).json({ error: "Failed to update display settings" });
     }
 });
@@ -135,21 +146,32 @@ router.put("/slide-data", isAuthenticated, async (req, res) => {
         const userId = (req as any).user.id;
         const { slides } = req.body;
 
+        logger.info(`Updating slide data for user ${userId}:`, slides);
+
         const session = await AppDataSource.getRepository(Session).findOne({
             where: { userId, isActive: true }
         });
 
         if (!session) {
+            logger.warn(`No active session found for user ${userId}`);
             return res.status(404).json({ error: "No active session found" });
         }
 
+        logger.info(`Found session ${session.id}, updating slide data`);
+
         session.setSlideData(slides);
         session.lastActivity = new Date();
-        await AppDataSource.getRepository(Session).save(session);
+
+        const savedSession = await AppDataSource.getRepository(Session).save(session);
+        logger.info(`Session ${savedSession.id} updated successfully`);
 
         res.json({ message: "Slide data updated" });
     } catch (error) {
         logger.error("Error updating slide data:", error);
+        if (error instanceof Error) {
+            logger.error(`Error details: ${error.message}`);
+            logger.error(`Stack trace: ${error.stack}`);
+        }
         res.status(500).json({ error: "Failed to update slide data" });
     }
 });
