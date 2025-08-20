@@ -1,12 +1,11 @@
 import mysql from "mysql2/promise";
 import { config } from "../config/env";
 import { logger } from "../utils/logger";
-import { runMigrations } from "../config/migrate";
-import { seedDatabase } from "../config/seed";
+import { AppDataSource } from "../config/database";
 
 /**
  * Database Setup Script
- * Complete MySQL database setup and migration from SQLite
+ * Complete MySQL database setup using TypeORM migrations
  */
 const setupDatabase = async (): Promise<void> => {
     try {
@@ -15,11 +14,8 @@ const setupDatabase = async (): Promise<void> => {
         // Step 1: Create database and user
         await createDatabaseAndUser();
 
-        // Step 2: Run migrations
-        await runMigrations();
-
-        // Step 3: Seed initial data
-        await seedDatabase();
+        // Step 2: Run TypeORM migrations
+        await runTypeORMMigrations();
 
         logger.info("Database setup completed successfully!");
 
@@ -124,6 +120,31 @@ const verifyConnection = async (): Promise<void> => {
 };
 
 /**
+ * Run TypeORM migrations
+ */
+const runTypeORMMigrations = async (): Promise<void> => {
+    try {
+        logger.info("Running TypeORM migrations...");
+
+        // Initialize the data source
+        await AppDataSource.initialize();
+
+        // Run migrations
+        const migrations = await AppDataSource.runMigrations();
+        logger.info(`Executed ${migrations.length} migrations`);
+
+        // Close the connection
+        await AppDataSource.destroy();
+
+    } catch (error) {
+        if (error instanceof Error) {
+            logger.error(`Migration failed: ${error.message}`);
+            throw error;
+        }
+    }
+};
+
+/**
  * Display setup instructions
  */
 const displayInstructions = (): void => {
@@ -136,9 +157,8 @@ const displayInstructions = (): void => {
     logger.info("   DB_PASSWORD=your_secure_password");
     logger.info("   DB_DATABASE=led_display_db");
     logger.info("   MYSQL_ROOT_PASSWORD=your_root_password");
-    logger.info("3. Run: npm run migrate");
-    logger.info("4. Run: npm run seed");
-    logger.info("5. Start the server: npm run dev");
+    logger.info("3. Run: npm run setup-db");
+    logger.info("4. Start the server: npm run dev");
     logger.info("==========================================\n");
 };
 

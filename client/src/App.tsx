@@ -10,7 +10,7 @@ import MainLayout from './components/layout/MainLayout';
 import { AuthProvider } from "./contexts/AuthContext";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { Login } from "./pages/Login";
-import Register from "./pages/Register";
+import Register from './pages/Register';
 import HomePage from './pages/HomePage';
 import AdminPage from './pages/AdminPage';
 import MediaPage from './pages/MediaPage';
@@ -29,7 +29,6 @@ const App: React.FC = () => {
                     <Routes>
                       {/* Public Routes */}
                       <Route path="/login" element={<Login />} />
-                      <Route path="/register" element={<Register />} />
 
                       {/* Display Route - No Header/Footer - Public Access for LED Screen */}
                       <Route
@@ -60,6 +59,14 @@ const App: React.FC = () => {
                           element={
                             <ProtectedRoute>
                               <MediaPage />
+                            </ProtectedRoute>
+                          }
+                        />
+                        <Route
+                          path="/register"
+                          element={
+                            <ProtectedRoute>
+                              <Register />
                             </ProtectedRoute>
                           }
                         />

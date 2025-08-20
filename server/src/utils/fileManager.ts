@@ -7,7 +7,7 @@ import { logger } from "./logger";
  */
 export class FileManager {
     private static uploadDir = path.join(__dirname, "../../uploads");
-    private static backendUrl = process.env.BACKEND_URL || "http://localhost:5000";
+    private static backendUrl = process.env.SERVER_URL || process.env.BACKEND_URL || "http://localhost:5000";
 
     /**
      * Purges unused files from the uploads directory

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useSlides } from "../contexts/SlideContext";
 import { useToast } from "../contexts/ToastContext";
@@ -19,9 +19,9 @@ import {
     DocumentSlide,
     DocumentSlideData
 } from "../types";
+import { backendApi } from "../services/api";
 
-/** Configuration for the backend API URL */
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || "http://localhost:5000";
+
 
 /** Type for form validation errors */
 interface FormErrors {
@@ -78,25 +78,18 @@ const uploadFile = async (file: File): Promise<string> => {
     formData.append("file", file);
 
     try {
-        const response = await fetch(`${BACKEND_URL}/api/files/upload`, {
-            method: "POST",
-            body: formData,
+        const response = await backendApi.post("/api/files/upload", formData, {
             headers: {
+                "Content-Type": "multipart/form-data",
                 "Authorization": `Bearer ${token}`
             }
         });
 
-        if (!response.ok) {
-            const errorData = await response.json().catch(() => ({}));
-            throw new Error(errorData.error || `Failed to upload file: ${response.statusText}`);
-        }
-
-        const data = await response.json();
-        if (!data.url) {
+        if (!response.data.url) {
             throw new Error("Invalid response: missing file URL");
         }
 
-        return `${BACKEND_URL}${data.url}`;
+        return response.data.url;
     } catch (error) {
         console.error("Upload error:", error);
         throw new Error(error instanceof Error ? error.message : "Failed to upload file");

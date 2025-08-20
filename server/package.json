@@ -8,8 +8,6 @@
     "dev": "nodemon src/server.ts",
     "build": "tsc",
     "test": "jest",
-    "migrate": "ts-node src/config/migrate.ts",
-    "seed": "ts-node src/config/seed.ts",
     "setup-db": "ts-node src/scripts/setupDatabase.ts",
     "db:reset": "ts-node src/scripts/resetDb.ts",
     "cleanup-sqlite": "node cleanup-sqlite.js"

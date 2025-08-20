@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect, ReactNode, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
+import { backendApi } from "../services/api";
 import axios from "axios";
 
 interface User {
@@ -26,16 +27,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         localStorage.removeItem("token");
         setToken(null);
         setUser(null);
-        delete axios.defaults.headers.common["Authorization"];
+        delete backendApi.defaults.headers.common["Authorization"];
         navigate("/login");
     }, [navigate]);
 
     useEffect(() => {
         if (token) {
-            axios.defaults.headers.common["Authorization"] = `Bearer ${token}`;
+            backendApi.defaults.headers.common["Authorization"] = `Bearer ${token}`;
             const fetchUser = async () => {
                 try {
-                    const response = await axios.get("http://localhost:5000/api/auth/me");
+                    const response = await backendApi.get("/api/auth/me");
                     setUser(response.data);
                 } catch (error) {
                     console.error("Error fetching user:", error);
@@ -48,7 +49,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     const login = async (username: string, password: string) => {
         try {
-            const response = await axios.post("http://localhost:5000/api/auth/login", {
+            const response = await backendApi.post("/api/auth/login", {
                 username,
                 password
             });

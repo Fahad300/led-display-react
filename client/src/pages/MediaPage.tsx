@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { useToast } from "../contexts/ToastContext";
 import MediaModal from "../components/MediaModal";
+import { backendApi } from "../services/api";
 
-/** Configuration for the backend API URL */
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || "http://localhost:5000";
+
 
 interface MediaFile {
     id: string;
@@ -47,26 +47,15 @@ const MediaPage: React.FC = () => {
                 throw new Error("No authentication token found");
             }
 
-            const response = await fetch(`${BACKEND_URL}/api/files?page=${currentPage}&limit=50`, {
-                headers: {
-                    "Authorization": `Bearer ${token}`,
-                    "Content-Type": "application/json"
-                }
-            });
+            const response = await backendApi.get(`/api/files?page=${currentPage}&limit=50`);
 
-            if (!response.ok) {
-                const errorData = await response.json().catch(() => ({}));
-                throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
-            }
-
-            const data = await response.json();
-            if (!data.files) {
+            if (!response.data.files) {
                 throw new Error("Invalid response format: files array is missing");
             }
 
-            console.log("Received files from database:", data.files);
-            setFiles(data.files);
-            setTotalPages(data.totalPages || 1);
+            console.log("Received files from database:", response.data.files);
+            setFiles(response.data.files);
+            setTotalPages(response.data.totalPages || 1);
         } catch (error) {
             console.error("Error fetching files:", error);
             addToast(error instanceof Error ? error.message : "Failed to fetch media files", "error");
@@ -95,19 +84,13 @@ const MediaPage: React.FC = () => {
         setIsPurging(true);
         try {
             // Get all files first
-            const response = await fetch(`${BACKEND_URL}/api/files?page=1&limit=1000`, {
-                headers: {
-                    "Authorization": `Bearer ${token}`,
-                    "Content-Type": "application/json"
-                }
-            });
+            const response = await backendApi.get(`/api/files?page=1&limit=1000`);
 
-            if (!response.ok) {
+            if (!response.data.files) {
                 throw new Error("Failed to fetch files for deletion");
             }
 
-            const data = await response.json();
-            const allFileIds = data.files.map((file: MediaFile) => file.id);
+            const allFileIds = response.data.files.map((file: MediaFile) => file.id);
 
             if (allFileIds.length === 0) {
                 addToast("No files to delete", "info");
@@ -116,19 +99,13 @@ const MediaPage: React.FC = () => {
 
             // Delete all files
             const deletePromises = allFileIds.map(async (fileId: string) => {
-                const deleteResponse = await fetch(`${BACKEND_URL}/api/files/${fileId}`, {
-                    method: "DELETE",
-                    headers: {
-                        "Authorization": `Bearer ${token}`,
-                        "Content-Type": "application/json"
-                    }
-                });
+                const deleteResponse = await backendApi.delete(`/api/files/${fileId}`);
 
-                if (!deleteResponse.ok) {
+                if (!deleteResponse.data) {
                     throw new Error(`Failed to delete file ${fileId}`);
                 }
 
-                return deleteResponse.json();
+                return deleteResponse.data;
             });
 
             await Promise.all(deletePromises);
@@ -160,19 +137,13 @@ const MediaPage: React.FC = () => {
         try {
             // Delete files one by one
             const deletePromises = selectedFiles.map(async (fileId) => {
-                const response = await fetch(`${BACKEND_URL}/api/files/${fileId}`, {
-                    method: "DELETE",
-                    headers: {
-                        "Authorization": `Bearer ${token}`,
-                        "Content-Type": "application/json"
-                    }
-                });
+                const response = await backendApi.delete(`/api/files/${fileId}`);
 
-                if (!response.ok) {
+                if (!response.data) {
                     throw new Error(`Failed to delete file ${fileId}`);
                 }
 
-                return response.json();
+                return response.data;
             });
 
             await Promise.all(deletePromises);
@@ -198,15 +169,9 @@ const MediaPage: React.FC = () => {
         }
 
         try {
-            const response = await fetch(`${BACKEND_URL}/api/files/${fileId}`, {
-                method: "DELETE",
-                headers: {
-                    "Authorization": `Bearer ${token}`,
-                    "Content-Type": "application/json"
-                }
-            });
+            const response = await backendApi.delete(`/api/files/${fileId}`);
 
-            if (!response.ok) {
+            if (!response.data) {
                 throw new Error("Failed to delete file");
             }
 
@@ -238,7 +203,7 @@ const MediaPage: React.FC = () => {
     const handleMediaPreview = (file: MediaFile) => {
         console.log("Previewing media:", file);
         setSelectedMedia({
-            url: `${BACKEND_URL}${file.url}`,
+            url: file.url,
             type: file.mimeType,
             name: file.originalName
         });
@@ -341,12 +306,12 @@ const MediaPage: React.FC = () => {
                                     <div className="flex items-center space-x-4">
                                         {file.mimeType.startsWith("image/") ? (
                                             <img
-                                                src={`${BACKEND_URL}${file.url}`}
+                                                src={file.url}
                                                 alt={file.originalName}
                                                 className="h-12 w-12 object-cover rounded cursor-pointer"
                                                 onClick={() => handleMediaPreview(file)}
                                                 onError={(e) => {
-                                                    console.error("Error loading image:", `${BACKEND_URL}${file.url}`);
+                                                    console.error("Error loading image:", file.url);
                                                     e.currentTarget.src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%23999999'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z'%3E%3C/path%3E%3C/svg%3E";
                                                 }}
                                             />

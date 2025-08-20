@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { useToast } from "../contexts/ToastContext";
 import MediaModal from "./MediaModal";
+import { backendApi } from "../services/api";
 
 interface MediaFile {
     name: string;
@@ -45,18 +46,9 @@ export const MediaSelector: React.FC<MediaSelectorProps> = ({
                 throw new Error("No authentication token found");
             }
 
-            const response = await fetch(`/api/files`, {
-                headers: {
-                    "Authorization": `Bearer ${token}`
-                }
-            });
+            const response = await backendApi.get(`/api/files`);
 
-            if (!response.ok) {
-                throw new Error("Failed to fetch files");
-            }
-
-            const data = await response.json();
-            const filteredFiles = data.files.filter((file: MediaFile) =>
+            const filteredFiles = response.data.files.filter((file: MediaFile) =>
                 acceptedTypes.includes(file.type)
             );
             setFiles(filteredFiles);
@@ -126,19 +118,13 @@ export const MediaSelector: React.FC<MediaSelectorProps> = ({
             const formData = new FormData();
             formData.append("file", file);
 
-            const response = await fetch(`/api/files/upload`, {
-                method: "POST",
-                body: formData,
+            const response = await backendApi.post(`/api/files/upload`, formData, {
                 headers: {
-                    "Authorization": `Bearer ${token}`
+                    "Content-Type": "multipart/form-data"
                 }
             });
 
-            if (!response.ok) {
-                throw new Error("Failed to upload file");
-            }
-
-            const data = await response.json();
+            const data = response.data;
             if (!data.url) {
                 throw new Error("Invalid response: missing file URL");
             }

@@ -43,3 +43,10 @@ Thumbs.db
 .cursorrules
 .vscode/
 .idea/
+
+# === Build folders ===
+/build
+/dist
+client/build
+server/build
+server/dist
