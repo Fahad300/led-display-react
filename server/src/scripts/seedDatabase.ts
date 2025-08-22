@@ -3,7 +3,6 @@ import { User } from "../models/User";
 import { Display } from "../models/Display";
 import { Session } from "../models/Session";
 import { logger } from "../utils/logger";
-import bcrypt from "bcrypt";
 
 /**
  * Simple database seeding script
@@ -51,15 +50,15 @@ const seedUsers = async (): Promise<void> => {
         return;
     }
 
-    // Create sample users
+    // Create sample users - passwords will be automatically hashed by User model
     const users = [
         {
             username: "admin",
-            password: await bcrypt.hash("admin123", 10)
+            password: "admin123"
         },
         {
             username: "user1",
-            password: await bcrypt.hash("user123", 10)
+            password: "user123"
         }
     ];
 

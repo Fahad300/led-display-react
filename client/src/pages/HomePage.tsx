@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useSlides } from '../contexts/SlideContext';
 import { Slide, SLIDE_TYPES, ImageSlide as ImageSlideType, VideoSlide as VideoSlideType, NewsSlide, EventSlide as EventSlideType, TeamComparisonSlide as TeamComparisonSlideType, GraphSlide as GraphSlideType, DocumentSlide as DocumentSlideType, Employee } from '../types';
-import { EventSlide, ImageSlide, CurrentEscalationsSlideComponent, TeamComparisonSlideComponent, GraphSlide, DocumentSlide } from "../components/slides";
+import { EventSlideComponent, ImageSlide, CurrentEscalationsSlideComponent, TeamComparisonSlideComponent, GraphSlide, DocumentSlide } from "../components/slides";
 import {
     DndContext,
     closestCenter,
@@ -908,7 +908,7 @@ const HomePage: React.FC = () => {
             case SLIDE_TYPES.NEWS:
                 return <NewsSlideComponent slide={slide as NewsSlide} />;
             case SLIDE_TYPES.EVENT:
-                return <EventSlide slide={slide as EventSlideType} />;
+                return <EventSlideComponent slide={slide as EventSlideType} />;
             case SLIDE_TYPES.CURRENT_ESCALATIONS:
                 return <CurrentEscalationsSlideComponent slide={slide} />;
             case SLIDE_TYPES.TEAM_COMPARISON:

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { motion } from "framer-motion";
+import { motion, Variants } from "framer-motion";
 import ReactConfetti from "react-confetti";
 import { NewsSlide } from "../types";
 
@@ -14,7 +14,7 @@ const AnimatedCharacters: React.FC<{ text: string; className?: string; style?: R
 }) => {
     const letters = Array.from(text);
 
-    const containerVariants = {
+    const containerVariants: Variants = {
         hidden: { opacity: 0 },
         visible: (i = 1) => ({
             opacity: 1,
@@ -22,7 +22,7 @@ const AnimatedCharacters: React.FC<{ text: string; className?: string; style?: R
         })
     };
 
-    const childVariants = {
+    const childVariants: Variants = {
         visible: {
             opacity: 1,
             y: 0,
@@ -78,7 +78,7 @@ const AnimatedTitle: React.FC<{
         baseColor
     ];
 
-    const containerVariants = {
+    const containerVariants: Variants = {
         animate: {
             transition: {
                 staggerChildren: 0.1,
@@ -89,7 +89,7 @@ const AnimatedTitle: React.FC<{
         }
     };
 
-    const letterVariants = {
+    const letterVariants: Variants = {
         animate: {
             y: [0, -20, 0, 20, 0],
             x: [0, 10, 0, -10, 0],
@@ -182,7 +182,7 @@ const NewsSlideComponent: React.FC<{ slide: NewsSlide }> = ({ slide }) => {
     };
 
     // Enhanced animation variants with corrected easing
-    const containerVariants = {
+    const containerVariants: Variants = {
         hidden: { opacity: 0, scale: 0.95 },
         visible: {
             opacity: 1,
@@ -203,7 +203,7 @@ const NewsSlideComponent: React.FC<{ slide: NewsSlide }> = ({ slide }) => {
         }
     };
 
-    const textContainerVariants = {
+    const textContainerVariants: Variants = {
         hidden: { opacity: 0, y: 50 },
         visible: {
             opacity: 1,

@@ -1,4 +1,4 @@
-export { EventSlide } from "./EventSlide";
+export { EventSlideComponent } from "./EventSlide";
 export { ImageSlide } from "./ImageSlide";
 export { VideoSlide } from "./VideoSlide";
 export { NewsSlide } from "./NewsSlide";
