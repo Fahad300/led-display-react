@@ -1,45 +1,7 @@
 import dotenv from "dotenv";
 import { logger } from "../utils/logger";
-import fs from "fs";
-import path from "path";
 
-// Check if .env file exists
-const envPath = path.resolve('./.env');
-console.log('Looking for .env file at:', envPath);
-console.log('File exists:', fs.existsSync(envPath));
-
-// Load environment variables with UTF-16 support
-try {
-    // Try to read as UTF-16 first
-    const envContent = fs.readFileSync(envPath, 'utf16le');
-    console.log('Reading .env file as UTF-16');
-
-    // Parse the content manually and set environment variables
-    const lines = envContent.split('\n');
-    lines.forEach(line => {
-        const trimmedLine = line.trim();
-        if (trimmedLine && !trimmedLine.startsWith('#')) {
-            const equalIndex = trimmedLine.indexOf('=');
-            if (equalIndex > 0) {
-                const key = trimmedLine.substring(0, equalIndex);
-                const value = trimmedLine.substring(equalIndex + 1);
-                process.env[key] = value;
-                console.log(`Set env var: ${key}=${value}`);
-            }
-        }
-    });
-} catch (error) {
-    console.log('Error reading .env file as UTF-16, trying UTF-8:', error);
-    // Fallback to dotenv
-    dotenv.config({ path: envPath });
-}
-
-console.log('env.ts: Environment variables loaded:', {
-    DB_HOST: process.env.DB_HOST,
-    DB_USERNAME: process.env.DB_USERNAME,
-    DB_DATABASE: process.env.DB_DATABASE,
-    JWT_SECRET: process.env.JWT_SECRET ? 'SET' : 'NOT SET'
-});
+dotenv.config(); // Automatically reads .env in UTF-8
 
 /**
  * Environment configuration interface
@@ -98,15 +60,15 @@ export const getConfig = (): EnvironmentConfig => {
 
     return {
         database: {
-            host: process.env.DB_HOST || "localhost",
+            host: process.env.DB_HOST!,
             port: parseInt(process.env.DB_PORT || "3306", 10),
-            username: process.env.DB_USERNAME || "led_display_user",
-            password: process.env.DB_PASSWORD || "",
-            database: process.env.DB_DATABASE || "led_display_db",
+            username: process.env.DB_USERNAME!,
+            password: process.env.DB_PASSWORD!,
+            database: process.env.DB_DATABASE!,
             synchronize: process.env.DB_SYNCHRONIZE === "true"
         },
         jwt: {
-            secret: process.env.JWT_SECRET || "default_secret_key",
+            secret: process.env.JWT_SECRET!,
             expiresIn: process.env.JWT_EXPIRES_IN || "24h"
         },
         server: {
@@ -123,4 +85,4 @@ export const getConfig = (): EnvironmentConfig => {
     };
 };
 
-export const config = getConfig(); 
+export const config = getConfig();

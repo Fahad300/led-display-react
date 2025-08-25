@@ -1,6 +1,8 @@
 import React from "react";
 import { motion } from "framer-motion";
 import ReactConfetti from "react-confetti";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faBriefcase, faUsers } from "@fortawesome/free-solid-svg-icons";
 import { Employee, EventSlide } from "../../types";
 
 /**
@@ -216,10 +218,12 @@ const SingleEmployeeDisplay: React.FC<{ employee: Employee; eventType?: "birthda
                     <span className="text-white font-semibold text-[clamp(1.2rem,3vw,2.5rem)]">{employee.name}</span>
                 </div>
                 <div className="text-center">
-                    <div className="text-emerald-300 mb-1 text-xl">
+                    <div className="text-emerald-300 mb-2 text-[clamp(1.4rem,3.5vw,2.8rem)] flex items-center justify-center gap-2">
+                        <FontAwesomeIcon icon={faBriefcase} className="text-[clamp(1.2rem,3vw,2.4rem)]" />
                         {employee.designation}
                     </div>
-                    <div className="text-blue-300 text-xl">
+                    <div className="text-blue-300 text-[clamp(1.4rem,3.5vw,2.8rem)] flex items-center justify-center gap-2">
+                        <FontAwesomeIcon icon={faUsers} className="text-[clamp(1.2rem,3vw,2.4rem)]" />
                         {employee.teamName}
                     </div>
                 </div>
