@@ -78,6 +78,8 @@ const MultipleEmployeesGrid: React.FC<{ employees: Employee[]; eventType?: "birt
                 <p className="text-2xl md:text-3xl text-white opacity-90">
                     {isBirthday ? "Celebrating our amazing team members" : "Celebrating years of dedication"}
                 </p>
+
+
             </div>
 
             <div
@@ -137,6 +139,17 @@ const MultipleEmployeesGrid: React.FC<{ employees: Employee[]; eventType?: "birt
                             >
                                 {employee.teamName}
                             </span>
+
+                            {/* Years of Service Display for Anniversary */}
+                            {!isBirthday && (
+                                <div className="mt-3">
+                                    <div className="bg-emerald-500/80 backdrop-blur-sm px-4 py-2 rounded-full border-2 border-emerald-300 shadow-lg inline-block">
+                                        <span className="text-white font-bold text-sm md:text-base opacity-90">
+                                            {new Date().getFullYear() - new Date(employee.dateOfJoining).getFullYear()} Year{new Date().getFullYear() - new Date(employee.dateOfJoining).getFullYear() !== 1 ? "s" : ""}
+                                        </span>
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     </motion.div>
                 ))}
@@ -183,6 +196,22 @@ const SingleEmployeeDisplay: React.FC<{ employee: Employee; eventType?: "birthda
             >
                 {isAnniversary ? "Happy Work Anniversary!" : "Happy Birthday!"}
             </motion.h2>
+
+            {/* Years of Service Display for Anniversary */}
+            {isAnniversary && years && (
+                <motion.div
+                    className="text-center mb-4"
+                    initial={{ opacity: 0, scale: 0.8 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ delay: 0.4, duration: 0.6 }}
+                >
+                    <div className="bg-emerald-600/80 backdrop-blur-sm px-8 py-3 rounded-full border-2 border-emerald-400 shadow-lg">
+                        <span className="text-white font-bold text-[clamp(1.8rem,4vw,3rem)]">
+                            {years} Year{years !== 1 ? "s" : ""} of Service!
+                        </span>
+                    </div>
+                </motion.div>
+            )}
 
             <motion.div
                 className="rounded-full border-4 border-emerald-600 overflow-hidden mb-4 md:mb-6 shadow-lg"
