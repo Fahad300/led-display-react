@@ -20,7 +20,7 @@ const DocumentSlide: React.FC<DocumentSlideProps> = ({ slide }) => {
         return (
             <div className="w-full h-full flex items-center justify-center bg-persivia-white">
                 <div className="text-center p-8">
-                    <h2 className="text-2xl font-bold text-persivia-blue mb-4">No Document Selected</h2>
+                    <h2 className="text-2xl md:text-3xl font-bold text-persivia-blue mb-4">No Document Selected</h2>
                     <p className="text-gray-600">Please select a document in the admin panel.</p>
                 </div>
             </div>
@@ -67,7 +67,7 @@ const DocumentSlide: React.FC<DocumentSlideProps> = ({ slide }) => {
         return (
             <div className="w-full h-full flex items-center justify-center bg-persivia-white">
                 <div className="text-center p-8">
-                    <h2 className="text-2xl font-bold text-persivia-blue mb-4">Unsupported File Type</h2>
+                    <h2 className="text-2xl md:text-3xl font-bold text-persivia-blue mb-4">Unsupported File Type</h2>
                     <p className="text-gray-600">This file type cannot be displayed.</p>
                 </div>
             </div>

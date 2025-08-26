@@ -72,7 +72,7 @@ const MultipleEmployeesGrid: React.FC<{ employees: Employee[]; eventType?: "birt
             />
 
             <div className="text-center mb-6">
-                <h2 className="text-6xl md:text-7xl lg:text-8xl font-bold text-white mb-3">
+                <h2 className="text-5xl md:text-6xl lg:text-7xl font-bold text-white mb-3">
                     {isBirthday ? "🎉 Happy Birthday!" : "🎊 Work Anniversary!"}
                 </h2>
                 <p className="text-2xl md:text-3xl text-white opacity-90">
@@ -189,7 +189,7 @@ const SingleEmployeeDisplay: React.FC<{ employee: Employee; eventType?: "birthda
             />
 
             <motion.h2
-                className="font-bold text-white mb-6 md:mb-8 font-cursive text-[clamp(2.5rem,7vw,5rem)] leading-tight text-center"
+                className="font-bold text-white mb-6 md:mb-8 font-cursive text-[clamp(2rem,5vw,3.5rem)] leading-tight text-center"
                 initial={{ y: -60, opacity: 0 }}
                 animate={{ y: 0, opacity: 1 }}
                 transition={{ type: "spring", stiffness: 120, delay: 0.2 }}
@@ -253,19 +253,19 @@ const SingleEmployeeDisplay: React.FC<{ employee: Employee; eventType?: "birthda
                 </div>
             </motion.div>
 
-            <motion.div
-                className={`absolute ${isAnniversary ? "bottom-4" : "bottom-16 md:bottom-10"} left-0 right-0 flex justify-center`}
-                initial={{ opacity: 0, y: 40 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 1.2 }}
-            >
-                <span className="bg-slate-700 text-white px-4 md:px-8 py-2 md:py-3 rounded-full text-[clamp(1rem,2vw,1.5rem)] font-medium shadow text-center">
-                    {isAnniversary
-                        ? `Congratulations on ${years} year${years !== 1 ? "s" : ""} with us!`
-                        : "Wishing you a fantastic year ahead!"
-                    }
-                </span>
-            </motion.div>
+            {/* Bottom message only for anniversary slides */}
+            {isAnniversary && (
+                <motion.div
+                    className="absolute bottom-4 left-0 right-0 flex justify-center"
+                    initial={{ opacity: 0, y: 40 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 1.2 }}
+                >
+                    <span className="bg-slate-700 text-white px-4 md:px-8 py-2 md:py-3 rounded-full text-[clamp(1rem,2vw,1.5rem)] font-medium shadow text-center">
+                        Congratulations on {years} year{years !== 1 ? "s" : ""} with us!
+                    </span>
+                </motion.div>
+            )}
         </motion.div>
     );
 };
@@ -292,7 +292,7 @@ export const EventSlideComponent: React.FC<{ slide: EventSlide }> = ({ slide }) 
         return (
             <div className="w-full h-full flex items-center justify-center animated-gradient-bg">
                 <div className="text-center text-white">
-                    <h2 className="text-3xl font-bold mb-4">No Events Today</h2>
+                    <h2 className="text-3xl md:text-4xl font-bold mb-4">No Events Today</h2>
                     <p className="text-xl opacity-80">Check back tomorrow for celebrations!</p>
                 </div>
             </div>

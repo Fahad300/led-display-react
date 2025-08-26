@@ -169,7 +169,7 @@ export const GraphSlide: React.FC<{ slide: GraphSlideType }> = ({ slide }) => {
     return (
         <div className="w-full h-full flex flex-col items-center justify-center bg-persivia-white p-4 md:p-6 pb-16 rounded-lg shadow animated-gradient-bg overflow-hidden">
             <div className="text-center mb-4 md:mb-6">
-                <h2 className="text-2xl md:text-3xl lg:text-4xl font-bold text-white tracking-tight leading-tight">
+                <h2 className="text-3xl md:text-4xl font-bold text-white tracking-tight leading-tight">
                     {graphData.title}
                 </h2>
             </div>
