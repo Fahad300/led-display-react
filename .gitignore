@@ -41,6 +41,7 @@ server/pnpm-lock.yaml
 .DS_Store
 Thumbs.db
 .cursorrules
+.cursorignore
 .vscode/
 .idea/
 

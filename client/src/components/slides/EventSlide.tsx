@@ -26,53 +26,37 @@ const useWindowSize = () => {
 const MultipleEmployeesGrid: React.FC<{ employees: Employee[]; eventType?: "birthday" | "anniversary" }> = ({ employees, eventType }) => {
     const { width, height } = useWindowSize();
 
-    // Calculate grid layout based on employee count with better sizing
-    const getGridConfig = (count: number) => {
-        if (count <= 4) return { cols: Math.min(count, 2), rows: Math.ceil(count / 2), cardSize: "xlarge" };
-        if (count <= 10) return { cols: 5, rows: Math.ceil(count / 5), cardSize: "small" };
-        return { cols: 6, rows: Math.ceil(count / 6), cardSize: "xsmall" };
-    };
-
-    const getCardDimensions = (size: string) => {
-        switch (size) {
-            case "xlarge":
-                return {
-                    width: Math.min(width * 0.5, 400),
-                    height: Math.min(height * 0.5, 400),
-                    photoSize: Math.min(width * 0.3, 220),
-                    textSize: "1.5rem",
-                    nameSize: "1.8rem"
-                };
-            case "small":
-                return {
-                    width: Math.min(width * 0.15, 120),
-                    height: Math.min(height * 0.15, 120),
-                    photoSize: Math.min(width * 0.1, 70),
-                    textSize: "0.9rem",
-                    nameSize: "1.1rem"
-                };
-            case "xsmall":
-                return {
-                    width: Math.min(width * 0.12, 100),
-                    height: Math.min(height * 0.12, 100),
-                    photoSize: Math.min(width * 0.08, 60),
-                    textSize: "0.8rem",
-                    nameSize: "1rem"
-                };
-            default:
-                return {
-                    width: Math.min(width * 0.2, 200),
-                    height: Math.min(height * 0.2, 200),
-                    photoSize: Math.min(width * 0.15, 120),
-                    textSize: "1.2rem",
-                    nameSize: "1.4rem"
-                };
+    // Calculate card dimensions based on employee count and available space
+    const getCardDimensions = (count: number) => {
+        if (count <= 4) {
+            return {
+                width: Math.min(width * 0.4, 350),
+                height: Math.min(height * 0.4, 350),
+                photoSize: Math.min(width * 0.25, 200),
+                textSize: "1.2rem",
+                nameSize: "1.5rem"
+            };
+        } else if (count <= 8) {
+            return {
+                width: Math.min(width * 0.25, 250),
+                height: Math.min(height * 0.25, 250),
+                photoSize: Math.min(width * 0.18, 150),
+                textSize: "1rem",
+                nameSize: "1.3rem"
+            };
+        } else {
+            return {
+                width: Math.min(width * 0.2, 200),
+                height: Math.min(height * 0.2, 200),
+                photoSize: Math.min(width * 0.15, 120),
+                textSize: "0.9rem",
+                nameSize: "1.1rem"
+            };
         }
     };
 
-    const { cols, rows, cardSize } = getGridConfig(employees.length);
     const isBirthday = eventType !== "anniversary";
-    const cardDims = getCardDimensions(cardSize);
+    const cardDims = getCardDimensions(employees.length);
 
     return (
         <div className="w-full h-full flex flex-col items-center justify-center p-4 animated-gradient-bg">
@@ -97,10 +81,8 @@ const MultipleEmployeesGrid: React.FC<{ employees: Employee[]; eventType?: "birt
             </div>
 
             <div
-                className="grid gap-6 items-center justify-center"
+                className="flex flex-wrap gap-6 items-center justify-center"
                 style={{
-                    gridTemplateColumns: `repeat(${cols}, 1fr)`,
-                    gridTemplateRows: `repeat(${rows}, 1fr)`,
                     maxWidth: "95%",
                     maxHeight: "70%"
                 }}
@@ -133,7 +115,7 @@ const MultipleEmployeesGrid: React.FC<{ employees: Employee[]; eventType?: "birt
                             </div>
                         </div>
 
-                        <div className="text-center">
+                        <div className="text-center mt-3">
                             <span
                                 className="text-white font-semibold leading-tight block truncate"
                                 style={{ fontSize: cardDims.nameSize }}
@@ -182,6 +164,17 @@ const SingleEmployeeDisplay: React.FC<{ employee: Employee; eventType?: "birthda
             aria-label={`${isAnniversary ? "Anniversary" : "Birthday"} slide for ${employee.name}`}
             role="region"
         >
+            {/* React Confetti Effect */}
+            <ReactConfetti
+                width={width}
+                height={height}
+                numberOfPieces={50}
+                recycle={true}
+                colors={["#ff0000", "#00ff00", "#0000ff", "#ffff00", "#ff00ff", "#00ffff"]}
+                opacity={0.7}
+                gravity={0.1}
+            />
+
             <motion.h2
                 className="font-bold text-white mb-6 md:mb-8 font-cursive text-[clamp(2.5rem,7vw,5rem)] leading-tight text-center"
                 initial={{ y: -60, opacity: 0 }}
@@ -218,13 +211,15 @@ const SingleEmployeeDisplay: React.FC<{ employee: Employee; eventType?: "birthda
                     <span className="text-white font-semibold text-[clamp(1.2rem,3vw,2.5rem)]">{employee.name}</span>
                 </div>
                 <div className="text-center">
-                    <div className="text-emerald-300 mb-2 text-[clamp(1.4rem,3.5vw,2.8rem)] flex items-center justify-center gap-2">
-                        <FontAwesomeIcon icon={faBriefcase} className="text-[clamp(1.2rem,3vw,2.4rem)]" />
-                        {employee.designation}
-                    </div>
-                    <div className="text-blue-300 text-[clamp(1.4rem,3.5vw,2.8rem)] flex items-center justify-center gap-2">
-                        <FontAwesomeIcon icon={faUsers} className="text-[clamp(1.2rem,3vw,2.4rem)]" />
-                        {employee.teamName}
+                    <div className="flex items-center justify-center gap-4 text-[clamp(0.9rem,3vw,2.3rem)]">
+                        <div className="text-emerald-300 flex items-center gap-2">
+                            <FontAwesomeIcon icon={faBriefcase} className="text-[clamp(0.7rem,2.5vw,1.9rem)]" />
+                            {employee.designation}
+                        </div>
+                        <div className="text-blue-300 flex items-center gap-2">
+                            <FontAwesomeIcon icon={faUsers} className="text-[clamp(0.7rem,2.5vw,1.9rem)]" />
+                            {employee.teamName}
+                        </div>
                     </div>
                 </div>
             </motion.div>
