@@ -100,6 +100,11 @@ const SlidesDisplay: React.FC = () => {
         const loadEventSlideStates = async () => {
             try {
                 console.log("🔄 Loading event slide states in SlidesDisplay...");
+
+                // Log environment status for debugging
+                const envStatus = sessionService.getEnvironmentStatus();
+                console.log("🌍 Environment status:", envStatus);
+
                 const sessionData = await sessionService.syncFromServer();
                 if (sessionData?.appSettings?.eventSlideStates) {
                     console.log("📊 Event slide states loaded from server:", sessionData.appSettings.eventSlideStates);
