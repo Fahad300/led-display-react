@@ -47,8 +47,8 @@ export const TeamComparisonSlideComponent: React.FC<{ slide: TeamComparisonSlide
 
     return (
         <div className="w-full h-full flex flex-col items-center justify-center bg-persivia-white p-6 pb-16 rounded-lg shadow animated-gradient-bg overflow-hidden">
-            <h2 className="text-3xl md:text-4xl font-bold text-persivia-white mb-6">Performance Comparison ( Top 10 ) </h2>
-            <div className="w-full max-w-7xl rounded-2xl backdrop-blur-md bg-white/20 bg-opacity-70 shadow-lg p-6 overflow-hidden">
+            <h2 className="text-3xl md:text-4xl font-bold text-persivia-white mb-6">Performance Comparison</h2>
+            <div className="w-[90%] max-w-6xl rounded-2xl backdrop-blur-md bg-white/20 bg-opacity-70 shadow-lg p-6 overflow-hidden">
                 {loading ? (
                     <div className="flex items-center justify-center h-48">
                         <div className="text-center">
