@@ -6,8 +6,7 @@ import { getTeamComparisonSlide } from '../data/teamComparison';
 import { SLIDE_DATA_SOURCES } from '../config/slideDefaults';
 import { useAuth } from './AuthContext';
 
-// Local storage key for slides
-const STORAGE_KEY = 'led-display-templates-config';
+// Database-driven slides (no localStorage)
 
 // Interface for the slide context
 interface SlideContextType {
@@ -97,7 +96,7 @@ export const SlideProvider: React.FC<SlideProviderProps> = ({ children }) => {
     const lastLocalChangeRef = useRef<number>(0);
 
     /**
-     * Debounced save function to prevent excessive updates
+     * Debounced save function to prevent excessive updates (database only)
      */
     const debouncedSaveSlides = useCallback(async (slidesToSave: Slide[]) => {
         // Clear existing timeout
@@ -108,24 +107,25 @@ export const SlideProvider: React.FC<SlideProviderProps> = ({ children }) => {
         // Set new timeout for debounced save
         updateTimeoutRef.current = setTimeout(async () => {
             try {
-                localStorage.setItem(STORAGE_KEY, JSON.stringify(slidesToSave));
-
-                // Sync to server if authenticated
+                // Save to database only (no localStorage)
                 if (isAuthenticated) {
                     try {
                         await sessionService.updateSlideData(slidesToSave);
+                        console.log("✅ Slides saved to database:", slidesToSave.length, "slides");
                     } catch (error) {
-                        console.error("Error syncing slides to server:", error);
+                        console.error("Error saving slides to database:", error);
                     }
+                } else {
+                    console.log("🔄 User not authenticated, skipping database save");
                 }
             } catch (error) {
-                console.error("Error saving slides:", error);
+                console.error("Error in debounced save:", error);
             }
         }, 300); // 300ms debounce
     }, [isAuthenticated]);
 
     /**
-     * Immediate save function for critical operations
+     * Immediate save function for critical operations (database only)
      */
     const immediateSaveSlides = useCallback(async (slidesToSave: Slide[]) => {
         // Clear any pending debounced saves to prevent conflicts
@@ -135,44 +135,45 @@ export const SlideProvider: React.FC<SlideProviderProps> = ({ children }) => {
         }
 
         try {
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(slidesToSave));
-
-            // Sync to server if authenticated
+            // Save to database only (no localStorage)
             if (isAuthenticated) {
                 try {
                     await sessionService.updateSlideData(slidesToSave);
+                    console.log("✅ Slides immediately saved to database:", slidesToSave.length, "slides");
                 } catch (error) {
-                    console.error("Error syncing slides to server:", error);
+                    console.error("Error immediately saving slides to database:", error);
                 }
+            } else {
+                console.log("🔄 User not authenticated, skipping immediate database save");
             }
         } catch (error) {
-            console.error("Error saving slides:", error);
+            console.error("Error in immediate save:", error);
         }
     }, [isAuthenticated]);
 
     /**
-     * Load slides from localStorage and server
-     */
+ * Load slides from database only (no localStorage fallback)
+ */
     const loadSlides = useCallback(async () => {
         setIsLoading(true);
         try {
             let allTemplates: any[] = [];
 
-            // Try to load from server first if authenticated
-            if (isAuthenticated) {
-                try {
-                    const serverData = await sessionService.syncFromServer();
-                    if (serverData?.slideData && serverData.slideData.length > 0) {
-                        allTemplates = serverData.slideData;
-                    }
-                } catch (error) {
-                    console.error("Error loading slides from server:", error);
+            // Always try to load from database first
+            console.log("🔄 Loading slides from database...");
+            try {
+                const serverData = await sessionService.syncFromServer();
+                if (serverData?.slideData && serverData.slideData.length > 0) {
+                    allTemplates = serverData.slideData;
+                    console.log("✅ Slides loaded from database:", allTemplates.length, "slides");
+                } else {
+                    console.log("🔄 No slides found in database, starting with empty array");
+                    allTemplates = [];
                 }
-            }
-
-            // Fallback to localStorage if no server data
-            if (allTemplates.length === 0) {
-                allTemplates = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
+            } catch (error) {
+                console.error("Error loading slides from database:", error);
+                console.log("🔄 Starting with empty slides array due to database error");
+                allTemplates = [];
             }
 
             // Type-check and filter to ensure we only get valid slides
@@ -273,13 +274,13 @@ export const SlideProvider: React.FC<SlideProviderProps> = ({ children }) => {
         loadSlides();
     }, [loadSlides]);
 
-    // Cross-device synchronization via polling with improved change detection
+    // Cross-device synchronization via polling with improved change detection (always active)
     useEffect(() => {
         let pollInterval: NodeJS.Timeout | null = null;
 
         const pollForUpdates = async () => {
             try {
-                // Try to get latest slide data from server (works for both authenticated and unauthenticated)
+                // Try to get latest slide data from database (works for both authenticated and unauthenticated)
                 const serverData = await sessionService.syncFromServer();
                 if (serverData?.slideData && serverData.slideData.length > 0) {
                     // Type-check and filter to ensure we only get valid slides
@@ -299,13 +300,13 @@ export const SlideProvider: React.FC<SlideProviderProps> = ({ children }) => {
                         (currentTime - lastUpdateRef.current) > 2000 &&
                         timeSinceLocalChange > 5000 &&
                         !isEditing) { // Skip syncing if user is editing
-                        console.log("🔄 Slides updated from server:", validSlides.length, "slides");
+                        console.log("🔄 Slides updated from database:", validSlides.length, "slides");
                         console.log("⏰ Time since local change:", timeSinceLocalChange, "ms");
                         setSlides(validSlides);
                         lastUpdateRef.current = currentTime;
                         await debouncedSaveSlides(validSlides);
                     } else {
-                        console.log("🚫 Skipping server update - recent local changes, no changes, or user is editing");
+                        console.log("🚫 Skipping database update - recent local changes, no changes, or user is editing");
                     }
                 }
             } catch (error) {
@@ -314,7 +315,8 @@ export const SlideProvider: React.FC<SlideProviderProps> = ({ children }) => {
             }
         };
 
-        // Poll every 10 seconds for cross-device slide updates
+        // Always set up polling for cross-device slide updates
+        console.log("🔄 Setting up 10-second polling interval for slide sync");
         pollInterval = setInterval(pollForUpdates, 10000);
 
         // Initial poll

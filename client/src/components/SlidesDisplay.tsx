@@ -95,19 +95,16 @@ const SlidesDisplay: React.FC = () => {
     const [isRefreshing, setIsRefreshing] = React.useState(false);
     const [eventSlideStates, setEventSlideStates] = useState<{ [key: string]: boolean }>({});
 
-    // Load event slide states from database
+    // Load event slide states from database only
     useEffect(() => {
         const loadEventSlideStates = async () => {
             try {
-                console.log("🔄 Loading event slide states in SlidesDisplay...");
+                console.log("🔄 Loading event slide states from database...");
 
-                // Log environment status for debugging
-                const envStatus = sessionService.getEnvironmentStatus();
-                console.log("🌍 Environment status:", envStatus);
-
+                // Always try to load from database
                 const sessionData = await sessionService.syncFromServer();
                 if (sessionData?.appSettings?.eventSlideStates) {
-                    console.log("📊 Event slide states loaded from server:", sessionData.appSettings.eventSlideStates);
+                    console.log("📊 Event slide states loaded from database:", sessionData.appSettings.eventSlideStates);
                     setEventSlideStates(sessionData.appSettings.eventSlideStates);
                 } else {
                     // Default to active if no states are saved
@@ -119,7 +116,7 @@ const SlidesDisplay: React.FC = () => {
                     setEventSlideStates(defaultStates);
                 }
             } catch (error) {
-                console.error("Error loading event slide states in SlidesDisplay:", error);
+                console.error("Error loading event slide states from database:", error);
                 // Fallback to default states
                 const defaultStates = {
                     "birthday-event-slide": true,
@@ -150,7 +147,7 @@ const SlidesDisplay: React.FC = () => {
         return cleanup;
     }, [onRefreshRequest, loadSlides]);
 
-    // Poll for event slide state updates
+    // Poll for event slide state updates (always active)
     useEffect(() => {
         const pollEventSlideStates = async () => {
             try {
@@ -164,7 +161,8 @@ const SlidesDisplay: React.FC = () => {
             }
         };
 
-        // Poll every 5 seconds for event slide state updates
+        // Always set up polling for event slide state updates
+        console.log("🔄 Setting up 5-second polling interval for event slide states");
         const pollInterval = setInterval(pollEventSlideStates, 5000);
 
         // Initial poll

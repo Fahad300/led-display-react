@@ -40,27 +40,29 @@ export const DisplaySettingsProvider: React.FC<{ children: React.ReactNode }> = 
         return null;
     });
 
-    // Initialize session and sync settings from server
+    // Initialize session and sync settings from database only
     useEffect(() => {
         const initializeSession = async () => {
             try {
-                // Try to initialize session (works for both authenticated and unauthenticated)
+                console.log("🔄 Initializing session and loading settings from database...");
                 await sessionService.initializeSession();
 
-                // Sync settings from server immediately for both admin and display
-                console.log("🔄 Initial sync from server...");
+                // Always try to load settings from database
                 const serverData = await sessionService.syncFromServer();
                 if (serverData?.displaySettings) {
                     setSettings(prev => ({ ...prev, ...serverData.displaySettings }));
                     setLastSyncTime(Date.now());
-                    console.log("🔄 Initial settings loaded:", serverData.displaySettings);
+                    console.log("🔄 Initial settings loaded from database:", serverData.displaySettings);
+                } else {
+                    console.log("🔄 No settings found in database, using defaults");
                 }
             } catch (error) {
                 console.error("Error initializing session:", error);
+                console.log("🔄 Using default settings due to database error");
             }
         };
 
-        // Initialize for both authenticated and unauthenticated users
+        // Always initialize from database
         initializeSession();
     }, [isAuthenticated, user]);
 
@@ -84,21 +86,21 @@ export const DisplaySettingsProvider: React.FC<{ children: React.ReactNode }> = 
         }
     }, [broadcastChannel, refreshCallbacks]);
 
-    // Cross-device synchronization via polling
+    // Cross-device synchronization via polling (always active)
     useEffect(() => {
         let pollInterval: NodeJS.Timeout | null = null;
 
         const pollForUpdates = async () => {
-            console.log("🔄 Polling for settings updates from server...");
+            console.log("🔄 Polling for settings updates from database...");
             try {
-                // Try to get latest settings from server (works for both authenticated and unauthenticated)
+                // Try to get latest settings from database (works for both authenticated and unauthenticated)
                 const serverData = await sessionService.syncFromServer();
                 if (serverData?.displaySettings) {
                     setSettings(prev => {
                         const newSettings = { ...prev, ...serverData.displaySettings };
                         // Only update if there are actual changes
                         if (JSON.stringify(prev) !== JSON.stringify(newSettings)) {
-                            console.log("🔄 Display settings updated from server:", newSettings);
+                            console.log("🔄 Display settings updated from database:", newSettings);
                             setLastSyncTime(Date.now());
                             return newSettings;
                         }
@@ -111,7 +113,7 @@ export const DisplaySettingsProvider: React.FC<{ children: React.ReactNode }> = 
             }
         };
 
-        // Poll every 5 seconds for cross-device updates (much more responsive)
+        // Always set up polling for cross-device updates
         console.log("🔄 Setting up 5-second polling interval for settings sync");
         pollInterval = setInterval(pollForUpdates, 5 * 1000); // 5 seconds
 

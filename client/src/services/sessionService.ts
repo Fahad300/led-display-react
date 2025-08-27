@@ -20,56 +20,12 @@ export interface SessionInfo {
 
 class SessionService {
     private sessionToken: string | null = null;
-    private environment: string;
 
     constructor() {
-        // Detect environment based on hostname or config
-        this.environment = this.detectEnvironment();
-        console.log(`🌍 SessionService initialized for environment: ${this.environment}`);
-
-        // Log detailed environment information
-        const envInfo = this.getEnvironmentStatus();
-        console.log("🌍 Environment Details:", {
-            environment: envInfo.environment,
-            hostname: envInfo.hostname,
-            port: envInfo.port,
-            isProduction: envInfo.isProduction,
-            isDevelopment: envInfo.isDevelopment
-        });
+        console.log("🌍 SessionService initialized for database-driven operations");
     }
 
-    /**
-     * Detect current environment based on hostname
-     */
-    private detectEnvironment(): string {
-        const hostname = window.location.hostname;
-        const port = window.location.port;
 
-        // Production environment
-        if (hostname === "10.20.30.38" || hostname === "10.20.30.38:3000") {
-            return "production";
-        }
-
-        // Local development environment
-        if (hostname === "localhost" || hostname === "127.0.0.1" || hostname === "192.168.1.100") {
-            return "development";
-        }
-
-        // Check for any local IP addresses
-        if (hostname.startsWith("192.168.") || hostname.startsWith("10.0.") || hostname.startsWith("172.")) {
-            return "development";
-        }
-
-        // Default to development for safety
-        return "development";
-    }
-
-    /**
-     * Get current environment
-     */
-    getCurrentEnvironment(): string {
-        return this.environment;
-    }
 
     /**
      * Get device information
@@ -245,7 +201,6 @@ class SessionService {
 
     /**
      * Sync settings from server (works for both authenticated and unauthenticated)
-     * Only syncs within the same environment to prevent cross-environment interference
      */
     async syncFromServer(): Promise<{
         displaySettings: any;
@@ -253,19 +208,12 @@ class SessionService {
         appSettings: any;
     } | null> {
         try {
-            // Only sync from same environment to prevent cross-environment interference
-            if (this.environment === "development") {
-                console.log(`🔄 Development environment (${this.environment}) - skipping server sync to prevent cross-environment interference`);
-                return null;
-            }
-
-            // Production environment - sync from server
-            console.log(`🔄 Production environment (${this.environment}) - syncing from server`);
+            console.log("🔄 Syncing from database...");
 
             try {
                 const response = await backendApi.get(`/api/sessions/latest`);
                 if (response.data) {
-                    console.log("✅ Successfully synced from production server");
+                    console.log("✅ Successfully synced from database");
                     return {
                         displaySettings: response.data.displaySettings,
                         slideData: response.data.slideData,
@@ -273,7 +221,7 @@ class SessionService {
                     };
                 }
             } catch (error) {
-                console.debug("No latest session available from production server:", error);
+                console.debug("No latest session available from database:", error);
             }
 
             // Fallback: try to get current session data (for authenticated users)
@@ -293,14 +241,13 @@ class SessionService {
 
             return null;
         } catch (error) {
-            console.error("Error syncing from server:", error);
+            console.error("Error syncing from database:", error);
             return null;
         }
     }
 
     /**
      * Sync settings to server
-     * Only syncs within the same environment to prevent cross-environment interference
      */
     async syncToServer(data: {
         displaySettings?: any;
@@ -308,12 +255,6 @@ class SessionService {
         appSettings?: any;
     }): Promise<void> {
         try {
-            // Only sync to server if in production environment
-            if (this.environment === "development") {
-                console.log(`🔄 Development environment (${this.environment}) - skipping server sync to prevent cross-environment interference`);
-                return;
-            }
-
             // Check if user is authenticated
             const token = localStorage.getItem("token");
             if (!token) {
@@ -321,7 +262,7 @@ class SessionService {
                 return;
             }
 
-            console.log(`🔄 Production environment (${this.environment}) - syncing to server`);
+            console.log("🔄 Syncing to database...");
 
             const promises: Promise<void>[] = [];
 
@@ -338,9 +279,9 @@ class SessionService {
             }
 
             await Promise.all(promises);
-            console.log("✅ Successfully synced to production server");
+            console.log("✅ Successfully synced to database");
         } catch (error) {
-            console.error("Error syncing to server:", error);
+            console.error("Error syncing to database:", error);
             // Don't throw error for display purposes - just log it
             console.log("Continuing without server sync");
         }
@@ -351,15 +292,9 @@ class SessionService {
      */
     async initializeSession(): Promise<void> {
         try {
-            console.log(`🌍 Initializing session for environment: ${this.environment}`);
-
-            // Only create session if in production environment
-            if (this.environment === "production") {
-                await this.createSession();
-                console.log("✅ Production session initialized successfully");
-            } else {
-                console.log("🔄 Development environment - skipping session initialization");
-            }
+            console.log("🌍 Initializing session...");
+            await this.createSession();
+            console.log("✅ Session initialized successfully");
         } catch (error) {
             console.error("Error initializing session:", error);
             // For display purposes, we don't need to fail completely
@@ -367,24 +302,7 @@ class SessionService {
         }
     }
 
-    /**
-     * Get environment status for debugging
-     */
-    getEnvironmentStatus(): {
-        environment: string;
-        hostname: string;
-        port: string;
-        isProduction: boolean;
-        isDevelopment: boolean;
-    } {
-        return {
-            environment: this.environment,
-            hostname: window.location.hostname,
-            port: window.location.port,
-            isProduction: this.environment === "production",
-            isDevelopment: this.environment === "development"
-        };
-    }
+
 }
 
 export const sessionService = new SessionService();

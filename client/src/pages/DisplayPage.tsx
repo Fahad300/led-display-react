@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from "react";
 import SlidesDisplay from "../components/SlidesDisplay";
 import { useDisplaySettings } from "../contexts/DisplaySettingsContext";
-import { sessionService } from "../services/sessionService";
 
 /**
  * DisplayPage: A route for fullscreen slide display only.
@@ -134,20 +133,11 @@ const DisplayPage: React.FC = () => {
             {/* Main Display */}
             <SlidesDisplay />
 
-            {/* Cross-Device Sync Indicator with Environment */}
+            {/* Cross-Device Sync Indicator */}
             <div className="absolute bottom-4 left-4 z-50 text-white text-sm">
-                <div className="flex items-center gap-3">
-                    <div className="flex items-center gap-1">
-                        <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
-                        <span>Live Sync</span>
-                    </div>
-
-                    {/* Environment Indicator */}
-                    <div className="flex items-center gap-1 text-xs bg-black/50 px-2 py-1 rounded">
-                        <span className="font-mono">
-                            {sessionService.getEnvironmentStatus().environment === "production" ? "🌍 PROD" : "💻 DEV"}
-                        </span>
-                    </div>
+                <div className="flex items-center gap-1">
+                    <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+                    <span>Live Sync</span>
                 </div>
             </div>
 
