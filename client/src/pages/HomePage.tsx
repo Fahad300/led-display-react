@@ -971,6 +971,18 @@ const HomePage: React.FC = () => {
         }
     };
 
+    const handleHidePersiviaLogoToggle = async () => {
+        setSyncStatus("syncing");
+        try {
+            await updateSettings({ hidePersiviaLogo: !settings.hidePersiviaLogo });
+            setSyncStatus("success");
+            setTimeout(() => setSyncStatus("idle"), 2000);
+        } catch (error) {
+            setSyncStatus("error");
+            setTimeout(() => setSyncStatus("idle"), 3000);
+        }
+    };
+
     // Show controls even when there are no active slides
 
     // --- UI ---
@@ -1092,7 +1104,7 @@ const HomePage: React.FC = () => {
                                 </div>
                             )}
 
-                            <SlideLogoOverlay isFullscreen={isFullscreen} />
+                            <SlideLogoOverlay isFullscreen={isFullscreen} hideLogo={settings.hidePersiviaLogo} />
                         </div>
                     </div>
                 </div>
@@ -1204,6 +1216,23 @@ const HomePage: React.FC = () => {
                                 className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${settings.hideArrows ? "bg-persivia-teal" : "bg-slate-200"}`}
                             >
                                 <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${settings.hideArrows ? "translate-x-5" : "translate-x-1"}`} />
+                            </button>
+                        </div>
+
+                        {/* Hide Persivia Logo Toggle */}
+                        <div className="flex items-center justify-between">
+                            <label htmlFor="hidePersiviaLogo" className="text-sm font-medium">
+                                Hide Persivia Logo
+                            </label>
+                            <button
+                                id="hidePersiviaLogo"
+                                type="button"
+                                role="switch"
+                                aria-checked={settings.hidePersiviaLogo}
+                                onClick={handleHidePersiviaLogoToggle}
+                                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${settings.hidePersiviaLogo ? "bg-persivia-teal" : "bg-slate-200"}`}
+                            >
+                                <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${settings.hidePersiviaLogo ? "translate-x-5" : "translate-x-1"}`} />
                             </button>
                         </div>
                     </div>

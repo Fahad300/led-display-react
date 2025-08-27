@@ -23,7 +23,8 @@ const SwiperSlideshow: React.FC<{
     hideArrows?: boolean;
     effect?: string;
     isFullscreen?: boolean;
-}> = ({ slides, renderSlideContent, onSlideChange, hidePagination = false, hideArrows = false, effect = "slide", isFullscreen = false }) => {
+    settings?: any;
+}> = ({ slides, renderSlideContent, onSlideChange, hidePagination = false, hideArrows = false, effect = "slide", isFullscreen = false, settings }) => {
     const [timeRemaining, setTimeRemaining] = useState<number>(0);
     const [currentSlideDuration, setCurrentSlideDuration] = useState<number>(0);
     const [currentSlideIndex, setCurrentSlideIndex] = useState<number>(0);
@@ -225,17 +226,19 @@ const SwiperSlideshow: React.FC<{
                     style={{ zIndex: 2 }}
                 />
 
-                {/* Pulsating Logo */}
-                <div className="relative z-10">
-                    <img
-                        src="/images/logo-persivia.svg"
-                        alt="Persivia Logo"
-                        className="display-logo"
-                        style={{
-                            animation: "pulse 3s ease-in-out infinite"
-                        }}
-                    />
-                </div>
+                {/* Pulsating Logo - only show if not hidden by settings */}
+                {!settings?.hidePersiviaLogo && (
+                    <div className="relative z-10">
+                        <img
+                            src="/images/logo-persivia.svg"
+                            alt="Persivia Logo"
+                            className="display-logo"
+                            style={{
+                                animation: "pulse 3s ease-in-out infinite"
+                            }}
+                        />
+                    </div>
+                )}
             </div>
         );
     }

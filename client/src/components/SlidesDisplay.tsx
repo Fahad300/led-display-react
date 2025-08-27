@@ -15,7 +15,7 @@ import { useEmployees } from "../contexts/EmployeeContext";
 /**
  * Simple Animated Logo Component for LED Display with Video Background
  */
-const AnimatedLogo: React.FC = () => {
+const AnimatedLogo: React.FC<{ hideLogo?: boolean }> = ({ hideLogo = false }) => {
     const [videoError, setVideoError] = useState(false);
 
     return (
@@ -47,26 +47,28 @@ const AnimatedLogo: React.FC = () => {
                 style={{ zIndex: 2 }}
             />
 
-            {/* Pulsating Logo */}
-            <motion.div
-                className="relative z-10"
-                animate={{
-                    scale: [1, 1.2, 1],
-                    opacity: [0.8, 1, 0.8]
-                }}
-                transition={{
-                    duration: 3,
-                    ease: "easeInOut",
-                    repeat: Infinity,
-                    repeatType: "reverse"
-                }}
-            >
-                <img
-                    src="/images/logo-persivia.svg"
-                    alt="Persivia Logo"
-                    className="display-logo"
-                />
-            </motion.div>
+            {/* Pulsating Logo - only show if not hidden */}
+            {!hideLogo && (
+                <motion.div
+                    className="relative z-10"
+                    animate={{
+                        scale: [1, 1.2, 1],
+                        opacity: [0.8, 1, 0.8]
+                    }}
+                    transition={{
+                        duration: 3,
+                        ease: "easeInOut",
+                        repeat: Infinity,
+                        repeatType: "reverse"
+                    }}
+                >
+                    <img
+                        src="/images/logo-persivia.svg"
+                        alt="Persivia Logo"
+                        className="display-logo"
+                    />
+                </motion.div>
+            )}
         </div>
     );
 };
@@ -297,7 +299,7 @@ const SlidesDisplay: React.FC = () => {
     if (processedSlides.length === 0) {
         return (
             <div className="relative w-full h-screen bg-black">
-                <AnimatedLogo />
+                <AnimatedLogo hideLogo={settings.hidePersiviaLogo} />
 
                 {/* Refresh Indicator */}
                 {isRefreshing && (
@@ -324,14 +326,15 @@ const SlidesDisplay: React.FC = () => {
                 hideArrows={settings.hideArrows}
                 effect={settings.swiperEffect}
                 isFullscreen={true}
+                settings={settings}
             />
             {settings.showDateStamp && (
                 <div className="absolute top-4 right-4 z-[10000]">
                     <DigitalClock />
                 </div>
             )}
-            {/* Only show logo overlay when there are active slides */}
-            {hasActiveSlides && <SlideLogoOverlay isFullscreen={true} />}
+            {/* Only show logo overlay when there are active slides and not hidden by settings */}
+            {hasActiveSlides && !settings.hidePersiviaLogo && <SlideLogoOverlay isFullscreen={true} />}
         </div>
     );
 };

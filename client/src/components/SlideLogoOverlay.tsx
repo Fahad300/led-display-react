@@ -6,9 +6,15 @@ import React from "react";
  */
 interface SlideLogoOverlayProps {
     isFullscreen?: boolean;
+    hideLogo?: boolean;
 }
 
-const SlideLogoOverlay: React.FC<SlideLogoOverlayProps> = ({ isFullscreen = false }) => {
+const SlideLogoOverlay: React.FC<SlideLogoOverlayProps> = ({ isFullscreen = false, hideLogo = false }) => {
+    // Don't render if logo is hidden
+    if (hideLogo) {
+        return null;
+    }
+
     return (
         <div className={`absolute bottom-5 right-5 z-50 ${isFullscreen ? "scale-[1]" : ""}`}>
             <img

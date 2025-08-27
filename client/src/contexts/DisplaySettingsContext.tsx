@@ -7,6 +7,7 @@ interface DisplaySettings {
     showDateStamp: boolean;
     hidePagination: boolean;
     hideArrows: boolean;
+    hidePersiviaLogo: boolean;
 }
 
 interface DisplaySettingsContextType {
@@ -21,6 +22,7 @@ const defaultSettings: DisplaySettings = {
     showDateStamp: true,
     hidePagination: false,
     hideArrows: false,
+    hidePersiviaLogo: false,
 };
 
 const DisplaySettingsContext = createContext<DisplaySettingsContextType | undefined>(undefined);
