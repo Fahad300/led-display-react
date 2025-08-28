@@ -52,9 +52,8 @@ export const TeamComparisonSlideComponent: React.FC<{ slide: TeamComparisonSlide
                 {loading ? (
                     <div className="flex items-center justify-center h-48">
                         <div className="text-center">
-                            <div className="w-16 h-16 bg-white/10 rounded-full flex items-center justify-center mx-auto mb-4">
-                                <div className="w-8 h-8 border-2 border-yellow-400 border-t-transparent rounded-full animate-spin"></div>
-                            </div>
+                            <div className="w-16 h-16 
+                            border-2 border-yellow-400 border-t-transparent rounded-full animate-spin"></div>
                             <p className="text-white/70 text-lg font-medium">Loading team data...</p>
                             <p className="text-white/50 text-sm mt-2">Fetching live data from API</p>
                         </div>

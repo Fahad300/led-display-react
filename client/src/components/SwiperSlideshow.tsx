@@ -36,9 +36,9 @@ const SwiperSlideshow: React.FC<{
     // Filter out slides with 0 duration or inactive slides
     const activeSlides = useMemo(() => {
         const filtered = slides.filter(slide => slide.active && (slide.duration || 0) > 0);
-        console.log(`Active slides: ${filtered.length} out of ${slides.length} total slides`);
+
         filtered.forEach((slide, index) => {
-            console.log(`Slide ${index}: ${slide.name} - Duration: ${slide.duration}s - Active: ${slide.active}`);
+
         });
         return filtered;
     }, [slides]);
@@ -125,7 +125,7 @@ const SwiperSlideshow: React.FC<{
         const currentSlide = activeSlides[currentSlideIndex];
         const duration = currentSlide.duration || 5;
 
-        console.log(`Starting countdown for slide ${currentSlideIndex} (${currentSlide.name}): ${duration}s`);
+
 
         // Set initial countdown
         setCurrentSlideDuration(duration);
@@ -147,7 +147,7 @@ const SwiperSlideshow: React.FC<{
     // Handle slide change
     const handleSlideChange = useCallback((swiper: SwiperType) => {
         const newIndex = swiper.activeIndex;
-        console.log(`Slide changed to index ${newIndex}`);
+
 
         setCurrentSlideIndex(newIndex);
         onSlideChange?.(newIndex);
@@ -160,7 +160,7 @@ const SwiperSlideshow: React.FC<{
     // Handle swiper initialization
     const handleSwiperInit = useCallback((swiper: SwiperType) => {
         swiperRef.current = swiper;
-        console.log(`Swiper initialized with ${activeSlides.length} active slides`);
+
 
         // Start countdown for first slide
         if (activeSlides.length > 0) {
@@ -171,7 +171,7 @@ const SwiperSlideshow: React.FC<{
 
     // Reset countdown when slides change
     useEffect(() => {
-        console.log("Slides changed, resetting countdown");
+
         clearCountdown();
         setCurrentSlideIndex(0);
 
@@ -212,8 +212,7 @@ const SwiperSlideshow: React.FC<{
                             console.error("Video playback error in SwiperSlideshow:", e);
                             setVideoError(true);
                         }}
-                        onLoadStart={() => console.log("Video loading started: /videos/soliton-bg.mp4")}
-                        onCanPlay={() => console.log("Video can play: /videos/soliton-bg.mp4")}
+
                     >
                         <source src="/videos/soliton-bg.mp4" type="video/mp4" />
                         Your browser does not support the video tag.

@@ -13,7 +13,7 @@ const DocumentSlide: React.FC<DocumentSlideProps> = ({ slide }) => {
     const { fileUrl, fileType, caption } = slide.data;
 
     // Log rendering details for debugging
-    console.log("[DocumentSlide] Rendering with:", { fileUrl, fileType, caption });
+
 
     // Early return if no file URL
     if (!fileUrl) {
@@ -40,25 +40,30 @@ const DocumentSlide: React.FC<DocumentSlideProps> = ({ slide }) => {
             );
         }
 
-        // For PDFs, use a full-screen iframe
+        // For PDFs, use a full-screen iframe without controls and fit to page
         if (fileType === "pdf") {
+            const pdfUrl = `${fileUrl}#toolbar=0&navpanes=0&scrollbar=0&statusbar=0&messages=0&view=Fit&zoom=page-fit`;
             return (
                 <iframe
-                    src={fileUrl}
+                    src={pdfUrl}
                     className="w-full h-full border-0 bg-persivia-white"
                     title={caption || "PDF Document"}
+                    frameBorder="0"
+                    scrolling="no"
                 />
             );
         }
 
-        // For Office files (Excel, PowerPoint, Word), use Office Online viewer
+        // For Office files (Excel, PowerPoint, Word), use Office Online viewer without controls and fit to page
         if (["excel", "powerpoint", "word"].includes(fileType)) {
-            const officeViewerUrl = `https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(fileUrl)}`;
+            const officeViewerUrl = `https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(fileUrl)}&wdStartOn=1&wdHideGridlines=1&wdHideHeaders=1&wdDownloadButton=0&wdInConfigurator=0&wdHideWorksheetTabs=1&wdHideFormulaBar=1&wdHideStatusBar=1&wdHideRibbon=1&wdFitToPage=1&wdFitToWidth=1&wdFitToHeight=1`;
             return (
                 <iframe
                     src={officeViewerUrl}
                     className="w-full h-full border-0 bg-persivia-white"
                     title={caption || "Office Document"}
+                    frameBorder="0"
+                    scrolling="no"
                 />
             );
         }

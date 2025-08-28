@@ -17,9 +17,12 @@ import {
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     EventSlideData,
     DocumentSlide,
-    DocumentSlideData
+    DocumentSlideData,
+    TextSlide,
+    TextSlideData
 } from "../types";
 import { backendApi } from "../services/api";
+import RichTextEditor from "../components/RichTextEditor";
 
 
 
@@ -64,6 +67,7 @@ const SLIDE_TABS: SlideTab[] = [
     { id: "image-tab", type: SLIDE_TYPES.IMAGE, label: "Image Slides" },
     { id: "video-tab", type: SLIDE_TYPES.VIDEO, label: "Video Slides" },
     { id: "news-tab", type: SLIDE_TYPES.NEWS, label: "News Slides" },
+    { id: "text-tab", type: SLIDE_TYPES.TEXT, label: "Text Slides" },
     { id: "document-tab", type: SLIDE_TYPES.DOCUMENT, label: "Document Slides" },
 ];
 
@@ -74,10 +78,14 @@ const uploadFile = async (file: File): Promise<string> => {
         throw new Error("No authentication token found");
     }
 
+
+
     const formData = new FormData();
     formData.append("file", file);
 
     try {
+
+
         const response = await backendApi.post("/api/files/upload", formData, {
             headers: {
                 "Content-Type": "multipart/form-data",
@@ -85,18 +93,26 @@ const uploadFile = async (file: File): Promise<string> => {
             }
         });
 
+
+
         if (!response.data.url) {
             throw new Error("Invalid response: missing file URL");
         }
 
         return response.data.url;
     } catch (error) {
-        console.error("Upload error:", error);
+        console.error("Upload error details:", {
+            error,
+            message: error instanceof Error ? error.message : "Unknown error",
+            response: error instanceof Error && (error as any).response ? (error as any).response.data : "No response data"
+        });
         throw new Error(error instanceof Error ? error.message : "Failed to upload file");
     }
 };
 
 const EditModal: React.FC<EditModalProps> = ({ isOpen, onClose, slide, onSave, onOpen }) => {
+
+
     const { addToast } = useToast();
     const [editedSlide, setEditedSlide] = useState<Slide | null>(null);
     const [isUploading, setIsUploading] = useState<boolean>(false);
@@ -263,6 +279,7 @@ const EditModal: React.FC<EditModalProps> = ({ isOpen, onClose, slide, onSave, o
         }
     };
 
+
     if (!isOpen || !editedSlide) return null;
 
     return (
@@ -306,6 +323,14 @@ const EditModal: React.FC<EditModalProps> = ({ isOpen, onClose, slide, onSave, o
                     {editedSlide.type === SLIDE_TYPES.NEWS && (
                         <NewsSlideFields
                             slide={editedSlide as NewsSlide}
+                            onUpdate={setEditedSlide}
+                            errors={errors}
+                        />
+                    )}
+
+                    {editedSlide.type === SLIDE_TYPES.TEXT && (
+                        <TextSlideFields
+                            slide={editedSlide as TextSlide}
                             onUpdate={setEditedSlide}
                             errors={errors}
                         />
@@ -479,6 +504,8 @@ const getSlideTypeLabel = (type: typeof SLIDE_TYPES[keyof typeof SLIDE_TYPES]) =
             return "Video";
         case SLIDE_TYPES.NEWS:
             return "News";
+        case SLIDE_TYPES.TEXT:
+            return "Text";
         case SLIDE_TYPES.DOCUMENT:
             return "Document";
         default:
@@ -496,6 +523,8 @@ const AdminPage: React.FC = () => {
     const [activeTabType, setActiveTabType] = useState<typeof SLIDE_TYPES[keyof typeof SLIDE_TYPES]>(SLIDE_TYPES.IMAGE);
     const [isProcessing, setIsProcessing] = useState<boolean>(false);
 
+
+
     const filteredSlides = slides.filter((slide): slide is Slide =>
         slide.type === activeTabType
     );
@@ -503,7 +532,11 @@ const AdminPage: React.FC = () => {
     const activeSlides = filteredSlides.filter(slide => slide.active);
     const inactiveSlides = filteredSlides.filter(slide => !slide.active);
 
+
+
     const handleCreateSlide = useCallback(() => {
+
+
         const newSlide = (() => {
             switch (activeTabType) {
                 case SLIDE_TYPES.IMAGE:
@@ -554,6 +587,18 @@ const AdminPage: React.FC = () => {
                         },
                         dataSource: "manual" as const,
                     } as NewsSlide;
+                case SLIDE_TYPES.TEXT:
+                    return {
+                        id: crypto.randomUUID(),
+                        type: SLIDE_TYPES.TEXT,
+                        name: "New Text Slide",
+                        active: false, // Start as inactive
+                        duration: 10,
+                        data: {
+                            content: "<h1>Welcome to Your Text Slide</h1><p>Start typing your content here...</p>"
+                        },
+                        dataSource: "manual" as const,
+                    } as TextSlide;
                 case SLIDE_TYPES.DOCUMENT:
                     return {
                         id: crypto.randomUUID(),
@@ -581,8 +626,6 @@ const AdminPage: React.FC = () => {
     const handleSaveSlide = useCallback(async (updatedSlide: Slide) => {
         setIsProcessing(true);
         try {
-            console.log("Saving slide with newsImage:", updatedSlide.type === SLIDE_TYPES.NEWS ? (updatedSlide as NewsSlide).data.newsImage : undefined);
-
             if (selectedSlide?.id) {
                 await updateSlide(updatedSlide);
                 addToast("Slide updated successfully", "success");
@@ -808,7 +851,7 @@ const NewsSlideFields: React.FC<SlideFieldsProps<NewsSlide>> = ({ slide, onUpdat
         if (file) {
             try {
                 const fileUrl = await uploadFile(file);
-                console.log("Setting newsImage to", fileUrl);
+
                 onUpdate({
                     ...slide,
                     data: { ...slide.data, newsImage: fileUrl }
@@ -985,6 +1028,28 @@ const NewsSlideFields: React.FC<SlideFieldsProps<NewsSlide>> = ({ slide, onUpdat
                         data: { ...slide.data, textColor: e.target.value }
                     })}
                     className="w-full h-10 px-1 py-1 border rounded-lg border-gray-300"
+                />
+            </div>
+        </div>
+    );
+};
+
+/** Text slide fields component */
+const TextSlideFields: React.FC<SlideFieldsProps<TextSlide>> = ({ slide, onUpdate, errors }) => {
+    return (
+        <div className="space-y-4">
+            <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Content *
+                </label>
+                <RichTextEditor
+                    value={slide.data.content}
+                    onChange={(content) => onUpdate({
+                        ...slide,
+                        data: { ...slide.data, content }
+                    })}
+                    placeholder="Enter your rich text content here..."
+                    className="mb-4"
                 />
             </div>
         </div>

@@ -208,12 +208,12 @@ class SessionService {
         appSettings: any;
     } | null> {
         try {
-            console.log("🔄 Syncing from database...");
+
 
             try {
                 const response = await backendApi.get(`/api/sessions/latest`);
                 if (response.data) {
-                    console.log("✅ Successfully synced from database");
+
                     return {
                         displaySettings: response.data.displaySettings,
                         slideData: response.data.slideData,
@@ -228,7 +228,7 @@ class SessionService {
             try {
                 const sessionData = await this.getCurrentSession();
                 if (sessionData) {
-                    console.log("✅ Successfully synced from authenticated session");
+
                     return {
                         displaySettings: sessionData.displaySettings,
                         slideData: sessionData.slideData,
@@ -262,7 +262,7 @@ class SessionService {
                 return;
             }
 
-            console.log("🔄 Syncing to database...");
+
 
             const promises: Promise<void>[] = [];
 
@@ -279,7 +279,7 @@ class SessionService {
             }
 
             await Promise.all(promises);
-            console.log("✅ Successfully synced to database");
+
         } catch (error) {
             console.error("Error syncing to database:", error);
             // Don't throw error for display purposes - just log it
@@ -294,7 +294,7 @@ class SessionService {
         try {
             console.log("🌍 Initializing session...");
             await this.createSession();
-            console.log("✅ Session initialized successfully");
+
         } catch (error) {
             console.error("Error initializing session:", error);
             // For display purposes, we don't need to fail completely

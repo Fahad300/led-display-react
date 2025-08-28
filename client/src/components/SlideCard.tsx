@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from "react";
-import { Slide, SLIDE_TYPES, ImageSlide, VideoSlide, NewsSlide, EventSlide } from "../types";
+import { Slide, SLIDE_TYPES, ImageSlide, VideoSlide, NewsSlide, EventSlide, TextSlide } from "../types";
 import { useEmployees } from "../contexts/EmployeeContext";
 
 /** Props for the slide card component */
@@ -26,6 +26,8 @@ const SlideCard: React.FC<SlideCardProps> = ({ slide, onEdit, onDelete, onToggle
                 const news = slide as NewsSlide;
                 return news.data.newsImage || news.data.backgroundImage;
             }
+            case SLIDE_TYPES.TEXT:
+                return ""; // Text slides don't have media URLs
             default:
                 return "";
         }
@@ -39,6 +41,8 @@ const SlideCard: React.FC<SlideCardProps> = ({ slide, onEdit, onDelete, onToggle
                 return (slide as VideoSlide).data.caption;
             case SLIDE_TYPES.NEWS:
                 return (slide as NewsSlide).data.title;
+            case SLIDE_TYPES.TEXT:
+                return "Text Content"; // Text slides show generic title
             default:
                 return "";
         }
@@ -49,6 +53,11 @@ const SlideCard: React.FC<SlideCardProps> = ({ slide, onEdit, onDelete, onToggle
             case SLIDE_TYPES.NEWS:
                 const newsSlide = slide as NewsSlide;
                 return `${newsSlide.data.details.substring(0, 100)}${newsSlide.data.details.length > 100 ? "..." : ""}`;
+            case SLIDE_TYPES.TEXT:
+                const textSlide = slide as TextSlide;
+                // Strip HTML tags and show first 100 characters
+                const plainText = textSlide.data.content.replace(/<[^>]*>/g, '');
+                return `${plainText.substring(0, 100)}${plainText.length > 100 ? "..." : ""}`;
             default:
                 return "";
         }

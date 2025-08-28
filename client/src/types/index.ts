@@ -25,6 +25,7 @@ export const SLIDE_TYPES = {
     TEAM_COMPARISON: 'team-comparison-slide',
     GRAPH: 'graph-slide',
     DOCUMENT: 'document-slide',
+    TEXT: 'text-slide',
 } as const;
 
 /**
@@ -250,6 +251,24 @@ export interface DocumentSlide extends BaseSlide {
 }
 
 /**
+ * Text slide data
+ */
+export interface TextSlideData {
+    /**
+     * Rich text content in HTML format
+     */
+    content: string;
+}
+
+/**
+ * Text slide type
+ */
+export interface TextSlide extends BaseSlide {
+    type: typeof SLIDE_TYPES.TEXT;
+    data: TextSlideData;
+}
+
+/**
  * Union type of all slide types
  */
 export type Slide =
@@ -261,6 +280,7 @@ export type Slide =
     | TeamComparisonSlide
     | GraphSlide
     | DocumentSlide
+    | TextSlide
     ;
 
 /**

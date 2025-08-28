@@ -1,5 +1,6 @@
 import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn } from "typeorm";
 import { User } from "./User";
+import { getFileUrl } from "../utils/urlUtils";
 
 @Entity("files")
 export class File {
@@ -38,7 +39,7 @@ export class File {
      * Get file URL for serving
      */
     getUrl(): string {
-        return `/api/files/${this.id}`;
+        return getFileUrl(this.id);
     }
 
     /**

@@ -21,23 +21,23 @@ const DisplayPage: React.FC = () => {
                     // Method 1: Try document.documentElement
                     try {
                         await document.documentElement.requestFullscreen();
-                        console.log("LED Display: Entered fullscreen via documentElement");
+
                         return;
                     } catch (error) {
-                        console.log("documentElement fullscreen failed, trying body...");
+
                     }
 
                     // Method 2: Try document.body
                     try {
                         await document.body.requestFullscreen();
-                        console.log("LED Display: Entered fullscreen via body");
+
                         return;
                     } catch (error) {
-                        console.log("body fullscreen failed");
+
                     }
                 }
             } catch (error) {
-                console.log("Could not enter fullscreen automatically:", error);
+
             }
         };
 
@@ -75,16 +75,80 @@ const DisplayPage: React.FC = () => {
     // Register refresh callback
     useEffect(() => {
         const cleanup = onRefreshRequest(() => {
-            console.log("🔄 Display page received refresh request");
+
             // Show sync indicator briefly
             setShowSyncIndicator(true);
 
-            setTimeout(() => {
-                setShowSyncIndicator(false);
-                // Force a hard refresh of the page
-                console.log("🔄 Performing hard refresh of display page");
-                window.location.reload();
-            }, 1000);
+            // Enhanced cache clearing and refresh
+            const performEnhancedRefresh = async () => {
+                try {
+
+
+                    // Clear any cached data
+                    if ('caches' in window) {
+                        try {
+                            const cacheNames = await caches.keys();
+                            await Promise.all(
+                                cacheNames.map(cacheName => caches.delete(cacheName))
+                            );
+
+                        } catch (cacheError) {
+
+                        }
+                    }
+
+                    // Clear any stored data
+                    try {
+                        // Clear sessionStorage
+                        sessionStorage.clear();
+
+
+                        // Clear localStorage (but keep auth token if exists)
+                        const authToken = localStorage.getItem("token");
+                        localStorage.clear();
+                        if (authToken) {
+                            localStorage.setItem("token", authToken);
+
+                        } else {
+
+                        }
+                    } catch (storageError) {
+
+                    }
+
+                    // Force reload all images and media
+                    try {
+                        const images = document.querySelectorAll('img');
+                        images.forEach(img => {
+                            if (img.src) {
+                                img.src = img.src + '?t=' + Date.now();
+                            }
+                        });
+
+                    } catch (imgError) {
+
+                    }
+
+                    // Wait a bit then perform hard refresh
+                    setTimeout(() => {
+                        setShowSyncIndicator(false);
+
+
+                        // Force reload with cache clearing
+                        window.location.reload();
+                    }, 1500);
+
+                } catch (error) {
+                    console.error("Error during enhanced refresh:", error);
+                    // Fallback to simple refresh
+                    setTimeout(() => {
+                        setShowSyncIndicator(false);
+                        window.location.reload();
+                    }, 1000);
+                }
+            };
+
+            performEnhancedRefresh();
         });
 
         return cleanup;
@@ -104,10 +168,10 @@ const DisplayPage: React.FC = () => {
         try {
             if (!document.fullscreenElement) {
                 await document.documentElement.requestFullscreen();
-                console.log("LED Display: Forced fullscreen on interaction");
+
             }
         } catch (error) {
-            console.log("Force fullscreen failed:", error);
+
         }
     };
 

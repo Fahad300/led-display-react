@@ -2,8 +2,8 @@ import React, { useMemo, useState, useEffect } from "react";
 import { useSlides } from "../contexts/SlideContext";
 import { useDisplaySettings } from "../contexts/DisplaySettingsContext";
 import { sessionService } from "../services/sessionService";
-import { Slide, SLIDE_TYPES, ImageSlide as ImageSlideType, VideoSlide as VideoSlideType, NewsSlide, EventSlide as EventSlideType, TeamComparisonSlide as TeamComparisonSlideType, GraphSlide as GraphSlideType, DocumentSlide as DocumentSlideType } from "../types";
-import { EventSlideComponent, ImageSlide, CurrentEscalationsSlideComponent, TeamComparisonSlideComponent, GraphSlide, DocumentSlide } from "./slides";
+import { Slide, SLIDE_TYPES, ImageSlide as ImageSlideType, VideoSlide as VideoSlideType, NewsSlide, EventSlide as EventSlideType, TeamComparisonSlide as TeamComparisonSlideType, GraphSlide as GraphSlideType, DocumentSlide as DocumentSlideType, TextSlide as TextSlideType } from "../types";
+import { EventSlideComponent, ImageSlide, CurrentEscalationsSlideComponent, TeamComparisonSlideComponent, GraphSlide, DocumentSlide, TextSlide } from "./slides";
 import { VideoSlide } from "./slides/VideoSlide";
 import SwiperSlideshow from "./SwiperSlideshow";
 import SlideLogoOverlay from "./SlideLogoOverlay";
@@ -101,12 +101,12 @@ const SlidesDisplay: React.FC = () => {
     useEffect(() => {
         const loadEventSlideStates = async () => {
             try {
-                console.log("🔄 Loading event slide states from database...");
+
 
                 // Always try to load from database
                 const sessionData = await sessionService.syncFromServer();
                 if (sessionData?.appSettings?.eventSlideStates) {
-                    console.log("📊 Event slide states loaded from database:", sessionData.appSettings.eventSlideStates);
+
                     setEventSlideStates(sessionData.appSettings.eventSlideStates);
                 } else {
                     // Default to active if no states are saved
@@ -114,7 +114,7 @@ const SlidesDisplay: React.FC = () => {
                         "birthday-event-slide": true,
                         "anniversary-event-slide": true
                     };
-                    console.log("📊 Using default event slide states:", defaultStates);
+
                     setEventSlideStates(defaultStates);
                 }
             } catch (error) {
@@ -134,16 +134,63 @@ const SlidesDisplay: React.FC = () => {
     // Register refresh callback to respond to force refresh requests
     React.useEffect(() => {
         const cleanup = onRefreshRequest(() => {
+
+
             // Show refreshing indicator
             setIsRefreshing(true);
 
-            // Reload slides when force refresh is triggered
-            loadSlides();
+            // Enhanced refresh with cache clearing
+            const performEnhancedRefresh = async () => {
+                try {
 
-            // Hide refreshing indicator after a short delay
-            setTimeout(() => {
-                setIsRefreshing(false);
-            }, 1000);
+
+                    // Clear any cached data
+                    if ('caches' in window) {
+                        try {
+                            const cacheNames = await caches.keys();
+                            await Promise.all(
+                                cacheNames.map(cacheName => caches.delete(cacheName))
+                            );
+
+                        } catch (cacheError) {
+
+                        }
+                    }
+
+                    // Force reload all images and media in the slides
+                    try {
+                        const images = document.querySelectorAll('img');
+                        images.forEach(img => {
+                            if (img.src) {
+                                img.src = img.src + '?t=' + Date.now();
+                            }
+                        });
+
+                    } catch (imgError) {
+
+                    }
+
+                    // Reload slides from database
+                    await loadSlides();
+
+
+                    // Hide refreshing indicator after a short delay
+                    setTimeout(() => {
+                        setIsRefreshing(false);
+
+                    }, 1500);
+
+                } catch (error) {
+                    console.error("Error during enhanced refresh in SlidesDisplay:", error);
+                    // Fallback to simple refresh
+                    loadSlides();
+                    setTimeout(() => {
+                        setIsRefreshing(false);
+                    }, 1000);
+                }
+            };
+
+            performEnhancedRefresh();
         });
 
         return cleanup;
@@ -155,7 +202,7 @@ const SlidesDisplay: React.FC = () => {
             try {
                 const sessionData = await sessionService.syncFromServer();
                 if (sessionData?.appSettings?.eventSlideStates) {
-                    console.log("🔄 Event slide states updated from polling:", sessionData.appSettings.eventSlideStates);
+
                     setEventSlideStates(sessionData.appSettings.eventSlideStates);
                 }
             } catch (error) {
@@ -164,7 +211,7 @@ const SlidesDisplay: React.FC = () => {
         };
 
         // Always set up polling for event slide state updates
-        console.log("🔄 Setting up 5-second polling interval for event slide states");
+
         const pollInterval = setInterval(pollEventSlideStates, 5000);
 
         // Initial poll
@@ -192,13 +239,11 @@ const SlidesDisplay: React.FC = () => {
     const processedSlides = useMemo(() => {
         if (isLoading) return [];
 
-        console.log("🔄 Processing slides in SlidesDisplay...");
-        console.log("📊 Current eventSlideStates:", eventSlideStates);
-        console.log("📊 Total slides from context:", slides.length);
+
 
         // Remove any existing event slides
         const nonEventSlides = slides.filter(slide => slide.type !== SLIDE_TYPES.EVENT);
-        console.log("📊 Non-event slides:", nonEventSlides.length);
+
 
         // Birthday event slide
         const birthdayEmployees = employees.filter(employee => isBirthdayToday(employee.dob));
@@ -250,10 +295,9 @@ const SlidesDisplay: React.FC = () => {
         const eventSlides: EventSlideType[] = [birthdayEventSlide, anniversaryEventSlide].filter((s): s is EventSlideType => s !== null);
         const allSlides = [...nonEventSlides, ...eventSlides];
 
-        console.log("📊 Final processed slides:", allSlides.length);
-        console.log("📊 Event slides created:", eventSlides.length);
+
         eventSlides.forEach(slide => {
-            console.log(`📊 Event slide: ${slide.name} - Active: ${slide.active}`);
+
         });
 
         return allSlides; // Let SwiperSlideshow handle the active filtering
@@ -279,6 +323,8 @@ const SlidesDisplay: React.FC = () => {
                     return <GraphSlide slide={slide as GraphSlideType} />;
                 case SLIDE_TYPES.DOCUMENT:
                     return <DocumentSlide slide={slide as DocumentSlideType} />;
+                case SLIDE_TYPES.TEXT:
+                    return <TextSlide slide={slide as TextSlideType} />;
                 default:
                     return null;
             }

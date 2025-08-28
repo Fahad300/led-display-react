@@ -1,13 +1,14 @@
 import fs from "fs";
 import path from "path";
 import { logger } from "./logger";
+import { getBackendUrl } from "./urlUtils";
 
 /**
  * Utility class for managing files in the uploads directory
  */
 export class FileManager {
     private static uploadDir = path.join(__dirname, "../../uploads");
-    private static backendUrl = process.env.SERVER_URL || process.env.BACKEND_URL || "http://localhost:5000";
+    private static backendUrl = getBackendUrl();
 
     /**
      * Purges unused files from the uploads directory

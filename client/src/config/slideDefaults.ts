@@ -12,6 +12,7 @@ export const SLIDE_DATA_SOURCES = {
     "image-slide": "FILE" as DataSource,
     "video-slide": "FILE" as DataSource,
     "news-slide": "FILE" as DataSource,
+    "text-slide": "MANUAL" as DataSource,
     "document-slide": "FILE" as DataSource,
     "birthday-slide": "AUTOMATED" as DataSource,
     "anniversary-slide": "AUTOMATED" as DataSource

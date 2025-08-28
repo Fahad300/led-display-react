@@ -6,3 +6,4 @@ export { CurrentEscalationsSlideComponent } from "./CurrentEscalationsSlide";
 export { TeamComparisonSlideComponent } from "./TeamComparisonSlide";
 export { GraphSlide } from "./GraphSlide";
 export { default as DocumentSlide } from "./DocumentSlide";
+export { default as TextSlide } from "./TextSlide";

@@ -10,7 +10,8 @@
     "test": "jest",
     "setup-db": "ts-node src/scripts/setupDatabase.ts",
     "db:reset": "ts-node src/scripts/resetDb.ts",
-    "migrate": "npx typeorm-ts-node-commonjs migration:run -d src/config/database.ts",
+    "migrate": "ts-node src/scripts/runMigrations.ts",
+    "migrate:revert": "npx typeorm-ts-node-commonjs migration:revert -d src/config/database.ts",
     "seed": "ts-node src/scripts/seedDatabase.ts",
     "cleanup-sqlite": "node cleanup-sqlite.js"
   },

@@ -25,6 +25,10 @@ export class Display {
             direction: "horizontal" | "vertical";
             transition: "fade" | "slide" | "none";
         };
+        // For text slides
+        textSlide?: {
+            content: string;
+        };
         // For current escalations
         escalations?: Array<{
             ticketCategory: string;

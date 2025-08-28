@@ -111,12 +111,12 @@ export const SlideProvider: React.FC<SlideProviderProps> = ({ children }) => {
                 if (isAuthenticated) {
                     try {
                         await sessionService.updateSlideData(slidesToSave);
-                        console.log("✅ Slides saved to database:", slidesToSave.length, "slides");
+
                     } catch (error) {
                         console.error("Error saving slides to database:", error);
                     }
                 } else {
-                    console.log("🔄 User not authenticated, skipping database save");
+
                 }
             } catch (error) {
                 console.error("Error in debounced save:", error);
@@ -139,12 +139,12 @@ export const SlideProvider: React.FC<SlideProviderProps> = ({ children }) => {
             if (isAuthenticated) {
                 try {
                     await sessionService.updateSlideData(slidesToSave);
-                    console.log("✅ Slides immediately saved to database:", slidesToSave.length, "slides");
+
                 } catch (error) {
                     console.error("Error immediately saving slides to database:", error);
                 }
             } else {
-                console.log("🔄 User not authenticated, skipping immediate database save");
+
             }
         } catch (error) {
             console.error("Error in immediate save:", error);
@@ -160,19 +160,19 @@ export const SlideProvider: React.FC<SlideProviderProps> = ({ children }) => {
             let allTemplates: any[] = [];
 
             // Always try to load from database first
-            console.log("🔄 Loading slides from database...");
+
             try {
                 const serverData = await sessionService.syncFromServer();
                 if (serverData?.slideData && serverData.slideData.length > 0) {
                     allTemplates = serverData.slideData;
-                    console.log("✅ Slides loaded from database:", allTemplates.length, "slides");
+
                 } else {
-                    console.log("🔄 No slides found in database, starting with empty array");
+
                     allTemplates = [];
                 }
             } catch (error) {
                 console.error("Error loading slides from database:", error);
-                console.log("🔄 Starting with empty slides array due to database error");
+
                 allTemplates = [];
             }
 
@@ -294,19 +294,34 @@ export const SlideProvider: React.FC<SlideProviderProps> = ({ children }) => {
                     const currentSlidesJson = JSON.stringify(slides);
                     const newSlidesJson = JSON.stringify(validSlides);
 
-                    // Don't override if we've made local changes in the last 5 seconds
+                    // Don't override if we've made local changes in the last 10 seconds (increased protection)
                     const timeSinceLocalChange = currentTime - lastLocalChangeRef.current;
                     if (currentSlidesJson !== newSlidesJson &&
                         (currentTime - lastUpdateRef.current) > 2000 &&
-                        timeSinceLocalChange > 5000 &&
+                        timeSinceLocalChange > 10000 && // Increased from 5000ms to 10000ms
                         !isEditing) { // Skip syncing if user is editing
-                        console.log("🔄 Slides updated from database:", validSlides.length, "slides");
-                        console.log("⏰ Time since local change:", timeSinceLocalChange, "ms");
+
+                        // Additional protection: Check if we're about to lose any local slides
+                        const localSlideIds = new Set(slides.map(s => s.id));
+                        const serverSlideIds = new Set(validSlides.map(s => s.id));
+
+                        // If we have local slides that aren't on the server and are very recent, don't overwrite
+                        const hasRecentLocalSlides = slides.some(slide =>
+                            !serverSlideIds.has(slide.id) &&
+                            timeSinceLocalChange < 15000 // Extra protection for very recent changes
+                        );
+
+                        if (hasRecentLocalSlides) {
+
+                            return;
+                        }
+
+
                         setSlides(validSlides);
                         lastUpdateRef.current = currentTime;
                         await debouncedSaveSlides(validSlides);
                     } else {
-                        console.log("🚫 Skipping database update - recent local changes, no changes, or user is editing");
+
                     }
                 }
             } catch (error) {
@@ -316,8 +331,8 @@ export const SlideProvider: React.FC<SlideProviderProps> = ({ children }) => {
         };
 
         // Always set up polling for cross-device slide updates
-        console.log("🔄 Setting up 10-second polling interval for slide sync");
-        pollInterval = setInterval(pollForUpdates, 10000);
+
+        pollInterval = setInterval(pollForUpdates, 15000); // Increased from 10000ms to 15000ms
 
         // Initial poll
         pollForUpdates();
@@ -327,7 +342,7 @@ export const SlideProvider: React.FC<SlideProviderProps> = ({ children }) => {
                 clearInterval(pollInterval);
             }
         };
-    }, [debouncedSaveSlides, isEditing]); // Removed slides from dependency array
+    }, [debouncedSaveSlides, isEditing, slides]); // Added slides back to dependency array for proper change detection
 
     // Cleanup timeout on unmount
     useEffect(() => {
@@ -348,9 +363,22 @@ export const SlideProvider: React.FC<SlideProviderProps> = ({ children }) => {
         };
 
         const updatedSlides = [...slides, newSlide];
-        setSlides(updatedSlides);
+
+        // Set the local change timestamp BEFORE updating state
         lastLocalChangeRef.current = Date.now();
-        await immediateSaveSlides(updatedSlides);
+
+        // Update local state immediately
+        setSlides(updatedSlides);
+
+        // Save to database with a small delay to ensure local state is stable
+        setTimeout(async () => {
+            try {
+                await immediateSaveSlides(updatedSlides);
+
+            } catch (error) {
+                console.error("❌ Error saving new slide to database:", error);
+            }
+        }, 100);
     }, [slides, immediateSaveSlides]);
 
     /**
@@ -361,25 +389,36 @@ export const SlideProvider: React.FC<SlideProviderProps> = ({ children }) => {
             slide.id === updatedSlide.id ? updatedSlide : slide
         );
 
-        setSlides(updatedSlides);
+        // Set the local change timestamp BEFORE updating state
         lastLocalChangeRef.current = Date.now();
-        await immediateSaveSlides(updatedSlides);
+
+        // Update local state immediately
+        setSlides(updatedSlides);
+
+        // Save to database with a small delay to ensure local state is stable
+        setTimeout(async () => {
+            try {
+                await immediateSaveSlides(updatedSlides);
+
+            } catch (error) {
+                console.error("❌ Error updating slide in database:", error);
+            }
+        }, 100);
     }, [slides, immediateSaveSlides]);
 
     /**
      * Delete a slide by ID
      */
     const deleteSlide = useCallback(async (id: string) => {
-        console.log("🗑️ Deleting slide with ID:", id);
-        console.log("📊 Current slides count:", slides.length);
+
 
         const updatedSlides = slides.filter(slide => slide.id !== id);
-        console.log("📊 Updated slides count:", updatedSlides.length);
+
 
         setSlides(updatedSlides);
         lastLocalChangeRef.current = Date.now();
         await immediateSaveSlides(updatedSlides);
-        console.log("✅ Slide deletion completed");
+
 
         if (activeSlide?.id === id) {
             setActiveSlide(null);

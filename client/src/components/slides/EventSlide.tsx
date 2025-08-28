@@ -59,7 +59,7 @@ const MultipleEmployeesGrid: React.FC<{ employees: Employee[]; eventType?: "birt
     const cardDims = getCardDimensions(employees.length);
 
     return (
-        <div className="w-full h-full flex flex-col items-center justify-center p-4 animated-gradient-bg">
+        <div className="w-full h-full flex flex-col items-center justify-center p-6 pt-8 animated-gradient-bg">
             {/* React Confetti Effect */}
             <ReactConfetti
                 width={width}
@@ -71,15 +71,10 @@ const MultipleEmployeesGrid: React.FC<{ employees: Employee[]; eventType?: "birt
                 gravity={0.1}
             />
 
-            <div className="text-center mb-6">
-                <h2 className="text-5xl md:text-6xl lg:text-7xl font-bold text-white mb-3">
+            <div className="text-center mb-12">
+                <h2 className="text-3xl md:text-4xl font-bold text-white mb-3">
                     {isBirthday ? "🎉 Happy Birthday!" : "🎊 Work Anniversary!"}
                 </h2>
-                <p className="text-2xl md:text-3xl text-white opacity-90">
-                    {isBirthday ? "Celebrating our amazing team members" : "Celebrating years of dedication"}
-                </p>
-
-
             </div>
 
             <div
@@ -169,7 +164,7 @@ const SingleEmployeeDisplay: React.FC<{ employee: Employee; eventType?: "birthda
 
     return (
         <motion.div
-            className="flex flex-col items-center justify-center h-full w-full relative overflow-hidden animated-gradient-bg"
+            className="flex flex-col items-center justify-center h-full w-full relative overflow-hidden animated-gradient-bg pt-8"
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 0.7, ease: "easeOut" }}
@@ -189,7 +184,7 @@ const SingleEmployeeDisplay: React.FC<{ employee: Employee; eventType?: "birthda
             />
 
             <motion.h2
-                className="font-bold text-white mb-6 md:mb-8 font-cursive text-[clamp(2rem,5vw,3.5rem)] leading-tight text-center"
+                className="font-bold text-white mb-6 md:mb-8 font-cursive text-3xl md:text-4xl leading-tight text-center"
                 initial={{ y: -60, opacity: 0 }}
                 animate={{ y: 0, opacity: 1 }}
                 transition={{ type: "spring", stiffness: 120, delay: 0.2 }}

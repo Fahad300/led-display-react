@@ -45,6 +45,36 @@ const handleMulterError = (err: any, req: express.Request, res: express.Response
     next(err);
 };
 
+// Test endpoint to verify URL construction
+router.get("/test/url", (req, res) => {
+    try {
+        const backendUrl = process.env.SERVER_URL || process.env.BACKEND_URL || "http://localhost:5000";
+        const testFileId = "test-123";
+        const testUrl = `${backendUrl}/api/files/${testFileId}`;
+
+        logger.info("URL test endpoint called");
+        logger.info(`Environment variables: SERVER_URL=${process.env.SERVER_URL}, BACKEND_URL=${process.env.BACKEND_URL}`);
+        logger.info(`Constructed URL: ${testUrl}`);
+
+        res.json({
+            message: "URL construction test",
+            environment: {
+                SERVER_URL: process.env.SERVER_URL,
+                BACKEND_URL: process.env.BACKEND_URL,
+                NODE_ENV: process.env.NODE_ENV
+            },
+            constructed: {
+                backendUrl,
+                testFileId,
+                testUrl
+            }
+        });
+    } catch (error) {
+        logger.error("Error in URL test endpoint:", error);
+        res.status(500).json({ error: "Failed to test URL construction" });
+    }
+});
+
 // Upload file to database
 router.post("/upload", isAuthenticated, upload.single("file"), handleMulterError, async (req: express.Request, res: express.Response) => {
     try {
@@ -106,12 +136,13 @@ router.get("/:id", async (req, res) => {
             return res.status(404).json({ error: "File not found" });
         }
 
-        logger.info(`File served successfully: ${fileData.filename} (${fileData.buffer.length} bytes)`);
+        logger.info(`File served successfully: ${fileData.filename} (${fileData.buffer.length} bytes), MIME: ${fileData.mimeType}`);
 
         // Set appropriate headers
         res.setHeader("Content-Type", fileData.mimeType);
         res.setHeader("Content-Disposition", `inline; filename="${fileData.filename}"`);
         res.setHeader("Cache-Control", "public, max-age=31536000"); // Cache for 1 year
+        res.setHeader("Access-Control-Allow-Origin", "*"); // Allow CORS for file serving
 
         // Send file buffer
         res.send(fileData.buffer);

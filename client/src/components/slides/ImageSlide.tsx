@@ -77,7 +77,11 @@ export const ImageSlide: React.FC<ImageSlideProps> = ({ slide, onUpdate }) => {
                     src={imageUrl}
                     alt={caption || "Slide image"}
                     className="w-full h-full object-cover"
+                    onLoad={() => {
+
+                    }}
                     onError={(e) => {
+                        console.error("Error loading image:", imageUrl, e);
                         const target = e.target as HTMLImageElement;
                         target.onerror = null;
                         target.parentElement!.innerHTML = `
@@ -87,6 +91,7 @@ export const ImageSlide: React.FC<ImageSlideProps> = ({ slide, onUpdate }) => {
                                 </svg>
                                 <h3 class="text-2xl md:text-3xl font-bold mb-2">Image Error</h3>
                                 <p class="text-slate-500">Failed to load image: ${imageUrl}</p>
+                                <p class="text-slate-400 text-sm mt-2">Check console for details</p>
                             </div>
                         `;
                     }}

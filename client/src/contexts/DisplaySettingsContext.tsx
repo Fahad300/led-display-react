@@ -46,7 +46,7 @@ export const DisplaySettingsProvider: React.FC<{ children: React.ReactNode }> = 
     useEffect(() => {
         const initializeSession = async () => {
             try {
-                console.log("🔄 Initializing session and loading settings from database...");
+
                 await sessionService.initializeSession();
 
                 // Always try to load settings from database
@@ -54,13 +54,13 @@ export const DisplaySettingsProvider: React.FC<{ children: React.ReactNode }> = 
                 if (serverData?.displaySettings) {
                     setSettings(prev => ({ ...prev, ...serverData.displaySettings }));
                     setLastSyncTime(Date.now());
-                    console.log("🔄 Initial settings loaded from database:", serverData.displaySettings);
+
                 } else {
-                    console.log("🔄 No settings found in database, using defaults");
+
                 }
             } catch (error) {
                 console.error("Error initializing session:", error);
-                console.log("🔄 Using default settings due to database error");
+
             }
         };
 
@@ -74,10 +74,10 @@ export const DisplaySettingsProvider: React.FC<{ children: React.ReactNode }> = 
         if (broadcastChannel) {
             const handleMessage = (event: MessageEvent) => {
                 if (event.data.type === "SETTINGS_UPDATE") {
-                    console.log("🔄 Received settings update from other tab:", event.data.settings);
+
                     setSettings(event.data.settings);
                 } else if (event.data.type === "FORCE_REFRESH") {
-                    console.log("🔄 Force refresh received from other tab");
+
                     // Trigger all refresh callbacks
                     refreshCallbacks.forEach(callback => callback());
                 }
@@ -93,7 +93,7 @@ export const DisplaySettingsProvider: React.FC<{ children: React.ReactNode }> = 
         let pollInterval: NodeJS.Timeout | null = null;
 
         const pollForUpdates = async () => {
-            console.log("🔄 Polling for settings updates from database...");
+
             try {
                 // Try to get latest settings from database (works for both authenticated and unauthenticated)
                 const serverData = await sessionService.syncFromServer();
@@ -102,7 +102,7 @@ export const DisplaySettingsProvider: React.FC<{ children: React.ReactNode }> = 
                         const newSettings = { ...prev, ...serverData.displaySettings };
                         // Only update if there are actual changes
                         if (JSON.stringify(prev) !== JSON.stringify(newSettings)) {
-                            console.log("🔄 Display settings updated from database:", newSettings);
+
                             setLastSyncTime(Date.now());
                             return newSettings;
                         }
@@ -116,7 +116,7 @@ export const DisplaySettingsProvider: React.FC<{ children: React.ReactNode }> = 
         };
 
         // Always set up polling for cross-device updates
-        console.log("🔄 Setting up 5-second polling interval for settings sync");
+
         pollInterval = setInterval(pollForUpdates, 5 * 1000); // 5 seconds
 
         // Initial poll after 2 seconds to avoid interference with initial load
@@ -139,7 +139,7 @@ export const DisplaySettingsProvider: React.FC<{ children: React.ReactNode }> = 
         if (isAuthenticated) {
             try {
                 await sessionService.updateDisplaySettings(updatedSettings);
-                console.log("🔄 Settings synced to server");
+
             } catch (error) {
                 console.error("Error syncing settings to server:", error);
             }
@@ -160,7 +160,7 @@ export const DisplaySettingsProvider: React.FC<{ children: React.ReactNode }> = 
 
     // Force refresh all display pages
     const forceRefresh = useCallback(async () => {
-        console.log("🔄 Force refresh triggered - immediately syncing with server");
+
 
         // Create a timeout promise to prevent hanging
         const timeoutPromise = new Promise((_, reject) => {
@@ -181,7 +181,7 @@ export const DisplaySettingsProvider: React.FC<{ children: React.ReactNode }> = 
             if (serverData?.displaySettings) {
                 setSettings(prev => {
                     const newSettings = { ...prev, ...serverData.displaySettings };
-                    console.log("🔄 Force refresh: Settings updated from server:", newSettings);
+
                     setLastSyncTime(Date.now());
                     return newSettings;
                 });
@@ -191,24 +191,26 @@ export const DisplaySettingsProvider: React.FC<{ children: React.ReactNode }> = 
             // Don't throw the error, continue with local refresh
         }
 
-        // Broadcast refresh request to other tabs
+        // Broadcast refresh request to other tabs with enhanced cache clearing
         if (broadcastChannel) {
             try {
                 broadcastChannel.postMessage({
                     type: "FORCE_REFRESH",
+                    timestamp: Date.now(),
+                    clearCache: true
                 });
-                console.log("🔄 Force refresh broadcast sent to other tabs");
+
             } catch (error) {
                 console.error("Error broadcasting force refresh:", error);
             }
         }
 
-        // Also refresh current tab if it's a display page
+        // Execute all refresh callbacks with enhanced cache clearing
         try {
             refreshCallbacks.forEach((callback, index) => {
                 try {
                     callback();
-                    console.log(`🔄 Force refresh callback ${index} executed`);
+
                 } catch (error) {
                     console.error(`Error in force refresh callback ${index}:`, error);
                 }
@@ -217,7 +219,7 @@ export const DisplaySettingsProvider: React.FC<{ children: React.ReactNode }> = 
             console.error("Error executing refresh callbacks:", error);
         }
 
-        console.log("🔄 Force refresh completed successfully");
+
     }, [broadcastChannel, refreshCallbacks]);
 
     // Register refresh callback
