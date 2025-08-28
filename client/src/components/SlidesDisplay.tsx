@@ -197,30 +197,7 @@ const SlidesDisplay: React.FC = () => {
     }, [onRefreshRequest, loadSlides]);
 
     // Poll for event slide state updates (always active)
-    useEffect(() => {
-        const pollEventSlideStates = async () => {
-            try {
-                const sessionData = await sessionService.syncFromServer();
-                if (sessionData?.appSettings?.eventSlideStates) {
-
-                    setEventSlideStates(sessionData.appSettings.eventSlideStates);
-                }
-            } catch (error) {
-                console.debug("Error polling event slide states:", error);
-            }
-        };
-
-        // Always set up polling for event slide state updates
-
-        const pollInterval = setInterval(pollEventSlideStates, 5000);
-
-        // Initial poll
-        pollEventSlideStates();
-
-        return () => {
-            clearInterval(pollInterval);
-        };
-    }, []);
+    // Cross-device synchronization now handled by UnifiedPollingContext
 
     // Helper functions for date checks
     const isBirthdayToday = (dob: string): boolean => {

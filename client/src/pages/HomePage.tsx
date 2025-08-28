@@ -40,6 +40,7 @@ import { DigitalClock } from "../components/DigitalClock";
 import NewsSlideComponent from "../components/NewsSlideComponent";
 import { useToast } from "../contexts/ToastContext";
 import { sessionService } from "../services/sessionService";
+import { useUnifiedPolling } from "../contexts/UnifiedPollingContext";
 
 // Type for reordering result
 interface ReorderResult {
@@ -609,6 +610,7 @@ const HomePage: React.FC = () => {
     const { settings, updateSettings, forceRefresh } = useDisplaySettings();
     const { employees } = useEmployees();
     const { addToast } = useToast();
+    const { refreshAll } = useUnifiedPolling();
     const navigate = useNavigate();
     const [syncStatus, setSyncStatus] = useState<"idle" | "syncing" | "success" | "error">("idle");
     const [dateTime, setDateTime] = useState(new Date().toLocaleString());
@@ -787,7 +789,7 @@ const HomePage: React.FC = () => {
         // Store current eventSlideStates for comparison
         prevEventSlideStates.current = eventSlideStates;
 
-    }, [slides, eventSlideStates, orderedSlides.length]);
+    }, [slides, eventSlideStates, orderedSlides.length, employees]);
 
     // Update active slides when processedActiveSlides change
     useEffect(() => {
@@ -1320,6 +1322,25 @@ const HomePage: React.FC = () => {
                         </svg>
                     )}
                     {forceRefreshText}
+                </button>
+
+                {/* Manual Event States Refresh Button */}
+                <button
+                    onClick={async () => {
+                        try {
+                            await refreshAll();
+                            addToast("✅ All data refreshed successfully", "success");
+                        } catch (error) {
+                            console.error("Error refreshing data:", error);
+                            addToast("❌ Failed to refresh data", "error");
+                        }
+                    }}
+                    className="w-full font-medium py-2 px-4 rounded-lg transition-colors mt-2 flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white"
+                >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                    </svg>
+                    Refresh All Data
                 </button>
 
 

@@ -13,6 +13,7 @@ interface SlideContextType {
     slides: Slide[];
     activeSlide: Slide | null;
     setActiveSlide: (slide: Slide | null) => void;
+    setSlides: (slides: Slide[] | ((prevSlides: Slide[]) => Slide[])) => void;
     addSlide: (slide: Slide) => void;
     updateSlide: (slide: Slide) => void;
     deleteSlide: (id: string) => Promise<void>;
@@ -30,6 +31,7 @@ const SlideContext = createContext<SlideContextType>({
     slides: [],
     activeSlide: null,
     setActiveSlide: () => { },
+    setSlides: () => { },
     addSlide: () => { },
     updateSlide: () => { },
     deleteSlide: async () => { },
@@ -274,75 +276,7 @@ export const SlideProvider: React.FC<SlideProviderProps> = ({ children }) => {
         loadSlides();
     }, [loadSlides]);
 
-    // Cross-device synchronization via polling with improved change detection (always active)
-    useEffect(() => {
-        let pollInterval: NodeJS.Timeout | null = null;
-
-        const pollForUpdates = async () => {
-            try {
-                // Try to get latest slide data from database (works for both authenticated and unauthenticated)
-                const serverData = await sessionService.syncFromServer();
-                if (serverData?.slideData && serverData.slideData.length > 0) {
-                    // Type-check and filter to ensure we only get valid slides
-                    const validSlides = serverData.slideData.filter((slide: any) =>
-                        slide && slide.id && slide.type &&
-                        Object.values(SLIDE_TYPES).includes(slide.type)
-                    ) as Slide[];
-
-                    // Only update if there are actual changes and enough time has passed
-                    const currentTime = Date.now();
-                    const currentSlidesJson = JSON.stringify(slides);
-                    const newSlidesJson = JSON.stringify(validSlides);
-
-                    // Don't override if we've made local changes in the last 10 seconds (increased protection)
-                    const timeSinceLocalChange = currentTime - lastLocalChangeRef.current;
-                    if (currentSlidesJson !== newSlidesJson &&
-                        (currentTime - lastUpdateRef.current) > 2000 &&
-                        timeSinceLocalChange > 10000 && // Increased from 5000ms to 10000ms
-                        !isEditing) { // Skip syncing if user is editing
-
-                        // Additional protection: Check if we're about to lose any local slides
-                        const localSlideIds = new Set(slides.map(s => s.id));
-                        const serverSlideIds = new Set(validSlides.map(s => s.id));
-
-                        // If we have local slides that aren't on the server and are very recent, don't overwrite
-                        const hasRecentLocalSlides = slides.some(slide =>
-                            !serverSlideIds.has(slide.id) &&
-                            timeSinceLocalChange < 15000 // Extra protection for very recent changes
-                        );
-
-                        if (hasRecentLocalSlides) {
-
-                            return;
-                        }
-
-
-                        setSlides(validSlides);
-                        lastUpdateRef.current = currentTime;
-                        await debouncedSaveSlides(validSlides);
-                    } else {
-
-                    }
-                }
-            } catch (error) {
-                // Silently handle errors for polling
-                console.debug("Polling for slide updates:", error);
-            }
-        };
-
-        // Always set up polling for cross-device slide updates
-
-        pollInterval = setInterval(pollForUpdates, 15000); // Increased from 10000ms to 15000ms
-
-        // Initial poll
-        pollForUpdates();
-
-        return () => {
-            if (pollInterval) {
-                clearInterval(pollInterval);
-            }
-        };
-    }, [debouncedSaveSlides, isEditing, slides]); // Added slides back to dependency array for proper change detection
+    // Cross-device synchronization now handled by UnifiedPollingContext
 
     // Cleanup timeout on unmount
     useEffect(() => {
@@ -463,6 +397,7 @@ export const SlideProvider: React.FC<SlideProviderProps> = ({ children }) => {
         slides,
         activeSlide,
         setActiveSlide,
+        setSlides,
         addSlide,
         updateSlide,
         deleteSlide,

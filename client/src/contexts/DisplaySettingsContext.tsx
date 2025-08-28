@@ -13,6 +13,7 @@ interface DisplaySettings {
 interface DisplaySettingsContextType {
     settings: DisplaySettings;
     updateSettings: (newSettings: Partial<DisplaySettings>) => void;
+    setSettings: (settings: DisplaySettings | ((prevSettings: DisplaySettings) => DisplaySettings)) => void;
     forceRefresh: () => void;
     onRefreshRequest: (callback: () => void) => void;
 }
@@ -88,47 +89,7 @@ export const DisplaySettingsProvider: React.FC<{ children: React.ReactNode }> = 
         }
     }, [broadcastChannel, refreshCallbacks]);
 
-    // Cross-device synchronization via polling (always active)
-    useEffect(() => {
-        let pollInterval: NodeJS.Timeout | null = null;
-
-        const pollForUpdates = async () => {
-
-            try {
-                // Try to get latest settings from database (works for both authenticated and unauthenticated)
-                const serverData = await sessionService.syncFromServer();
-                if (serverData?.displaySettings) {
-                    setSettings(prev => {
-                        const newSettings = { ...prev, ...serverData.displaySettings };
-                        // Only update if there are actual changes
-                        if (JSON.stringify(prev) !== JSON.stringify(newSettings)) {
-
-                            setLastSyncTime(Date.now());
-                            return newSettings;
-                        }
-                        return prev;
-                    });
-                }
-            } catch (error) {
-                // Silently handle errors for polling - this is normal for unauthenticated displays
-                console.debug("Polling for settings updates (normal for displays):", error);
-            }
-        };
-
-        // Always set up polling for cross-device updates
-
-        pollInterval = setInterval(pollForUpdates, 5 * 1000); // 5 seconds
-
-        // Initial poll after 2 seconds to avoid interference with initial load
-        const initialPoll = setTimeout(pollForUpdates, 2000);
-
-        return () => {
-            if (pollInterval) {
-                clearInterval(pollInterval);
-            }
-            clearTimeout(initialPoll);
-        };
-    }, []);
+    // Cross-device synchronization now handled by UnifiedPollingContext
 
     // Save settings to server and broadcast to other tabs
     const updateSettings = useCallback(async (newSettings: Partial<DisplaySettings>) => {
@@ -236,6 +197,7 @@ export const DisplaySettingsProvider: React.FC<{ children: React.ReactNode }> = 
         <DisplaySettingsContext.Provider value={{
             settings,
             updateSettings,
+            setSettings,
             forceRefresh,
             onRefreshRequest,
         }}>
