@@ -24,7 +24,18 @@ import {
 import { backendApi } from "../services/api";
 import RichTextEditor from "../components/RichTextEditor";
 
-
+// Utility function to generate UUID that works across all browsers
+const generateUUID = (): string => {
+    if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+        return crypto.randomUUID();
+    }
+    // Fallback for browsers that don't support crypto.randomUUID
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
+        const r = Math.random() * 16 | 0;
+        const v = c === 'x' ? r : (r & 0x3 | 0x8);
+        return v.toString(16);
+    });
+};
 
 /** Type for form validation errors */
 interface FormErrors {
@@ -541,7 +552,7 @@ const AdminPage: React.FC = () => {
             switch (activeTabType) {
                 case SLIDE_TYPES.IMAGE:
                     return {
-                        id: crypto.randomUUID(),
+                        id: generateUUID(),
                         type: SLIDE_TYPES.IMAGE,
                         name: "New Image Slide",
                         active: false, // Start as inactive
@@ -554,7 +565,7 @@ const AdminPage: React.FC = () => {
                     } as ImageSlide;
                 case SLIDE_TYPES.VIDEO:
                     return {
-                        id: crypto.randomUUID(),
+                        id: generateUUID(),
                         type: SLIDE_TYPES.VIDEO,
                         name: "New Video Slide",
                         active: false, // Start as inactive
@@ -570,7 +581,7 @@ const AdminPage: React.FC = () => {
                     } as VideoSlide;
                 case SLIDE_TYPES.NEWS:
                     return {
-                        id: crypto.randomUUID(),
+                        id: generateUUID(),
                         type: SLIDE_TYPES.NEWS,
                         name: "New News Slide",
                         active: false, // Start as inactive
@@ -589,7 +600,7 @@ const AdminPage: React.FC = () => {
                     } as NewsSlide;
                 case SLIDE_TYPES.TEXT:
                     return {
-                        id: crypto.randomUUID(),
+                        id: generateUUID(),
                         type: SLIDE_TYPES.TEXT,
                         name: "New Text Slide",
                         active: false, // Start as inactive
@@ -601,7 +612,7 @@ const AdminPage: React.FC = () => {
                     } as TextSlide;
                 case SLIDE_TYPES.DOCUMENT:
                     return {
-                        id: crypto.randomUUID(),
+                        id: generateUUID(),
                         type: SLIDE_TYPES.DOCUMENT,
                         name: "New Document Slide",
                         active: false, // Start as inactive

@@ -694,8 +694,8 @@ const HomePage: React.FC = () => {
                 } else {
                     // Initialize with default values if none exist
                     const defaultStates = {
-                        "birthday-event-slide": true,
-                        "anniversary-event-slide": true
+                        "birthday-event-slide": false,
+                        "anniversary-event-slide": false
                     };
                     setEventSlideStates(defaultStates);
                     // Save default states to database
@@ -705,8 +705,8 @@ const HomePage: React.FC = () => {
                 console.error("Error loading event slide states:", error);
                 // Fallback to default states
                 const defaultStates = {
-                    "birthday-event-slide": true,
-                    "anniversary-event-slide": true
+                    "birthday-event-slide": false,
+                    "anniversary-event-slide": false
                 };
                 setEventSlideStates(defaultStates);
             }
@@ -733,7 +733,7 @@ const HomePage: React.FC = () => {
                 id: "birthday-event-slide",
                 name: "Birthday Celebrations",
                 type: SLIDE_TYPES.EVENT,
-                active: birthdayEmployees.length > 0 ? (birthdayActiveState ?? true) : false, // Only active if there are birthdays
+                active: birthdayEmployees.length > 0 ? (birthdayActiveState ?? false) : false, // Use stored state or default to false
                 duration: birthdayEmployees.length > 0 ? 10 : 0, // Only show duration if there are birthdays
                 data: {
                     title: "Birthday Celebrations",
@@ -757,7 +757,7 @@ const HomePage: React.FC = () => {
                 id: "anniversary-event-slide",
                 name: "Work Anniversaries",
                 type: SLIDE_TYPES.EVENT,
-                active: anniversaryEmployees.length > 0 ? (anniversaryActiveState ?? true) : false, // Only active if there are anniversaries
+                active: anniversaryEmployees.length > 0 ? (anniversaryActiveState ?? false) : false, // Use stored state or default to false
                 duration: anniversaryEmployees.length > 0 ? 10 : 0, // Only show duration if there are anniversaries
                 data: {
                     title: "Work Anniversaries",

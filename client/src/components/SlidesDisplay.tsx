@@ -109,10 +109,10 @@ const SlidesDisplay: React.FC = () => {
 
                     setEventSlideStates(sessionData.appSettings.eventSlideStates);
                 } else {
-                    // Default to active if no states are saved
+                    // Default to inactive if no states are saved
                     const defaultStates = {
-                        "birthday-event-slide": true,
-                        "anniversary-event-slide": true
+                        "birthday-event-slide": false,
+                        "anniversary-event-slide": false
                     };
 
                     setEventSlideStates(defaultStates);
@@ -121,8 +121,8 @@ const SlidesDisplay: React.FC = () => {
                 console.error("Error loading event slide states from database:", error);
                 // Fallback to default states
                 const defaultStates = {
-                    "birthday-event-slide": true,
-                    "anniversary-event-slide": true
+                    "birthday-event-slide": false,
+                    "anniversary-event-slide": false
                 };
                 setEventSlideStates(defaultStates);
             }
@@ -247,7 +247,7 @@ const SlidesDisplay: React.FC = () => {
 
         // Birthday event slide
         const birthdayEmployees = employees.filter(employee => isBirthdayToday(employee.dob));
-        const birthdayActiveState = eventSlideStates["birthday-event-slide"] ?? true;
+        const birthdayActiveState = eventSlideStates["birthday-event-slide"] ?? false;
         console.log("🎂 Birthday employees:", birthdayEmployees.length, "Active state:", birthdayActiveState);
 
         const birthdayEventSlide: EventSlideType | null = birthdayEmployees.length > 0 ? {
@@ -270,7 +270,7 @@ const SlidesDisplay: React.FC = () => {
 
         // Anniversary event slide
         const anniversaryEmployees = employees.filter(employee => isAnniversaryToday(employee.dateOfJoining));
-        const anniversaryActiveState = eventSlideStates["anniversary-event-slide"] ?? true;
+        const anniversaryActiveState = eventSlideStates["anniversary-event-slide"] ?? false;
         console.log("🎉 Anniversary employees:", anniversaryEmployees.length, "Active state:", anniversaryActiveState);
 
         const anniversaryEventSlide: EventSlideType | null = anniversaryEmployees.length > 0 ? {
