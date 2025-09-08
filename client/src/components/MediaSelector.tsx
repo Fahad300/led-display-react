@@ -48,7 +48,13 @@ export const MediaSelector: React.FC<MediaSelectorProps> = ({
 
             const response = await backendApi.get(`/api/files`);
 
-            const filteredFiles = response.data.files.filter((file: MediaFile) =>
+            // Ensure file URLs are properly formatted
+            const processedFiles = response.data.files.map((file: any) => ({
+                ...file,
+                url: file.url || file.getUrl?.() || `${backendApi.defaults.baseURL}/api/files/${file.id}`
+            }));
+
+            const filteredFiles = processedFiles.filter((file: MediaFile) =>
                 acceptedTypes.includes(file.type)
             );
             setFiles(filteredFiles);
