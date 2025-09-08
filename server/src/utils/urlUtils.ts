@@ -6,12 +6,8 @@
  * Get the backend base URL from environment variables
  */
 export const getBackendUrl = (): string => {
-    // For production deployment, use the actual server URL
-    if (process.env.NODE_ENV === "production") {
-        return process.env.SERVER_URL || process.env.BACKEND_URL || `http://${process.env.HOST || "localhost"}:${process.env.PORT || "5000"}`;
-    }
-    // For development, use localhost
-    return process.env.SERVER_URL || process.env.BACKEND_URL || "http://localhost:5000";
+    // Use SERVER_URL from environment variables
+    return process.env.SERVER_URL || "http://localhost:5000";
 };
 
 /**

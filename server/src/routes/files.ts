@@ -48,19 +48,18 @@ const handleMulterError = (err: any, req: express.Request, res: express.Response
 // Test endpoint to verify URL construction
 router.get("/test/url", (req, res) => {
     try {
-        const backendUrl = process.env.SERVER_URL || process.env.BACKEND_URL || "http://localhost:5000";
+        const backendUrl = process.env.SERVER_URL || "http://localhost:5000";
         const testFileId = "test-123";
         const testUrl = `${backendUrl}/api/files/${testFileId}`;
 
         logger.info("URL test endpoint called");
-        logger.info(`Environment variables: SERVER_URL=${process.env.SERVER_URL}, BACKEND_URL=${process.env.BACKEND_URL}`);
+        logger.info(`Environment variables: SERVER_URL=${process.env.SERVER_URL}`);
         logger.info(`Constructed URL: ${testUrl}`);
 
         res.json({
             message: "URL construction test",
             environment: {
                 SERVER_URL: process.env.SERVER_URL,
-                BACKEND_URL: process.env.BACKEND_URL,
                 NODE_ENV: process.env.NODE_ENV
             },
             constructed: {
