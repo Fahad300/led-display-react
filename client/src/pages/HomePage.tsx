@@ -616,7 +616,7 @@ const HomePage: React.FC = () => {
     const { settings, updateSettings, forceRefresh } = useDisplaySettings();
     const { employees } = useEmployees();
     const { addToast } = useToast();
-    const { refreshAll } = useUnifiedPolling();
+    const { refreshAll, triggerImmediateRefresh } = useUnifiedPolling();
     const navigate = useNavigate();
     const [dateTime, setDateTime] = useState(new Date().toLocaleString());
     const [isFullscreen, setIsFullscreen] = useState(false);
@@ -1262,7 +1262,7 @@ const HomePage: React.FC = () => {
                         try {
                             // Refresh both local data and trigger remote refresh
                             await Promise.all([
-                                refreshAll(), // Local data refresh
+                                triggerImmediateRefresh(), // Immediate local data refresh
                                 sessionService.triggerRemoteRefresh("all") // Remote refresh for all displays
                             ]);
                             addToast("✅ Force refresh sent to all remote displays", "success");

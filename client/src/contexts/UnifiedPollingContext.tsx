@@ -7,6 +7,7 @@ import { useGraphs } from './GraphContext';
 
 interface UnifiedPollingContextType {
     refreshAll: () => Promise<void>;
+    triggerImmediateRefresh: () => Promise<void>;
     isPolling: boolean;
 }
 
@@ -184,16 +185,42 @@ export const UnifiedPollingProvider: React.FC<UnifiedPollingProviderProps> = ({ 
             performUnifiedPoll();
         }, 5000); // 5 second initial delay for faster startup
 
-        const interval = setInterval(performUnifiedPoll, 300000); // Poll every 5 minutes for data updates only
+        // Regular polling every 5 minutes for data updates
+        const regularInterval = setInterval(performUnifiedPoll, 300000);
+
+        // More frequent polling every 30 seconds to catch refresh triggers
+        const refreshInterval = setInterval(performUnifiedPoll, 30000);
 
         return () => {
             clearTimeout(initialDelay);
-            clearInterval(interval);
+            clearInterval(regularInterval);
+            clearInterval(refreshInterval);
         };
+    }, [performUnifiedPoll]);
+
+    // Enhanced refresh function that triggers immediate polling
+    const triggerImmediateRefresh = useCallback(async () => {
+        console.debug('🔄 Immediate refresh triggered - forcing immediate sync');
+
+        // Reset all sync timers to force immediate refresh
+        lastSlideSync.current = 0;
+        lastDisplaySettingsSync.current = 0;
+        lastEventStatesSync.current = 0;
+        lastEmployeeSync.current = 0;
+        lastGraphSync.current = 0;
+
+        // Perform immediate sync
+        await performUnifiedPoll();
+
+        // Also trigger a second sync after a short delay to catch any delayed updates
+        setTimeout(() => {
+            performUnifiedPoll();
+        }, 2000);
     }, [performUnifiedPoll]);
 
     const value: UnifiedPollingContextType = {
         refreshAll,
+        triggerImmediateRefresh,
         isPolling: isPolling.current
     };
 

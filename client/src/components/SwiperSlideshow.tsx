@@ -137,6 +137,13 @@ const SwiperSlideshow: React.FC<{
                 if (prev <= 1) {
                     clearInterval(countdownRef.current!);
                     countdownRef.current = null;
+
+                    // Transition to next slide
+                    if (swiperRef.current && activeSlides.length > 1) {
+                        const nextIndex = (currentSlideIndex + 1) % activeSlides.length;
+                        swiperRef.current.slideTo(nextIndex);
+                    }
+
                     return 0;
                 }
                 return prev - 1;
@@ -179,6 +186,14 @@ const SwiperSlideshow: React.FC<{
             startCountdown();
         }
     }, [activeSlides, clearCountdown, startCountdown]);
+
+    // Handle slide transition when timeRemaining reaches 0
+    useEffect(() => {
+        if (timeRemaining === 0 && swiperRef.current && activeSlides.length > 1) {
+            const nextIndex = (currentSlideIndex + 1) % activeSlides.length;
+            swiperRef.current.slideTo(nextIndex);
+        }
+    }, [timeRemaining, currentSlideIndex, activeSlides.length]);
 
     // Cleanup on unmount
     useEffect(() => {

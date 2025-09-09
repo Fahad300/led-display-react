@@ -278,16 +278,33 @@ router.post("/trigger-refresh", isAuthenticated, async (req, res) => {
         });
 
         if (session) {
+            // Update lastActivity with a more recent timestamp to ensure immediate detection
             session.lastActivity = new Date();
             await AppDataSource.getRepository(Session).save(session);
             logger.info(`Session ${session.id} lastActivity updated to trigger refresh`);
+
+            // Also update all other active sessions to trigger refresh on all displays
+            const allActiveSessions = await AppDataSource.getRepository(Session).find({
+                where: { isActive: true }
+            });
+
+            // Update all active sessions to trigger refresh
+            for (const activeSession of allActiveSessions) {
+                if (activeSession.id !== session.id) {
+                    activeSession.lastActivity = new Date();
+                    await AppDataSource.getRepository(Session).save(activeSession);
+                }
+            }
+
+            logger.info(`Updated ${allActiveSessions.length} active sessions to trigger refresh`);
         }
 
         // Return success response
         res.json({
             message: `${refreshType} refresh triggered successfully`,
             timestamp: new Date().toISOString(),
-            refreshType
+            refreshType,
+            sessionsUpdated: session ? 1 : 0
         });
 
     } catch (error) {
