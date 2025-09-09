@@ -618,7 +618,6 @@ const HomePage: React.FC = () => {
     const { addToast } = useToast();
     const { refreshAll } = useUnifiedPolling();
     const navigate = useNavigate();
-    const [syncStatus, setSyncStatus] = useState<"idle" | "syncing" | "success" | "error">("idle");
     const [dateTime, setDateTime] = useState(new Date().toLocaleString());
     const [isFullscreen, setIsFullscreen] = useState(false);
     const [activeSlideIndex, setActiveSlideIndex] = useState(0);
@@ -633,9 +632,6 @@ const HomePage: React.FC = () => {
     // Ref to track previous eventSlideStates to prevent unnecessary updates
     const prevEventSlideStates = useRef(eventSlideStates);
 
-    // Force refresh button state
-    const [isForceRefreshing, setIsForceRefreshing] = useState(false);
-    const [forceRefreshText, setForceRefreshText] = useState("Force Refresh All Displays");
 
     // Helper functions for date checks - use API flags instead of recalculating
     const isBirthdayToday = (employee: Employee): boolean => {
@@ -925,61 +921,6 @@ const HomePage: React.FC = () => {
         return () => window.removeEventListener("keydown", handleKeyPress);
     }, []);
 
-    const handleRefresh = async () => {
-        try {
-            // Trigger remote refresh for all displays
-            await sessionService.triggerRemoteRefresh("all");
-            addToast("✅ Refresh signal sent to all remote displays", "success");
-        } catch (error) {
-            console.error("Error triggering remote refresh:", error);
-            addToast("❌ Failed to trigger remote refresh", "error");
-            // Fallback to local refresh
-            navigate(0);
-        }
-    };
-
-    const handleForceRefreshDisplay = async () => {
-        // Prevent multiple simultaneous refreshes
-        if (isForceRefreshing) {
-            return;
-        }
-
-        // Set button state
-        setIsForceRefreshing(true);
-        setForceRefreshText("Refreshing...");
-
-        try {
-            // Trigger both local and remote refresh
-            await Promise.all([
-                forceRefresh(), // Local refresh
-                sessionService.triggerRemoteRefresh("all") // Remote refresh
-            ]);
-
-            // Show success feedback
-            addToast("✅ Force refresh completed! All displays will clear cache and reload", "success");
-
-            // Show detailed success state
-            setForceRefreshText("✓ Cache Cleared & Refreshed");
-
-            // Reset button after delay
-            setTimeout(() => {
-                setForceRefreshText("Force Refresh All Displays");
-                setIsForceRefreshing(false);
-            }, 4000);
-        } catch (error) {
-            console.error("Force refresh error:", error);
-            addToast("❌ Failed to refresh displays - check console for details", "error");
-
-            // Show error state
-            setForceRefreshText("Error - Try Again");
-
-            // Reset button after delay
-            setTimeout(() => {
-                setForceRefreshText("Force Refresh All Displays");
-                setIsForceRefreshing(false);
-            }, 3000);
-        }
-    };
 
     /**
      * Render content based on slide type
@@ -1011,62 +952,52 @@ const HomePage: React.FC = () => {
 
     // Update settings handlers
     const handleEffectChange = async (effect: string) => {
-        setSyncStatus("syncing");
         try {
             await updateSettings({ swiperEffect: effect });
-            setSyncStatus("success");
-            setTimeout(() => setSyncStatus("idle"), 2000);
+            addToast("✅ Slide effect updated successfully", "success");
         } catch (error) {
-            setSyncStatus("error");
-            setTimeout(() => setSyncStatus("idle"), 3000);
+            console.error("Error updating slide effect:", error);
+            addToast("❌ Failed to update slide effect", "error");
         }
     };
 
     const handleDateStampToggle = async () => {
-        setSyncStatus("syncing");
         try {
             await updateSettings({ showDateStamp: !settings.showDateStamp });
-            setSyncStatus("success");
-            setTimeout(() => setSyncStatus("idle"), 2000);
+            addToast("✅ Date stamp setting updated successfully", "success");
         } catch (error) {
-            setSyncStatus("error");
-            setTimeout(() => setSyncStatus("idle"), 3000);
+            console.error("Error updating date stamp setting:", error);
+            addToast("❌ Failed to update date stamp setting", "error");
         }
     };
 
     const handlePaginationToggle = async () => {
-        setSyncStatus("syncing");
         try {
             await updateSettings({ hidePagination: !settings.hidePagination });
-            setSyncStatus("success");
-            setTimeout(() => setSyncStatus("idle"), 2000);
+            addToast("✅ Pagination setting updated successfully", "success");
         } catch (error) {
-            setSyncStatus("error");
-            setTimeout(() => setSyncStatus("idle"), 3000);
+            console.error("Error updating pagination setting:", error);
+            addToast("❌ Failed to update pagination setting", "error");
         }
     };
 
     const handleArrowsToggle = async () => {
-        setSyncStatus("syncing");
         try {
             await updateSettings({ hideArrows: !settings.hideArrows });
-            setSyncStatus("success");
-            setTimeout(() => setSyncStatus("idle"), 2000);
+            addToast("✅ Arrow navigation setting updated successfully", "success");
         } catch (error) {
-            setSyncStatus("error");
-            setTimeout(() => setSyncStatus("idle"), 3000);
+            console.error("Error updating arrow navigation setting:", error);
+            addToast("❌ Failed to update arrow navigation setting", "error");
         }
     };
 
     const handleHidePersiviaLogoToggle = async () => {
-        setSyncStatus("syncing");
         try {
             await updateSettings({ hidePersiviaLogo: !settings.hidePersiviaLogo });
-            setSyncStatus("success");
-            setTimeout(() => setSyncStatus("idle"), 2000);
+            addToast("✅ Logo visibility setting updated successfully", "success");
         } catch (error) {
-            setSyncStatus("error");
-            setTimeout(() => setSyncStatus("idle"), 3000);
+            console.error("Error updating logo visibility setting:", error);
+            addToast("❌ Failed to update logo visibility setting", "error");
         }
     };
 
@@ -1325,65 +1256,33 @@ const HomePage: React.FC = () => {
                     </div>
                 </div>
 
-                {/* Refresh Button */}
-                <button
-                    onClick={handleRefresh}
-                    className="w-full bg-persivia-blue hover:bg-persivia-blue/90 text-white font-medium py-2 px-4 rounded-lg transition-colors"
-                >
-                    Refresh Display
-                </button>
-
-                {/* Sync Status Indicator */}
-                {syncStatus !== "idle" && (
-                    <div className={`w-full p-2 rounded-lg text-white text-sm font-medium text-center mt-2 ${syncStatus === "syncing" ? "bg-blue-500" :
-                        syncStatus === "success" ? "bg-green-500" :
-                            "bg-red-500"
-                        }`}>
-                        {syncStatus === "syncing" && "🔄 Syncing to displays..."}
-                        {syncStatus === "success" && "✅ Synced successfully"}
-                        {syncStatus === "error" && "❌ Sync failed"}
-                    </div>
-                )}
-
-                {/* Force Refresh Display Button */}
-                <button
-                    onClick={handleForceRefreshDisplay}
-                    disabled={isForceRefreshing}
-                    className={`w-full font-medium py-2 px-4 rounded-lg transition-colors mt-2 flex items-center justify-center gap-2 ${isForceRefreshing
-                        ? "bg-gray-500 cursor-not-allowed"
-                        : "bg-red-600 hover:bg-red-700"
-                        } text-white`}
-                >
-                    {isForceRefreshing && (
-                        <svg className="w-4 h-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                        </svg>
-                    )}
-                    {forceRefreshText}
-                </button>
-
-                {/* Manual Event States Refresh Button */}
+                {/* Force Refresh Button - Single button for immediate refresh on all displays */}
                 <button
                     onClick={async () => {
                         try {
                             // Refresh both local data and trigger remote refresh
                             await Promise.all([
                                 refreshAll(), // Local data refresh
-                                sessionService.triggerRemoteRefresh("data") // Remote data refresh
+                                sessionService.triggerRemoteRefresh("all") // Remote refresh for all displays
                             ]);
-                            addToast("✅ All data refreshed successfully on all displays", "success");
+                            addToast("✅ Force refresh sent to all remote displays", "success");
                         } catch (error) {
-                            console.error("Error refreshing data:", error);
-                            addToast("❌ Failed to refresh data", "error");
+                            console.error("Error triggering force refresh:", error);
+                            addToast("❌ Failed to trigger force refresh", "error");
                         }
                     }}
-                    className="w-full font-medium py-2 px-4 rounded-lg transition-colors mt-2 flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white"
+                    className="w-full font-medium py-2 px-4 rounded-lg transition-colors mt-2 flex items-center justify-center gap-2 bg-orange-600 hover:bg-orange-700 text-white"
                 >
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                     </svg>
-                    Refresh All Data
+                    Force Refresh All Displays
                 </button>
+
+                {/* Auto-polling info */}
+                <div className="text-xs text-gray-500 text-center mt-2">
+                    Data auto-syncs every 5 minutes • Use Force Refresh for immediate updates
+                </div>
 
 
             </aside>

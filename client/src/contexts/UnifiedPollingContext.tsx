@@ -184,7 +184,7 @@ export const UnifiedPollingProvider: React.FC<UnifiedPollingProviderProps> = ({ 
             performUnifiedPoll();
         }, 5000); // 5 second initial delay for faster startup
 
-        const interval = setInterval(performUnifiedPoll, 10000); // Poll every 10 seconds for more responsive updates
+        const interval = setInterval(performUnifiedPoll, 300000); // Poll every 5 minutes for data updates only
 
         return () => {
             clearTimeout(initialDelay);
