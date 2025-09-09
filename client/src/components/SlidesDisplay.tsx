@@ -8,6 +8,7 @@ import { VideoSlide } from "./slides/VideoSlide";
 import SwiperSlideshow from "./SwiperSlideshow";
 import SlideLogoOverlay from "./SlideLogoOverlay";
 import { DigitalClock } from "./DigitalClock";
+import { TestingOverlay } from "./TestingOverlay";
 import NewsSlideComponent from "./NewsSlideComponent";
 import { motion } from "framer-motion";
 import { useEmployees } from "../contexts/EmployeeContext";
@@ -33,8 +34,16 @@ const AnimatedLogo: React.FC<{ hideLogo?: boolean }> = ({ hideLogo = false }) =>
                         console.error("Video playback error in AnimatedLogo:", e);
                         setVideoError(true);
                     }}
-                    onLoadStart={() => console.log("Video loading started: /videos/soliton-bg.mp4")}
-                    onCanPlay={() => console.log("Video can play: /videos/soliton-bg.mp4")}
+                    onLoadStart={() => {
+                        if (process.env.NODE_ENV === 'development') {
+                            console.log("Video loading started");
+                        }
+                    }}
+                    onCanPlay={() => {
+                        if (process.env.NODE_ENV === 'development') {
+                            console.log("Video ready to play");
+                        }
+                    }}
                 >
                     <source src="/videos/soliton-bg.mp4" type="video/mp4" />
                     Your browser does not support the video tag.
@@ -118,7 +127,7 @@ const SlidesDisplay: React.FC = () => {
                     setEventSlideStates(defaultStates);
                 }
             } catch (error) {
-                console.error("Error loading event slide states from database:", error);
+                console.error("Failed to load event slide states:", error instanceof Error ? error.message : String(error));
                 // Fallback to default states
                 const defaultStates = {
                     "birthday-event-slide": false,
@@ -181,7 +190,7 @@ const SlidesDisplay: React.FC = () => {
                     }, 1500);
 
                 } catch (error) {
-                    console.error("Error during enhanced refresh in SlidesDisplay:", error);
+                    console.error("Refresh failed:", error instanceof Error ? error.message : String(error));
                     // Fallback to simple refresh
                     loadSlides();
                     setTimeout(() => {
@@ -225,7 +234,10 @@ const SlidesDisplay: React.FC = () => {
         // Birthday event slide
         const birthdayEmployees = employees.filter(employee => isBirthdayToday(employee.dob));
         const birthdayActiveState = eventSlideStates["birthday-event-slide"] ?? false;
-        console.log("🎂 Birthday employees:", birthdayEmployees.length, "Active state:", birthdayActiveState);
+        // Debug logging only in development
+        if (process.env.NODE_ENV === 'development') {
+            console.log("Birthday check:", birthdayEmployees.length, "employees");
+        }
 
         const birthdayEventSlide: EventSlideType | null = birthdayEmployees.length > 0 ? {
             id: "birthday-event-slide",
@@ -248,7 +260,10 @@ const SlidesDisplay: React.FC = () => {
         // Anniversary event slide
         const anniversaryEmployees = employees.filter(employee => isAnniversaryToday(employee.dateOfJoining));
         const anniversaryActiveState = eventSlideStates["anniversary-event-slide"] ?? false;
-        console.log("🎉 Anniversary employees:", anniversaryEmployees.length, "Active state:", anniversaryActiveState);
+        // Debug logging only in development
+        if (process.env.NODE_ENV === 'development') {
+            console.log("Anniversary check:", anniversaryEmployees.length, "employees");
+        }
 
         const anniversaryEventSlide: EventSlideType | null = anniversaryEmployees.length > 0 ? {
             id: "anniversary-event-slide",
@@ -356,6 +371,8 @@ const SlidesDisplay: React.FC = () => {
                     <DigitalClock />
                 </div>
             )}
+            {/* Testing overlay - always visible during testing */}
+            <TestingOverlay />
             {/* Only show logo overlay when there are active slides and not hidden by settings */}
             {hasActiveSlides && !settings.hidePersiviaLogo && <SlideLogoOverlay isFullscreen={true} />}
         </div>

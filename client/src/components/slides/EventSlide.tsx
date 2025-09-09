@@ -269,18 +269,10 @@ const BirthdayAnniversarySlide: React.FC<{ employees: Employee[]; eventType?: "b
 export const EventSlideComponent: React.FC<{ slide: EventSlide }> = ({ slide }) => {
     const { employees, eventType, hasEvents } = slide.data;
 
-    // Debug logging
-    console.log("EventSlideComponent rendered:", {
-        slideId: slide.id,
-        eventType,
-        employeesCount: employees?.length || 0,
-        hasEvents,
-        employees: employees?.map(emp => ({
-            name: emp.name,
-            isBirthday: emp.isBirthday,
-            isAnniversary: emp.isAnniversary
-        })) || []
-    });
+    // Debug logging only in development
+    if (process.env.NODE_ENV === 'development') {
+        console.log("EventSlide rendered:", eventType, employees?.length || 0, "employees");
+    }
 
     // If no events or no employees, show appropriate message
     if (!hasEvents || !employees || employees.length === 0) {

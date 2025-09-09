@@ -298,11 +298,10 @@ const SortableSlideCard: React.FC<{
                                 role="switch"
                                 aria-checked={slide.active}
                                 onClick={() => {
-                                    console.log("🎯 Toggle clicked for slide:", slide.id, {
-                                        active: slide.active,
-                                        hasEvents: (slide as EventSlideType).data.hasEvents,
-                                        eventType: (slide as EventSlideType).data.eventType
-                                    });
+                                    // Debug logging only in development
+                                    if (process.env.NODE_ENV === 'development') {
+                                        console.log("Toggle clicked:", slide.id, slide.active ? 'ON' : 'OFF');
+                                    }
                                     onToggleActive(slide.id);
                                 }}
                                 disabled={!(slide as EventSlideType).data.hasEvents}
@@ -724,11 +723,10 @@ const HomePage: React.FC = () => {
 
     // Initialize ordered slides and update active slides
     useEffect(() => {
-        // Debug logging
-        console.log("🔍 Event Slide Debug Info:");
-        console.log("Employees:", employees);
-        console.log("Birthday employees:", employees.filter(employee => isBirthdayToday(employee)));
-        console.log("Anniversary employees:", employees.filter(employee => isAnniversaryToday(employee)));
+        // Debug logging only in development
+        if (process.env.NODE_ENV === 'development') {
+            console.log("Event slides update - Employees:", employees.length, "Birthdays:", employees.filter(employee => isBirthdayToday(employee)).length, "Anniversaries:", employees.filter(employee => isAnniversaryToday(employee)).length);
+        }
 
         // Always recreate event slides when employees data changes or when eventSlideStates change
         // This ensures event slides have correct hasEvents values based on current employee data
@@ -746,7 +744,10 @@ const HomePage: React.FC = () => {
             const birthdayActiveState = eventSlideStates["birthday-event-slide"];
             const hasBirthdays = birthdayEmployees.length > 0;
 
-            console.log("🎂 Birthday check:", { birthdayEmployees, hasBirthdays, birthdayActiveState });
+            // Debug logging only in development
+            if (process.env.NODE_ENV === 'development') {
+                console.log("Birthday slide:", hasBirthdays ? `${birthdayEmployees.length} employees` : "No birthdays");
+            }
 
             const birthdayEventSlide: EventSlideType = {
                 id: "birthday-event-slide",
@@ -773,7 +774,10 @@ const HomePage: React.FC = () => {
             const anniversaryActiveState = eventSlideStates["anniversary-event-slide"];
             const hasAnniversaries = anniversaryEmployees.length > 0;
 
-            console.log("🎉 Anniversary check:", { anniversaryEmployees, hasAnniversaries, anniversaryActiveState });
+            // Debug logging only in development
+            if (process.env.NODE_ENV === 'development') {
+                console.log("Anniversary slide:", hasAnniversaries ? `${anniversaryEmployees.length} employees` : "No anniversaries");
+            }
 
             const anniversaryEventSlide: EventSlideType = {
                 id: "anniversary-event-slide",
@@ -828,9 +832,11 @@ const HomePage: React.FC = () => {
 
     // Handle slide activation toggle
     const handleToggleActive = async (slideId: string) => {
-        console.log("🔄 handleToggleActive called for:", slideId);
+        // Debug logging only in development
+        if (process.env.NODE_ENV === 'development') {
+            console.log("Toggle slide:", slideId);
+        }
         const slideToUpdate = orderedSlides.find(s => s.id === slideId);
-        console.log("🔍 Found slide:", slideToUpdate);
 
         if (slideToUpdate) {
             // For event slides, log the toggle action
@@ -838,13 +844,10 @@ const HomePage: React.FC = () => {
                 const eventSlide = slideToUpdate as EventSlideType;
                 const hasEvents = eventSlide.data.hasEvents;
 
-                console.log("🎪 Event slide toggle:", {
-                    slideId,
-                    currentActive: slideToUpdate.active,
-                    hasEvents,
-                    eventType: eventSlide.data.eventType,
-                    employees: eventSlide.data.employees?.length || 0
-                });
+                // Debug logging only in development
+                if (process.env.NODE_ENV === 'development') {
+                    console.log(`Event slide toggle: ${eventSlide.data.eventType} - ${hasEvents ? 'has events' : 'no events'}`);
+                }
             }
 
             const updatedSlide = { ...slideToUpdate, active: !slideToUpdate.active };

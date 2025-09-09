@@ -2,6 +2,8 @@ import React, { createContext, useContext, useEffect, useRef, useCallback } from
 import { sessionService } from '../services/sessionService';
 import { useSlides } from './SlideContext';
 import { useDisplaySettings } from './DisplaySettingsContext';
+import { useEmployees } from './EmployeeContext';
+import { useGraphs } from './GraphContext';
 
 interface UnifiedPollingContextType {
     refreshAll: () => Promise<void>;
@@ -25,11 +27,15 @@ interface UnifiedPollingProviderProps {
 export const UnifiedPollingProvider: React.FC<UnifiedPollingProviderProps> = ({ children }) => {
     const { slides, setSlides } = useSlides();
     const { settings, setSettings } = useDisplaySettings();
+    const { refetch: refetchEmployees } = useEmployees();
+    const { refetchTeamWiseData } = useGraphs();
 
     const isPolling = useRef(false);
     const lastSlideSync = useRef<number>(0);
     const lastDisplaySettingsSync = useRef<number>(0);
     const lastEventStatesSync = useRef<number>(0);
+    const lastEmployeeSync = useRef<number>(0);
+    const lastGraphSync = useRef<number>(0);
 
     // Unified polling function
     const performUnifiedPoll = useCallback(async () => {
@@ -97,6 +103,28 @@ export const UnifiedPollingProvider: React.FC<UnifiedPollingProviderProps> = ({ 
                 lastDisplaySettingsSync.current = now;
             }
 
+            // Poll employee data every 2 hours (event data changes daily at midnight)
+            if (now - lastEmployeeSync.current >= 2 * 60 * 60 * 1000) {
+                console.debug('🔄 Unified Poll: Refreshing employee data');
+                try {
+                    await refetchEmployees();
+                    lastEmployeeSync.current = now;
+                } catch (error) {
+                    console.error('Error refreshing employee data:', error);
+                }
+            }
+
+            // Poll graph data every 5 minutes (live data that changes frequently)
+            if (now - lastGraphSync.current >= 5 * 60 * 1000) {
+                console.debug('🔄 Unified Poll: Refreshing graph data');
+                try {
+                    await refetchTeamWiseData();
+                    lastGraphSync.current = now;
+                } catch (error) {
+                    console.error('Error refreshing graph data:', error);
+                }
+            }
+
             // Poll event slide states every 15 seconds - increased from 8s
             if (now - lastEventStatesSync.current >= 15000) {
                 console.debug('🔄 Unified Poll: Syncing event slide states from server');
@@ -135,8 +163,20 @@ export const UnifiedPollingProvider: React.FC<UnifiedPollingProviderProps> = ({ 
         lastSlideSync.current = 0;
         lastDisplaySettingsSync.current = 0;
         lastEventStatesSync.current = 0;
-        await performUnifiedPoll();
-    }, [performUnifiedPoll]);
+        lastEmployeeSync.current = 0;
+        lastGraphSync.current = 0;
+
+        // Refresh all data sources
+        try {
+            await Promise.all([
+                performUnifiedPoll(),
+                refetchEmployees(),
+                refetchTeamWiseData()
+            ]);
+        } catch (error) {
+            console.error('Error during manual refresh:', error);
+        }
+    }, [performUnifiedPoll, refetchEmployees, refetchTeamWiseData]);
 
     // Start unified polling with initial delay
     useEffect(() => {

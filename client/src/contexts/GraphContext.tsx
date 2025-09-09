@@ -35,7 +35,7 @@ export const GraphProvider: React.FC<GraphProviderProps> = ({ children }) => {
         await fetchTeamWiseDataFromAPI();
     };
 
-    // Initial data fetch
+    // Initial data fetch and periodic refresh
     useEffect(() => {
         const fetchInitialData = async () => {
             setLoading(true);
@@ -50,6 +50,13 @@ export const GraphProvider: React.FC<GraphProviderProps> = ({ children }) => {
         };
 
         fetchInitialData();
+
+        // Set up automatic refresh every 5 minutes for graph data (live data)
+        const interval = setInterval(() => {
+            fetchTeamWiseDataFromAPI();
+        }, 5 * 60 * 1000); // 5 minutes
+
+        return () => clearInterval(interval);
     }, []);
 
     const value: GraphContextType = {

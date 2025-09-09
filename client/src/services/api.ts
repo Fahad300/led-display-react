@@ -6,13 +6,10 @@ const getBackendUrl = (): string => {
     return process.env.REACT_APP_BACKEND_URL || "http://localhost:5000";
 };
 
-// Log the backend URL for debugging
-console.log("Backend URL:", getBackendUrl());
-console.log("Environment variables:", {
-    NODE_ENV: process.env.NODE_ENV,
-    REACT_APP_BACKEND_URL: process.env.REACT_APP_BACKEND_URL,
-    REACT_APP_BACKEND_PORT: process.env.REACT_APP_BACKEND_PORT
-});
+// Log backend URL only in development
+if (process.env.NODE_ENV === 'development') {
+    console.log("Backend URL:", getBackendUrl());
+}
 
 export const backendApi = axios.create({
     baseURL: getBackendUrl(),
