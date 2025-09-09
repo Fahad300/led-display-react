@@ -38,8 +38,8 @@ import { VideoSlide } from "../components/slides/VideoSlide";
 import { useNavigate } from 'react-router-dom';
 import { DigitalClock } from "../components/DigitalClock";
 import NewsSlideComponent from "../components/NewsSlideComponent";
-import { useToast } from "../contexts/ToastContext";
 import { sessionService } from "../services/sessionService";
+import { useToast } from "../contexts/ToastContext";
 import { useUnifiedPolling } from "../contexts/UnifiedPollingContext";
 
 // Type for reordering result
@@ -925,16 +925,22 @@ const HomePage: React.FC = () => {
         return () => window.removeEventListener("keydown", handleKeyPress);
     }, []);
 
-    const handleRefresh = () => {
-        navigate(0); // This will trigger a re-render without a full page reload
+    const handleRefresh = async () => {
+        try {
+            // Trigger remote refresh for all displays
+            await sessionService.triggerRemoteRefresh("all");
+            addToast("✅ Refresh signal sent to all remote displays", "success");
+        } catch (error) {
+            console.error("Error triggering remote refresh:", error);
+            addToast("❌ Failed to trigger remote refresh", "error");
+            // Fallback to local refresh
+            navigate(0);
+        }
     };
 
     const handleForceRefreshDisplay = async () => {
-
-
         // Prevent multiple simultaneous refreshes
         if (isForceRefreshing) {
-
             return;
         }
 
@@ -943,8 +949,11 @@ const HomePage: React.FC = () => {
         setForceRefreshText("Refreshing...");
 
         try {
-            // Trigger force refresh
-            await forceRefresh();
+            // Trigger both local and remote refresh
+            await Promise.all([
+                forceRefresh(), // Local refresh
+                sessionService.triggerRemoteRefresh("all") // Remote refresh
+            ]);
 
             // Show success feedback
             addToast("✅ Force refresh completed! All displays will clear cache and reload", "success");
@@ -1357,8 +1366,12 @@ const HomePage: React.FC = () => {
                 <button
                     onClick={async () => {
                         try {
-                            await refreshAll();
-                            addToast("✅ All data refreshed successfully", "success");
+                            // Refresh both local data and trigger remote refresh
+                            await Promise.all([
+                                refreshAll(), // Local data refresh
+                                sessionService.triggerRemoteRefresh("data") // Remote data refresh
+                            ]);
+                            addToast("✅ All data refreshed successfully on all displays", "success");
                         } catch (error) {
                             console.error("Error refreshing data:", error);
                             addToast("❌ Failed to refresh data", "error");

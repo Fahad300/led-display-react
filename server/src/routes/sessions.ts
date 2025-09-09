@@ -261,6 +261,42 @@ router.get("/latest", async (req, res) => {
 });
 
 /**
+ * @route POST /api/sessions/trigger-refresh
+ * @desc Trigger immediate refresh on all remote displays
+ * @access Private
+ */
+router.post("/trigger-refresh", isAuthenticated, async (req, res) => {
+    try {
+        const userId = (req as any).user.id;
+        const { refreshType = "all" } = req.body; // "all", "data", "settings", "slides"
+
+        logger.info(`Triggering ${refreshType} refresh for user ${userId}`);
+
+        // Update the current session's lastActivity to trigger refresh
+        const session = await AppDataSource.getRepository(Session).findOne({
+            where: { userId, isActive: true }
+        });
+
+        if (session) {
+            session.lastActivity = new Date();
+            await AppDataSource.getRepository(Session).save(session);
+            logger.info(`Session ${session.id} lastActivity updated to trigger refresh`);
+        }
+
+        // Return success response
+        res.json({
+            message: `${refreshType} refresh triggered successfully`,
+            timestamp: new Date().toISOString(),
+            refreshType
+        });
+
+    } catch (error) {
+        logger.error("Error triggering refresh:", error);
+        res.status(500).json({ error: "Failed to trigger refresh" });
+    }
+});
+
+/**
  * @route GET /api/sessions/all
  * @desc Get all sessions for the authenticated user
  * @access Private

@@ -182,9 +182,9 @@ export const UnifiedPollingProvider: React.FC<UnifiedPollingProviderProps> = ({ 
     useEffect(() => {
         const initialDelay = setTimeout(() => {
             performUnifiedPoll();
-        }, 15000); // 15 second initial delay - increased from 5s
+        }, 5000); // 5 second initial delay for faster startup
 
-        const interval = setInterval(performUnifiedPoll, 15000); // Poll every 15 seconds - increased from 5s
+        const interval = setInterval(performUnifiedPoll, 10000); // Poll every 10 seconds for more responsive updates
 
         return () => {
             clearTimeout(initialDelay);

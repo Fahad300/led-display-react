@@ -288,6 +288,23 @@ class SessionService {
     }
 
     /**
+     * Trigger immediate refresh on all remote displays
+     */
+    async triggerRemoteRefresh(refreshType: "all" | "data" | "settings" | "slides" = "all"): Promise<void> {
+        try {
+            const response = await backendApi.post("/api/sessions/trigger-refresh", {
+                refreshType
+            });
+
+            console.debug(`Remote refresh triggered: ${refreshType}`, response.data);
+            return response.data;
+        } catch (error) {
+            console.error("Error triggering remote refresh:", error);
+            throw error;
+        }
+    }
+
+    /**
      * Initialize session on app startup
      */
     async initializeSession(): Promise<void> {
