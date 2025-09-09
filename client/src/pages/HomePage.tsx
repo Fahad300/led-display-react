@@ -297,8 +297,15 @@ const SortableSlideCard: React.FC<{
                                 type="button"
                                 role="switch"
                                 aria-checked={slide.active}
-                                onClick={() => onToggleActive(slide.id)}
-                                disabled={!slide.active && !(slide as EventSlideType).data.hasEvents}
+                                onClick={() => {
+                                    console.log("🎯 Toggle clicked for slide:", slide.id, {
+                                        active: slide.active,
+                                        hasEvents: (slide as EventSlideType).data.hasEvents,
+                                        eventType: (slide as EventSlideType).data.eventType
+                                    });
+                                    onToggleActive(slide.id);
+                                }}
+                                disabled={!(slide as EventSlideType).data.hasEvents}
                                 className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${slide.active ? "bg-persivia-teal" :
                                     (slide as EventSlideType).data.hasEvents ? "bg-slate-200" : "bg-slate-200 cursor-not-allowed opacity-50"
                                     }`}
@@ -631,17 +638,13 @@ const HomePage: React.FC = () => {
     const [isForceRefreshing, setIsForceRefreshing] = useState(false);
     const [forceRefreshText, setForceRefreshText] = useState("Force Refresh All Displays");
 
-    // Helper functions for date checks
-    const isBirthdayToday = (dob: string): boolean => {
-        const today = new Date();
-        const date = new Date(dob);
-        return date.getMonth() === today.getMonth() && date.getDate() === today.getDate();
+    // Helper functions for date checks - use API flags instead of recalculating
+    const isBirthdayToday = (employee: Employee): boolean => {
+        return employee.isBirthday === true;
     };
 
-    const isAnniversaryToday = (dateOfJoining: string): boolean => {
-        const today = new Date();
-        const date = new Date(dateOfJoining);
-        return date.getMonth() === today.getMonth() && date.getDate() === today.getDate();
+    const isAnniversaryToday = (employee: Employee): boolean => {
+        return employee.isAnniversary === true;
     };
 
     // Process active slides to adjust EVENT slide duration and active state
@@ -653,7 +656,7 @@ const HomePage: React.FC = () => {
             if (slide.type === SLIDE_TYPES.EVENT) {
                 // Birthday event slide
                 if (slide.id === "birthday-event-slide") {
-                    const birthdayEmployees = employees.filter(employee => isBirthdayToday(employee.dob));
+                    const birthdayEmployees = employees.filter(employee => isBirthdayToday(employee));
                     const hasBirthdays = birthdayEmployees.length > 0;
                     return {
                         ...slide,
@@ -662,13 +665,14 @@ const HomePage: React.FC = () => {
                         data: {
                             ...slide.data,
                             employees: birthdayEmployees,
-                            eventType: "birthday" as "birthday"
+                            eventType: "birthday" as "birthday",
+                            hasEvents: hasBirthdays
                         }
                     };
                 }
                 // Anniversary event slide
                 if (slide.id === "anniversary-event-slide") {
-                    const anniversaryEmployees = employees.filter(employee => isAnniversaryToday(employee.dateOfJoining));
+                    const anniversaryEmployees = employees.filter(employee => isAnniversaryToday(employee));
                     const hasAnniversaries = anniversaryEmployees.length > 0;
                     return {
                         ...slide,
@@ -677,7 +681,8 @@ const HomePage: React.FC = () => {
                         data: {
                             ...slide.data,
                             employees: anniversaryEmployees,
-                            eventType: "anniversary" as "anniversary"
+                            eventType: "anniversary" as "anniversary",
+                            hasEvents: hasAnniversaries
                         }
                     };
                 }
@@ -719,63 +724,78 @@ const HomePage: React.FC = () => {
 
     // Initialize ordered slides and update active slides
     useEffect(() => {
+        // Debug logging
+        console.log("🔍 Event Slide Debug Info:");
+        console.log("Employees:", employees);
+        console.log("Birthday employees:", employees.filter(employee => isBirthdayToday(employee)));
+        console.log("Anniversary employees:", employees.filter(employee => isAnniversaryToday(employee)));
 
+        // Always recreate event slides when employees data changes or when eventSlideStates change
+        // This ensures event slides have correct hasEvents values based on current employee data
+        const hasEmployeesData = employees.length > 0;
+        const shouldUpdate = orderedSlides.length === 0 ||
+            eventSlideStates !== prevEventSlideStates.current ||
+            hasEmployeesData;
 
-        // Only update if we don't have any orderedSlides yet, or if eventSlideStates changed
-        // This prevents overwriting newly created slides
-        if (orderedSlides.length === 0 || eventSlideStates !== prevEventSlideStates.current) {
+        if (shouldUpdate) {
             // Remove any existing event slides
             const nonEventSlides = slides.filter(slide => slide.type !== SLIDE_TYPES.EVENT);
 
-            // Birthday event slide - always create it
-            const birthdayEmployees = employees.filter(employee => isBirthdayToday(employee.dob));
+            // Birthday event slide - always create, but only active if there are birthdays
+            const birthdayEmployees = employees.filter(employee => isBirthdayToday(employee));
             const birthdayActiveState = eventSlideStates["birthday-event-slide"];
+            const hasBirthdays = birthdayEmployees.length > 0;
+
+            console.log("🎂 Birthday check:", { birthdayEmployees, hasBirthdays, birthdayActiveState });
 
             const birthdayEventSlide: EventSlideType = {
                 id: "birthday-event-slide",
                 name: "Birthday Celebrations",
                 type: SLIDE_TYPES.EVENT,
-                active: birthdayEmployees.length > 0 ? (birthdayActiveState ?? false) : false, // Use stored state or default to false
-                duration: birthdayEmployees.length > 0 ? 10 : 0, // Only show duration if there are birthdays
+                active: hasBirthdays ? (birthdayActiveState ?? false) : false, // Only active if there are birthdays
+                duration: hasBirthdays ? 10 : 0, // Only show duration if there are birthdays
                 data: {
                     title: "Birthday Celebrations",
-                    description: birthdayEmployees.length > 0
+                    description: hasBirthdays
                         ? "Celebrating our team members' birthdays"
                         : "No birthdays today - cannot activate this slide",
                     date: new Date().toISOString(),
                     isEmployeeSlide: true,
                     employees: birthdayEmployees,
                     eventType: "birthday",
-                    hasEvents: birthdayEmployees.length > 0
+                    hasEvents: hasBirthdays
                 },
                 dataSource: "manual"
             };
 
-            // Anniversary event slide - always create it
-            const anniversaryEmployees = employees.filter(employee => isAnniversaryToday(employee.dateOfJoining));
+            // Anniversary event slide - always create, but only active if there are anniversaries
+            const anniversaryEmployees = employees.filter(employee => isAnniversaryToday(employee));
             const anniversaryActiveState = eventSlideStates["anniversary-event-slide"];
+            const hasAnniversaries = anniversaryEmployees.length > 0;
+
+            console.log("🎉 Anniversary check:", { anniversaryEmployees, hasAnniversaries, anniversaryActiveState });
 
             const anniversaryEventSlide: EventSlideType = {
                 id: "anniversary-event-slide",
                 name: "Work Anniversaries",
                 type: SLIDE_TYPES.EVENT,
-                active: anniversaryEmployees.length > 0 ? (anniversaryActiveState ?? false) : false, // Use stored state or default to false
-                duration: anniversaryEmployees.length > 0 ? 10 : 0, // Only show duration if there are anniversaries
+                active: hasAnniversaries ? (anniversaryActiveState ?? false) : false, // Only active if there are anniversaries
+                duration: hasAnniversaries ? 10 : 0, // Only show duration if there are anniversaries
                 data: {
                     title: "Work Anniversaries",
-                    description: anniversaryEmployees.length > 0
+                    description: hasAnniversaries
                         ? "Celebrating our team members' work anniversaries"
                         : "No work anniversaries today - cannot activate this slide",
                     date: new Date().toISOString(),
                     isEmployeeSlide: true,
                     employees: anniversaryEmployees,
                     eventType: "anniversary",
-                    hasEvents: anniversaryEmployees.length > 0
+                    hasEvents: hasAnniversaries
                 },
                 dataSource: "manual"
             };
 
-            // Always add both event slides
+            // Always add both event slides (they will show as inactive if no events)
             const eventSlides: EventSlideType[] = [birthdayEventSlide, anniversaryEventSlide];
             setOrderedSlides([...nonEventSlides, ...eventSlides]);
         } else {
@@ -789,7 +809,7 @@ const HomePage: React.FC = () => {
         // Store current eventSlideStates for comparison
         prevEventSlideStates.current = eventSlideStates;
 
-    }, [slides, eventSlideStates, orderedSlides.length, employees]);
+    }, [slides, eventSlideStates, employees]);
 
     // Update active slides when processedActiveSlides change
     useEffect(() => {
@@ -808,17 +828,23 @@ const HomePage: React.FC = () => {
 
     // Handle slide activation toggle
     const handleToggleActive = async (slideId: string) => {
+        console.log("🔄 handleToggleActive called for:", slideId);
         const slideToUpdate = orderedSlides.find(s => s.id === slideId);
+        console.log("🔍 Found slide:", slideToUpdate);
+
         if (slideToUpdate) {
-            // For event slides, check if there are actual events before allowing activation
+            // For event slides, log the toggle action
             if (slideToUpdate.type === SLIDE_TYPES.EVENT) {
                 const eventSlide = slideToUpdate as EventSlideType;
                 const hasEvents = eventSlide.data.hasEvents;
 
-                // If trying to activate but no events, prevent it
-                if (!slideToUpdate.active && !hasEvents) {
-                    return;
-                }
+                console.log("🎪 Event slide toggle:", {
+                    slideId,
+                    currentActive: slideToUpdate.active,
+                    hasEvents,
+                    eventType: eventSlide.data.eventType,
+                    employees: eventSlide.data.employees?.length || 0
+                });
             }
 
             const updatedSlide = { ...slideToUpdate, active: !slideToUpdate.active };

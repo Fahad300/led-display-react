@@ -192,21 +192,6 @@ const SingleEmployeeDisplay: React.FC<{ employee: Employee; eventType?: "birthda
                 {isAnniversary ? "Happy Work Anniversary!" : "Happy Birthday!"}
             </motion.h2>
 
-            {/* Years of Service Display for Anniversary */}
-            {isAnniversary && years && (
-                <motion.div
-                    className="text-center mb-4"
-                    initial={{ opacity: 0, scale: 0.8 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    transition={{ delay: 0.4, duration: 0.6 }}
-                >
-                    <div className="bg-emerald-600/80 backdrop-blur-sm px-8 py-3 rounded-full border-2 border-emerald-400 shadow-lg">
-                        <span className="text-white font-bold text-[clamp(1.8rem,4vw,3rem)]">
-                            {years} Year{years !== 1 ? "s" : ""} of Service!
-                        </span>
-                    </div>
-                </motion.div>
-            )}
 
             <motion.div
                 className="rounded-full border-4 border-emerald-600 overflow-hidden mb-4 md:mb-6 shadow-lg"
@@ -256,9 +241,11 @@ const SingleEmployeeDisplay: React.FC<{ employee: Employee; eventType?: "birthda
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 1.2 }}
                 >
-                    <span className="bg-slate-700 text-white px-4 md:px-8 py-2 md:py-3 rounded-full text-[clamp(1rem,2vw,1.5rem)] font-medium shadow text-center">
-                        Congratulations on {years} year{years !== 1 ? "s" : ""} with us!
-                    </span>
+                    <div className="bg-emerald-600/80 backdrop-blur-sm px-8 py-3 rounded-full border-2 border-emerald-400 shadow-lg">
+                        <span className="text-white font-bold text-[clamp(1.2rem,4vw,2em)]">
+                            Cheers to {employee.name.split(" ")[0]} for {years} Year{years !== 1 ? "s" : ""} of Excellence!
+                        </span>
+                    </div>
                 </motion.div>
             )}
         </motion.div>
@@ -280,15 +267,36 @@ const BirthdayAnniversarySlide: React.FC<{ employees: Employee[]; eventType?: "b
  * Main EventSlide component
  */
 export const EventSlideComponent: React.FC<{ slide: EventSlide }> = ({ slide }) => {
-    const { employees } = slide.data;
-    const eventType = slide.data.eventType;
+    const { employees, eventType, hasEvents } = slide.data;
 
-    if (!employees || employees.length === 0) {
+    // Debug logging
+    console.log("EventSlideComponent rendered:", {
+        slideId: slide.id,
+        eventType,
+        employeesCount: employees?.length || 0,
+        hasEvents,
+        employees: employees?.map(emp => ({
+            name: emp.name,
+            isBirthday: emp.isBirthday,
+            isAnniversary: emp.isAnniversary
+        })) || []
+    });
+
+    // If no events or no employees, show appropriate message
+    if (!hasEvents || !employees || employees.length === 0) {
         return (
             <div className="w-full h-full flex items-center justify-center animated-gradient-bg">
                 <div className="text-center text-white">
-                    <h2 className="text-3xl md:text-4xl font-bold mb-4">No Events Today</h2>
+                    <h2 className="text-3xl md:text-4xl font-bold mb-4">
+                        {eventType === "birthday" ? "No Birthdays Today" : "No Anniversaries Today"}
+                    </h2>
                     <p className="text-xl opacity-80">Check back tomorrow for celebrations!</p>
+                    <div className="mt-4 text-sm opacity-60">
+                        <p>Event Type: {eventType}</p>
+                        <p>Slide ID: {slide.id}</p>
+                        <p>Has Events: {hasEvents ? "Yes" : "No"}</p>
+                        <p>Employees Count: {employees?.length || 0}</p>
+                    </div>
                 </div>
             </div>
         );
