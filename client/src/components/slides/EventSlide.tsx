@@ -271,7 +271,7 @@ export const EventSlideComponent: React.FC<{ slide: EventSlide }> = ({ slide }) 
 
     // Debug logging only in development
     if (process.env.NODE_ENV === 'development') {
-        console.log("EventSlide rendered:", eventType, employees?.length || 0, "employees");
+        // EventSlide rendered with employees
     }
 
     // If no events or no employees, show appropriate message

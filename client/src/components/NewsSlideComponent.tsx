@@ -62,7 +62,7 @@ const AnimatedCharacters: React.FC<{ text: string; className?: string; style?: R
 };
 
 /**
- * Enhanced Animated Title Component with color and position animations
+ * Subtle Animated Title Component with gentle fade and glow effects
  */
 const AnimatedTitle: React.FC<{
     text: string;
@@ -70,39 +70,59 @@ const AnimatedTitle: React.FC<{
     baseColor: string;
 }> = ({ text, className = "", baseColor }) => {
     const letters = Array.from(text);
-    const colors = [
-        baseColor,
-        "#FFD700", // Gold
-        "#FF69B4", // Hot Pink
-        "#00FFFF", // Cyan
-        baseColor
-    ];
 
     const containerVariants: Variants = {
-        animate: {
+        hidden: { opacity: 0 },
+        visible: {
+            opacity: 1,
             transition: {
-                staggerChildren: 0.1,
-                repeat: Infinity,
-                repeatType: "reverse" as const,
-                duration: 8
+                staggerChildren: 0.05,
+                delayChildren: 0.2
             }
         }
     };
 
     const letterVariants: Variants = {
-        animate: {
-            y: [0, -20, 0, 20, 0],
-            x: [0, 10, 0, -10, 0],
-            color: colors,
-            textShadow: [
-                "0 0 20px rgba(255,255,255,0.5)",
-                "0 0 60px rgba(255,255,255,0.3)",
-                "0 0 20px rgba(255,255,255,0.5)"
-            ],
+        hidden: {
+            opacity: 0,
+            y: 30,
+            scale: 0.7,
+            rotateX: -90
+        },
+        visible: {
+            opacity: 1,
+            y: 0,
+            scale: 1,
+            rotateX: 0,
             transition: {
-                duration: 4,
+                duration: 0.8,
+                ease: "easeOut",
+                type: "spring",
+                damping: 12,
+                stiffness: 100
+            }
+        }
+    };
+
+    // Enhanced continuous animation for the entire title with yellow/gold gradient
+    const titleVariants: Variants = {
+        animate: {
+            background: [
+                "linear-gradient(45deg, #FFD700, #FFA500, #FFD700)",
+                "linear-gradient(45deg, #FFA500, #FFD700, #FFA500)",
+                "linear-gradient(45deg, #FFD700, #FFA500, #FFD700)"
+            ],
+            backgroundClip: "text",
+            color: "transparent",
+            textShadow: [
+                "0 0 20px rgba(255, 215, 0, 0.8)",
+                "0 0 30px rgba(255, 165, 0, 0.9)",
+                "0 0 20px rgba(255, 215, 0, 0.8)"
+            ],
+            scale: [1, 1.02, 1],
+            transition: {
+                duration: 3,
                 repeat: Infinity,
-                repeatType: "reverse" as const,
                 ease: "easeInOut"
             }
         }
@@ -112,17 +132,27 @@ const AnimatedTitle: React.FC<{
         <motion.div
             className={`relative ${className}`}
             variants={containerVariants}
-            animate="animate"
+            initial="hidden"
+            animate="visible"
         >
-            {letters.map((letter, index) => (
-                <motion.span
-                    key={index}
-                    style={{ display: "inline-block", whiteSpace: "pre" }}
-                    variants={letterVariants}
-                >
-                    {letter}
-                </motion.span>
-            ))}
+            <motion.div
+                variants={titleVariants}
+                animate="animate"
+                style={{
+                    color: baseColor,
+                    WebkitBackgroundClip: "text"
+                }}
+            >
+                {letters.map((letter, index) => (
+                    <motion.span
+                        key={index}
+                        style={{ display: "inline-block", whiteSpace: "pre" }}
+                        variants={letterVariants}
+                    >
+                        {letter}
+                    </motion.span>
+                ))}
+            </motion.div>
         </motion.div>
     );
 };
@@ -298,22 +328,12 @@ const NewsSlideComponent: React.FC<{ slide: NewsSlide }> = ({ slide }) => {
                         style={{ color: textColor }}
                     >
                         {details.split('\n').map((paragraph, index) => (
-                            <motion.p
+                            <p
                                 key={index}
-                                initial={{ opacity: 0, x: -30 }}
-                                animate={{
-                                    opacity: 1,
-                                    x: 0,
-                                    transition: {
-                                        delay: 1 + (index * 0.2),
-                                        duration: 0.8,
-                                        ease: "easeOut"
-                                    }
-                                }}
                                 className="leading-tight"
                             >
                                 {paragraph}
-                            </motion.p>
+                            </p>
                         ))}
                         {/* Show newsImage below details if present */}
                         {slide.data.newsImage && (

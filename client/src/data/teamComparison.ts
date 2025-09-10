@@ -53,7 +53,7 @@ export function getTeamComparisonSlide(): TeamComparisonSlide {
     return {
         id: 'team-comparison-1',
         name: 'Team Performance Comparison',
-        type: 'team-comparison-slide',
+        type: 'comparison-slide',
         dataSource: SLIDE_DATA_SOURCES["team-comparison-slide"],
         duration: 15,
         active: true,

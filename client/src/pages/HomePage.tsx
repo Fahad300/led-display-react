@@ -20,6 +20,7 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import SlideLogoOverlay from "../components/SlideLogoOverlay";
 import { useEmployees } from "../contexts/EmployeeContext";
+import { useVideoPlayback } from "../hooks/useVideoPlayback";
 import { Swiper, SwiperSlide } from "swiper/react";
 import { EffectFade, EffectCube, EffectCoverflow, EffectFlip, EffectCards, Autoplay, Navigation, Pagination } from "swiper/modules";
 import type { Swiper as SwiperType } from "swiper";
@@ -41,6 +42,9 @@ import NewsSlideComponent from "../components/NewsSlideComponent";
 import { sessionService } from "../services/sessionService";
 import { useToast } from "../contexts/ToastContext";
 import { useUnifiedPolling } from "../contexts/UnifiedPollingContext";
+
+// Version constant - update this when releasing new versions
+const VERSION = "1.0.1";
 
 // Type for reordering result
 interface ReorderResult {
@@ -138,6 +142,8 @@ const getSlideTypeLabel = (type: typeof SLIDE_TYPES[keyof typeof SLIDE_TYPES]) =
  * Slide Preview Component
  */
 const SlidePreview: React.FC<{ slide: Slide }> = ({ slide }) => {
+    const { safePlay, safePause } = useVideoPlayback();
+
     const renderPreview = () => {
         switch (slide.type) {
             case SLIDE_TYPES.EVENT:
@@ -164,14 +170,28 @@ const SlidePreview: React.FC<{ slide: Slide }> = ({ slide }) => {
                 return (
                     <div className="w-full h-24 relative rounded-lg overflow-hidden bg-persivia-light-gray">
                         {videoSlide.data.videoUrl ? (
-                            <video
-                                src={videoSlide.data.videoUrl}
-                                className="w-full h-full object-cover"
-                                muted
-                                playsInline
-                                onMouseOver={(e) => e.currentTarget.play()}
-                                onMouseOut={(e) => e.currentTarget.pause()}
-                            />
+                            <>
+                                {/* Video thumbnail - using the video element to capture a frame */}
+                                <video
+                                    src={videoSlide.data.videoUrl}
+                                    className="w-full h-full object-cover"
+                                    muted
+                                    playsInline
+                                    preload="metadata"
+                                    onLoadedMetadata={(e) => {
+                                        // Seek to 1 second to get a good frame
+                                        e.currentTarget.currentTime = 1;
+                                    }}
+                                />
+                                {/* Play icon overlay */}
+                                <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-30">
+                                    <div className="w-8 h-8 bg-white bg-opacity-90 rounded-full flex items-center justify-center">
+                                        <svg className="w-4 h-4 text-gray-800 ml-0.5" fill="currentColor" viewBox="0 0 24 24">
+                                            <path d="M8 5v14l11-7z" />
+                                        </svg>
+                                    </div>
+                                </div>
+                            </>
                         ) : (
                             <div className="flex items-center justify-center h-full">
                                 <span className="text-persivia-gray">No video</span>
@@ -197,19 +217,7 @@ const SlidePreview: React.FC<{ slide: Slide }> = ({ slide }) => {
                     </div>
                 );
             case SLIDE_TYPES.TEXT:
-                const textSlide = slide as TextSlideType;
-                return (
-                    <div className="w-full h-24 relative rounded-lg overflow-hidden bg-persivia-light-gray">
-                        <div className="flex items-center justify-center h-full p-2">
-                            <div
-                                className="text-xs text-gray-600 text-center line-clamp-3"
-                                dangerouslySetInnerHTML={{
-                                    __html: textSlide.data.content.replace(/<[^>]*>/g, '').substring(0, 100) + '...'
-                                }}
-                            />
-                        </div>
-                    </div>
-                );
+                return null; // No preview for text slides
             default:
                 return ("");
         }
@@ -264,7 +272,7 @@ const SortableSlideCard: React.FC<{
             slide.type === SLIDE_TYPES.EVENT &&
             (slide.data?.eventType === "birthday" || slide.data?.eventType === "anniversary")
         ) {
-            return "automated";
+            return "API";
         }
         return slide.dataSource;
     };
@@ -300,7 +308,7 @@ const SortableSlideCard: React.FC<{
                                 onClick={() => {
                                     // Debug logging only in development
                                     if (process.env.NODE_ENV === 'development') {
-                                        console.log("Toggle clicked:", slide.id, slide.active ? 'ON' : 'OFF');
+                                        // Toggle clicked
                                     }
                                     onToggleActive(slide.id);
                                 }}
@@ -547,22 +555,19 @@ const isVideoSlide = (slide: Slide): slide is VideoSlideType => {
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const VideoSlideComponent: React.FC<{ slide: VideoSlideType }> = ({ slide }) => {
     const videoRef = useRef<HTMLVideoElement>(null);
+    const { safePlay } = useVideoPlayback();
 
     useEffect(() => {
         // Ensure video plays when it becomes active
         if (videoRef.current) {
             const playVideo = async () => {
-                try {
-                    if (slide.data.autoplay) {
-                        await videoRef.current?.play();
-                    }
-                } catch (error) {
-                    console.error("Video autoplay error:", error);
+                if (slide.data.autoplay) {
+                    await safePlay(videoRef.current!);
                 }
             };
             playVideo();
         }
-    }, [slide.data.autoplay]);
+    }, [slide.data.autoplay, safePlay]);
 
     return (
         <div className="relative w-full h-full bg-black">
@@ -721,7 +726,7 @@ const HomePage: React.FC = () => {
     useEffect(() => {
         // Debug logging only in development
         if (process.env.NODE_ENV === 'development') {
-            console.log("Event slides update - Employees:", employees.length, "Birthdays:", employees.filter(employee => isBirthdayToday(employee)).length, "Anniversaries:", employees.filter(employee => isAnniversaryToday(employee)).length);
+            // Event slides update
         }
 
         // Always recreate event slides when employees data changes or when eventSlideStates change
@@ -742,7 +747,7 @@ const HomePage: React.FC = () => {
 
             // Debug logging only in development
             if (process.env.NODE_ENV === 'development') {
-                console.log("Birthday slide:", hasBirthdays ? `${birthdayEmployees.length} employees` : "No birthdays");
+                // Birthday slide status
             }
 
             const birthdayEventSlide: EventSlideType = {
@@ -772,7 +777,7 @@ const HomePage: React.FC = () => {
 
             // Debug logging only in development
             if (process.env.NODE_ENV === 'development') {
-                console.log("Anniversary slide:", hasAnniversaries ? `${anniversaryEmployees.length} employees` : "No anniversaries");
+                // Anniversary slide status
             }
 
             const anniversaryEventSlide: EventSlideType = {
@@ -830,7 +835,7 @@ const HomePage: React.FC = () => {
     const handleToggleActive = async (slideId: string) => {
         // Debug logging only in development
         if (process.env.NODE_ENV === 'development') {
-            console.log("Toggle slide:", slideId);
+            // Toggle slide
         }
         const slideToUpdate = orderedSlides.find(s => s.id === slideId);
 
@@ -842,7 +847,7 @@ const HomePage: React.FC = () => {
 
                 // Debug logging only in development
                 if (process.env.NODE_ENV === 'development') {
-                    console.log(`Event slide toggle: ${eventSlide.data.eventType} - ${hasEvents ? 'has events' : 'no events'}`);
+                    // Event slide toggle status
                 }
             }
 
@@ -1284,6 +1289,15 @@ const HomePage: React.FC = () => {
                     Data auto-syncs every 5 minutes • Use Force Refresh for immediate updates
                 </div>
 
+                {/* Version info */}
+                <div className="text-xs text-gray-400 text-center mt-3 pt-3 border-t border-gray-200">
+                    <div className="flex items-center justify-center gap-2">
+                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        <span>Version {VERSION}</span>
+                    </div>
+                </div>
 
             </aside>
         </div>

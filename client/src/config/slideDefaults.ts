@@ -5,15 +5,15 @@ import { DataSource } from "../types";
  * Change these values to set the data source for all slides of each type
  */
 export const SLIDE_DATA_SOURCES = {
-    "current-escalations-slide": "API" as DataSource,
+    "current-esc-slide": "API" as DataSource,
     "team-comparison-slide": "API" as DataSource,
     "graph-slide": "API" as DataSource,
-    "event-slide": "AUTOMATED" as DataSource,
+    "event-slide": "API" as DataSource,
     "image-slide": "FILE" as DataSource,
     "video-slide": "FILE" as DataSource,
     "news-slide": "FILE" as DataSource,
     "text-slide": "MANUAL" as DataSource,
     "document-slide": "FILE" as DataSource,
-    "birthday-slide": "AUTOMATED" as DataSource,
-    "anniversary-slide": "AUTOMATED" as DataSource
+    "birthday-slide": "API" as DataSource,
+    "anniversary-slide": "API" as DataSource
 }; 

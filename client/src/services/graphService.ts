@@ -23,7 +23,7 @@ const retryWithBackoff = async <T>(
 
             // Exponential backoff: 1s, 2s, 4s
             const delay = baseDelay * Math.pow(2, attempt);
-            console.log(`API call failed, retrying in ${delay}ms... (attempt ${attempt + 1}/${maxRetries + 1})`);
+            // API call failed, retrying
 
             await new Promise(resolve => setTimeout(resolve, delay));
         }
@@ -47,12 +47,12 @@ export const fetchTeamWiseData = async (): Promise<GraphSlideData> => {
     try {
         // Use retry logic with exponential backoff
         const res = await retryWithBackoff(async () => {
-            console.log('Fetching team wise data from API...');
+            // Fetching team wise data from API
             return await backendApi.get('/api/proxy/jira-chart');
         });
 
         const apiData = res.data;
-        console.log('Successfully fetched team wise data:', apiData);
+        // Successfully fetched team wise data
 
         // Transform API response to match GraphSlideData interface
         const transformedData = apiData.labels.map((teamName: string, teamIndex: number) => {

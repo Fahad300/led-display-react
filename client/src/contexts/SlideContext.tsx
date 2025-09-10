@@ -72,7 +72,7 @@ const getCurrentEscalationsSlide = (): CurrentEscalationsSlide | null => {
         id: "current-escalations-1",
         name: "Current Escalations",
         type: SLIDE_TYPES.CURRENT_ESCALATIONS,
-        dataSource: SLIDE_DATA_SOURCES["current-escalations-slide"],
+        dataSource: SLIDE_DATA_SOURCES["current-esc-slide"],
         duration: 10,
         active: true,
         data: {

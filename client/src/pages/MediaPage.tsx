@@ -53,7 +53,7 @@ const MediaPage: React.FC = () => {
                 throw new Error("Invalid response format: files array is missing");
             }
 
-            console.log("Received files from database:", response.data.files);
+            // Files loaded from database
             setFiles(response.data.files);
             setTotalPages(response.data.totalPages || 1);
         } catch (error) {
@@ -201,7 +201,7 @@ const MediaPage: React.FC = () => {
         });
 
     const handleMediaPreview = (file: MediaFile) => {
-        console.log("Previewing media:", file);
+        // Previewing media file
         setSelectedMedia({
             url: file.url,
             type: file.mimeType,
@@ -218,7 +218,7 @@ const MediaPage: React.FC = () => {
     };
 
     return (
-        <div className="container mx-auto px-4 py-8">
+        <div className="container mx-auto px-4 py-8 pb-20">
             <div className="flex justify-between items-center mb-8">
                 <h1 className="text-3xl font-bold text-gray-900">Media Management</h1>
                 <div className="flex items-center space-x-4">
@@ -311,13 +311,12 @@ const MediaPage: React.FC = () => {
                                                 className="h-12 w-12 object-cover rounded cursor-pointer"
                                                 onClick={() => handleMediaPreview(file)}
                                                 onError={(e) => {
-                                                    console.error("Error loading image:", file.url);
-                                                    console.error("File object:", file);
+                                                    // Image loading error
                                                     // Try to construct a fallback URL
                                                     const fallbackUrl = file.url.includes('localhost')
                                                         ? file.url.replace('localhost', window.location.hostname)
                                                         : `${window.location.protocol}//${window.location.hostname}:5000/api/files/${file.id}`;
-                                                    console.log("Trying fallback URL:", fallbackUrl);
+                                                    // Trying fallback URL
                                                     e.currentTarget.src = fallbackUrl;
                                                 }}
                                             />
@@ -386,7 +385,7 @@ const MediaPage: React.FC = () => {
 
             {/* Bulk Actions */}
             {selectedFiles.length > 0 && (
-                <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-4">
+                <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-4 z-40 shadow-lg">
                     <div className="container mx-auto flex items-center justify-between">
                         <p className="text-sm text-gray-600">
                             {selectedFiles.length} file(s) selected

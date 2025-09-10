@@ -8,7 +8,7 @@ const getBackendUrl = (): string => {
 
 // Log backend URL only in development
 if (process.env.NODE_ENV === 'development') {
-    console.log("Backend URL:", getBackendUrl());
+    // Backend URL configured
 }
 
 export const backendApi = axios.create({

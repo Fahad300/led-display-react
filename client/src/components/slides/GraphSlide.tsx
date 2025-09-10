@@ -160,7 +160,7 @@ export const GraphSlide: React.FC<{ slide: GraphSlideType }> = ({ slide }) => {
                 const selectedPriority = graphData.categories[datasetIndex];
 
                 // Handle click - you can add navigation logic here
-                console.log(`Clicked: Team ${selectedTeam}, Priority ${selectedPriority}`);
+                // Graph clicked
 
             }
         }

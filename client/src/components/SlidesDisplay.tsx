@@ -34,14 +34,23 @@ const AnimatedLogo: React.FC<{ hideLogo?: boolean }> = ({ hideLogo = false }) =>
                         console.error("Video playback error in AnimatedLogo:", e);
                         setVideoError(true);
                     }}
+                    onPlay={() => {
+                        // Video started playing successfully
+                    }}
+                    onPause={() => {
+                        // Video paused successfully
+                    }}
+                    onAbort={() => {
+                        // Video loading was aborted
+                    }}
                     onLoadStart={() => {
                         if (process.env.NODE_ENV === 'development') {
-                            console.log("Video loading started");
+                            // Video loading started
                         }
                     }}
                     onCanPlay={() => {
                         if (process.env.NODE_ENV === 'development') {
-                            console.log("Video ready to play");
+                            // Video ready to play
                         }
                     }}
                 >
@@ -236,7 +245,7 @@ const SlidesDisplay: React.FC = () => {
         const birthdayActiveState = eventSlideStates["birthday-event-slide"] ?? false;
         // Debug logging only in development
         if (process.env.NODE_ENV === 'development') {
-            console.log("Birthday check:", birthdayEmployees.length, "employees");
+            // Birthday check
         }
 
         const birthdayEventSlide: EventSlideType | null = birthdayEmployees.length > 0 ? {
@@ -262,7 +271,7 @@ const SlidesDisplay: React.FC = () => {
         const anniversaryActiveState = eventSlideStates["anniversary-event-slide"] ?? false;
         // Debug logging only in development
         if (process.env.NODE_ENV === 'development') {
-            console.log("Anniversary check:", anniversaryEmployees.length, "employees");
+            // Anniversary check
         }
 
         const anniversaryEventSlide: EventSlideType | null = anniversaryEmployees.length > 0 ? {

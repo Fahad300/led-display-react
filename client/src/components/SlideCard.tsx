@@ -293,7 +293,7 @@ const SlideCard: React.FC<SlideCardProps> = ({ slide, onEdit, onDelete, onToggle
                 </div>
             </div>
 
-            {/* Media Preview */}
+            {/* Media Preview - Only for slides with media */}
             {(slide.type === SLIDE_TYPES.IMAGE || slide.type === SLIDE_TYPES.VIDEO || slide.type === SLIDE_TYPES.NEWS) && (
                 <div className="aspect-video relative bg-gray-100 rounded-lg overflow-hidden">
                     {!mediaError ? (
@@ -326,13 +326,14 @@ const SlideCard: React.FC<SlideCardProps> = ({ slide, onEdit, onDelete, onToggle
                 </div>
             )}
 
-            {/* Content Preview */}
+            {/* Content Preview for News Slides */}
             {slide.type === SLIDE_TYPES.NEWS && (
                 <div className="mt-4">
                     {title && <h4 className="font-medium text-gray-900 mb-1">{title}</h4>}
                     {description && <p className="text-sm text-gray-500">{description}</p>}
                 </div>
             )}
+
 
             {/* Footer */}
             <div className="flex items-center justify-between mt-4">
@@ -386,6 +387,8 @@ const getSlideTypeLabel = (type: typeof SLIDE_TYPES[keyof typeof SLIDE_TYPES]) =
             return "Event";
         case SLIDE_TYPES.DOCUMENT:
             return "Document";
+        case SLIDE_TYPES.TEXT:
+            return "Text";
         default:
             return "Unknown";
     }

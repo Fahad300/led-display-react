@@ -9,6 +9,18 @@ import { useGraphs } from "../../contexts/GraphContext";
 export const TeamComparisonSlideComponent: React.FC<{ slide: TeamComparisonSlide }> = ({ slide }) => {
     const { teamWiseData, loading, error } = useGraphs();
 
+    // Format date range for display
+    const formatDateRange = (lastUpdated: string): string => {
+        const date = new Date(lastUpdated);
+        const year = date.getFullYear();
+        const endDate = date.toLocaleDateString("en-US", {
+            day: "numeric",
+            month: "short",
+            year: "numeric"
+        });
+        return `Jan 1, ${year} - ${endDate}`;
+    };
+
     // Transform graph data to team comparison format
     const transformGraphDataToTeams = () => {
         if (!teamWiseData || !teamWiseData.data || teamWiseData.data.length === 0) {
@@ -47,7 +59,9 @@ export const TeamComparisonSlideComponent: React.FC<{ slide: TeamComparisonSlide
 
     return (
         <div className="w-full h-full flex flex-col items-center justify-center bg-persivia-white p-6 pb-16 rounded-lg shadow animated-gradient-bg overflow-hidden">
-            <h2 className="text-3xl md:text-4xl font-bold text-persivia-white mb-6">Performance Comparison</h2>
+            <div className="flex flex-col items-center justify-space-between">
+                <h2 className="text-3xl md:text-4xl font-bold text-persivia-white mb-6">Performance Comparison <span className="relative top-[-3px] text-md md:text-lg">({formatDateRange(slide.data.lastUpdated)})</span></h2>
+            </div>
             <div className="w-[90%] max-w-6xl rounded-2xl backdrop-blur-md bg-white/20 bg-opacity-70 shadow-lg p-6 overflow-hidden">
                 {loading ? (
                     <div className="flex items-center justify-center h-48">

@@ -31,7 +31,7 @@ export const EmployeeProvider: React.FC<EmployeeProviderProps> = ({ children }) 
                 if (process.env.NODE_ENV === 'development') {
                     const birthdays = data.filter(emp => emp.isBirthday).length;
                     const anniversaries = data.filter(emp => emp.isAnniversary).length;
-                    console.log(`Employee data refreshed: ${data.length} employees, ${birthdays} birthdays, ${anniversaries} anniversaries`);
+                    // Employee data refreshed
                 }
             } else {
                 setEmployees([]);

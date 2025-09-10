@@ -1,9 +1,8 @@
-import React, { useState, useEffect, useCallback, useRef } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useSlides } from "../contexts/SlideContext";
 import { useToast } from "../contexts/ToastContext";
 import SlideCard from "../components/SlideCard";
-import { useEmployees } from "../contexts/EmployeeContext";
 import {
     Slide,
     ImageSlide,
@@ -19,7 +18,6 @@ import {
     DocumentSlide,
     DocumentSlideData,
     TextSlide,
-    TextSlideData
 } from "../types";
 import { backendApi } from "../services/api";
 import RichTextEditor from "../components/RichTextEditor";
@@ -32,7 +30,7 @@ const generateUUID = (): string => {
     // Fallback for browsers that don't support crypto.randomUUID
     return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
         const r = Math.random() * 16 | 0;
-        const v = c === 'x' ? r : (r & 0x3 | 0x8);
+        const v = c === 'x' ? r : ((r & 0x3) | 0x8);
         return v.toString(16);
     });
 };
@@ -112,11 +110,7 @@ const uploadFile = async (file: File): Promise<string> => {
 
         return response.data.url;
     } catch (error) {
-        console.error("Upload error details:", {
-            error,
-            message: error instanceof Error ? error.message : "Unknown error",
-            response: error instanceof Error && (error as any).response ? (error as any).response.data : "No response data"
-        });
+        // Upload error details
         throw new Error(error instanceof Error ? error.message : "Failed to upload file");
     }
 };
@@ -127,15 +121,21 @@ const EditModal: React.FC<EditModalProps> = ({ isOpen, onClose, slide, onSave, o
     const { addToast } = useToast();
     const [editedSlide, setEditedSlide] = useState<Slide | null>(null);
     const [isUploading, setIsUploading] = useState<boolean>(false);
+    const [loading, setLoading] = useState<boolean>(false);
+    const [loadingMessage, setLoadingMessage] = useState<string>("");
+    const [uploadProgress, setUploadProgress] = useState<number>(0);
     const [errors, setErrors] = useState<FormErrors>({});
     const [pendingFile, setPendingFile] = useState<File | null>(null);
     const [pendingPreviewUrl, setPendingPreviewUrl] = useState<string | null>(null);
+    const [isFileUploaded, setIsFileUploaded] = useState<boolean>(false);
 
     useEffect(() => {
         if (slide) {
             setEditedSlide(slide);
             setPendingFile(null);
             setPendingPreviewUrl(null);
+            setIsFileUploaded(false);
+            setUploadProgress(0);
         }
     }, [slide]);
 
@@ -148,6 +148,8 @@ const EditModal: React.FC<EditModalProps> = ({ isOpen, onClose, slide, onSave, o
             setIsUploading(false);
             setPendingFile(null);
             setPendingPreviewUrl(null);
+            setIsFileUploaded(false);
+            setUploadProgress(0);
         }
     }, [isOpen, onOpen]);
 
@@ -183,7 +185,181 @@ const EditModal: React.FC<EditModalProps> = ({ isOpen, onClose, slide, onSave, o
 
         setPendingFile(file);
         setPendingPreviewUrl(URL.createObjectURL(file));
+        setIsFileUploaded(false);
+        setUploadProgress(0);
         setErrors((prev) => ({ ...prev, imageUrl: undefined, videoUrl: undefined }));
+    };
+
+    const handleUpload = async () => {
+        if (!pendingFile || !editedSlide) return;
+
+        setIsUploading(true);
+        setUploadProgress(0);
+        setLoadingMessage("Uploading file...");
+
+        try {
+            // Simulate upload progress
+            const progressInterval = setInterval(() => {
+                setUploadProgress(prev => {
+                    if (prev >= 90) {
+                        clearInterval(progressInterval);
+                        return prev;
+                    }
+                    return prev + Math.random() * 20;
+                });
+            }, 200);
+
+            const fileUrl = await uploadFile(pendingFile);
+
+            clearInterval(progressInterval);
+            setUploadProgress(100);
+
+            // Update the slide with the uploaded file URL
+            if (editedSlide.type === SLIDE_TYPES.IMAGE) {
+                setEditedSlide({
+                    ...editedSlide,
+                    data: {
+                        ...editedSlide.data,
+                        imageUrl: fileUrl,
+                    } as ImageSlideData,
+                } as ImageSlide);
+            } else if (editedSlide.type === SLIDE_TYPES.VIDEO) {
+                // For video, get duration with better error handling and loading state
+                let duration = 10; // Default duration if metadata loading fails
+
+                // Show loading state for video metadata
+                setLoading(true);
+                setLoadingMessage("Loading video metadata...");
+
+                try {
+                    // First try to get duration from the local file before uploading
+                    if (pendingFile) {
+                        const localVideo = document.createElement("video");
+                        localVideo.preload = "metadata";
+
+                        const localMetadataPromise = new Promise<void>((resolve) => {
+                            const timeout = setTimeout(() => {
+                                // Local video metadata loading timeout
+                                resolve();
+                            }, 8000); // Increased timeout for local file
+
+                            localVideo.onloadedmetadata = () => {
+                                clearTimeout(timeout);
+                                resolve();
+                            };
+
+                            localVideo.onerror = () => {
+                                clearTimeout(timeout);
+                                // Local video metadata loading failed
+                                resolve();
+                            };
+                        });
+
+                        localVideo.src = URL.createObjectURL(pendingFile);
+                        await localMetadataPromise;
+
+                        if (localVideo.duration && !isNaN(localVideo.duration) && isFinite(localVideo.duration)) {
+                            duration = Math.ceil(localVideo.duration);
+                            URL.revokeObjectURL(localVideo.src); // Clean up
+                            // Video duration from local file
+                            addToast(`Video duration detected: ${duration} seconds`, "success");
+                        } else {
+                            // Fallback: try with server URL
+                            setLoadingMessage("Trying server URL for video metadata...");
+
+                            const video = document.createElement("video");
+                            video.crossOrigin = "anonymous";
+                            video.preload = "metadata";
+
+                            const serverMetadataPromise = new Promise<void>((resolve) => {
+                                const timeout = setTimeout(() => {
+                                    // Server video metadata loading timeout
+                                    resolve();
+                                }, 15000); // Increased timeout for server URL
+
+                                video.onloadedmetadata = () => {
+                                    clearTimeout(timeout);
+                                    resolve();
+                                };
+
+                                video.onerror = () => {
+                                    clearTimeout(timeout);
+                                    // Server video metadata loading failed
+                                    resolve();
+                                };
+                            });
+
+                            video.src = fileUrl;
+                            await serverMetadataPromise;
+
+                            if (video.duration && !isNaN(video.duration) && isFinite(video.duration)) {
+                                duration = Math.ceil(video.duration);
+                                // Video duration from server URL
+                                addToast(`Video duration detected: ${duration} seconds`, "success");
+                            }
+                        }
+                    }
+                } catch (error) {
+                    // Failed to load video metadata, using default duration
+                    // Show warning toast but continue with default duration
+                    addToast("Video uploaded successfully, but couldn't determine duration. Using default 10 seconds.", "warning");
+                } finally {
+                    setLoading(false);
+                    setLoadingMessage("");
+                }
+
+                setEditedSlide({
+                    ...editedSlide,
+                    duration,
+                    data: {
+                        ...editedSlide.data,
+                        videoUrl: fileUrl,
+                    } as VideoSlideData,
+                } as VideoSlide);
+            } else if (editedSlide.type === SLIDE_TYPES.DOCUMENT) {
+                // Determine fileType
+                let fileType: DocumentSlideData["fileType"] = "other";
+                if (pendingFile.type.startsWith("image/")) fileType = "image";
+                else if (pendingFile.type === "application/pdf") fileType = "pdf";
+                else if (pendingFile.type.includes("spreadsheet")) fileType = "excel";
+                else if (pendingFile.type.includes("presentation")) fileType = "powerpoint";
+                else if (pendingFile.type.includes("word")) fileType = "word";
+                setEditedSlide({
+                    ...editedSlide,
+                    data: {
+                        ...editedSlide.data,
+                        fileUrl,
+                        fileType,
+                    } as DocumentSlideData,
+                } as DocumentSlide);
+            }
+
+            setIsFileUploaded(true);
+            addToast("File uploaded successfully!", "success");
+
+        } catch (error) {
+            console.error("Upload error:", error);
+            let errorMessage = "Failed to upload file";
+
+            if (error instanceof Error) {
+                if (error.message.includes("Failed to load video metadata")) {
+                    errorMessage = "Video uploaded successfully, but couldn't determine duration. Using default duration.";
+                    addToast(errorMessage, "warning");
+                } else if (error.message.includes("timeout")) {
+                    errorMessage = "Upload timed out. Please try again.";
+                    addToast(errorMessage, "error");
+                } else {
+                    errorMessage = error.message;
+                    addToast(errorMessage, "error");
+                }
+            } else {
+                addToast(errorMessage, "error");
+            }
+        } finally {
+            setIsUploading(false);
+            setUploadProgress(0);
+            setLoadingMessage("");
+        }
     };
 
     const validateForm = (): boolean => {
@@ -194,10 +370,10 @@ const EditModal: React.FC<EditModalProps> = ({ isOpen, onClose, slide, onSave, o
         }
 
         if (editedSlide) {
-            if (editedSlide.type === SLIDE_TYPES.IMAGE && !((pendingFile || (editedSlide as ImageSlide).data.imageUrl))) {
-                newErrors.imageUrl = "Image is required";
-            } else if (editedSlide.type === SLIDE_TYPES.VIDEO && !((pendingFile || (editedSlide as VideoSlide).data.videoUrl))) {
-                newErrors.videoUrl = "Video is required";
+            if (editedSlide.type === SLIDE_TYPES.IMAGE && !((isFileUploaded || (editedSlide as ImageSlide).data.imageUrl))) {
+                newErrors.imageUrl = "Image is required - please upload a file first";
+            } else if (editedSlide.type === SLIDE_TYPES.VIDEO && !((isFileUploaded || (editedSlide as VideoSlide).data.videoUrl))) {
+                newErrors.videoUrl = "Video is required - please upload a file first";
             } else if (editedSlide.type === SLIDE_TYPES.NEWS) {
                 const newsSlide = editedSlide as NewsSlide;
                 if (!newsSlide.data.title?.trim()) newErrors.title = "Title is required";
@@ -210,8 +386,8 @@ const EditModal: React.FC<EditModalProps> = ({ isOpen, onClose, slide, onSave, o
                 if (!eventSlide.data.date) newErrors.date = "Date is required";
             } else if (editedSlide.type === SLIDE_TYPES.DOCUMENT) {
                 const documentSlide = editedSlide as DocumentSlide;
-                if (!pendingFile && !documentSlide.data.fileUrl) newErrors.imageUrl = "A document file is required";
-                if (!documentSlide.data.fileType && !pendingFile) newErrors.imageUrl = "File type is required";
+                if (!isFileUploaded && !documentSlide.data.fileUrl) newErrors.imageUrl = "A document file is required - please upload a file first";
+                if (!documentSlide.data.fileType && !isFileUploaded) newErrors.imageUrl = "File type is required";
             }
 
             // Only enforce 1-60s for non-video slides
@@ -229,65 +405,16 @@ const EditModal: React.FC<EditModalProps> = ({ isOpen, onClose, slide, onSave, o
 
     const handleSave = async () => {
         if (!editedSlide || !validateForm()) return;
-        setIsUploading(true);
-        let updatedSlide = { ...editedSlide };
-        try {
-            if (pendingFile) {
-                const fileUrl = await uploadFile(pendingFile);
-                if (editedSlide.type === SLIDE_TYPES.IMAGE) {
-                    updatedSlide = {
-                        ...editedSlide,
-                        data: {
-                            ...editedSlide.data,
-                            imageUrl: fileUrl,
-                        } as ImageSlideData,
-                    } as ImageSlide;
-                } else if (editedSlide.type === SLIDE_TYPES.VIDEO) {
-                    // For video, get duration
-                    const video = document.createElement("video");
-                    video.src = fileUrl;
-                    await new Promise((resolve, reject) => {
-                        video.onloadedmetadata = () => resolve(null);
-                        video.onerror = () => reject(new Error("Failed to load video metadata"));
-                    });
-                    const duration = Math.ceil(video.duration);
-                    updatedSlide = {
-                        ...editedSlide,
-                        duration,
-                        data: {
-                            ...editedSlide.data,
-                            videoUrl: fileUrl,
-                        } as VideoSlideData,
-                    } as VideoSlide;
-                } else if (editedSlide.type === SLIDE_TYPES.DOCUMENT) {
-                    // Determine fileType
-                    let fileType: DocumentSlideData["fileType"] = "other";
-                    if (pendingFile.type.startsWith("image/")) fileType = "image";
-                    else if (pendingFile.type === "application/pdf") fileType = "pdf";
-                    else if (pendingFile.type.includes("spreadsheet")) fileType = "excel";
-                    else if (pendingFile.type.includes("presentation")) fileType = "powerpoint";
-                    else if (pendingFile.type.includes("word")) fileType = "word";
-                    updatedSlide = {
-                        ...editedSlide,
-                        data: {
-                            ...editedSlide.data,
-                            fileUrl,
-                            fileType,
-                        } as DocumentSlideData,
-                    } as DocumentSlide;
-                }
-            }
-            onSave(updatedSlide);
-            onClose();
-        } catch (error) {
-            console.error("Upload error:", error);
-            const errorMessage = error instanceof Error ? error.message : "Failed to upload file";
-            addToast(errorMessage, "error");
-        } finally {
-            setIsUploading(false);
-            setPendingFile(null);
-            setPendingPreviewUrl(null);
+
+        // Check if file upload is required but not completed
+        const needsFileUpload = (editedSlide.type === SLIDE_TYPES.IMAGE || editedSlide.type === SLIDE_TYPES.VIDEO || editedSlide.type === SLIDE_TYPES.DOCUMENT);
+        if (needsFileUpload && !isFileUploaded && !((editedSlide as any).data.imageUrl || (editedSlide as any).data.videoUrl || (editedSlide as any).data.fileUrl)) {
+            addToast("Please upload a file before saving", "error");
+            return;
         }
+
+        onSave(editedSlide);
+        onClose();
     };
 
 
@@ -299,11 +426,29 @@ const EditModal: React.FC<EditModalProps> = ({ isOpen, onClose, slide, onSave, o
                 initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.95 }}
-                className="bg-white rounded-xl shadow-xl w-full max-w-2xl p-6 max-h-[90vh] overflow-y-auto"
+                className="bg-white rounded-xl shadow-xl w-full max-w-2xl p-6 max-h-[90vh] overflow-y-auto relative"
             >
+                {/* Loading overlay */}
+                {(loading || isUploading) && (
+                    <div className="absolute inset-0 bg-white/80 backdrop-blur-sm flex items-center justify-center z-10 rounded-xl">
+                        <div className="flex flex-col items-center space-y-3">
+                            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                            <p className="text-sm text-gray-600 font-medium">{loadingMessage}</p>
+                            {isUploading && (
+                                <div className="w-64 bg-gray-200 rounded-full h-2">
+                                    <div
+                                        className="bg-blue-600 h-2 rounded-full transition-all duration-300 ease-out"
+                                        style={{ width: `${uploadProgress}%` }}
+                                    ></div>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                )}
+
                 <div className="flex items-center justify-between mb-6">
                     <h2 className="text-2xl font-bold text-gray-900">
-                        {`${slide ? "Edit" : "Create"} ${getSlideTypeLabel(editedSlide.type)} Slide`}
+                        {slide ? `Edit ${getSlideTypeLabel(editedSlide.type)} Slide` : `Add ${getSlideTypeLabel(editedSlide.type)} Slide`}
                     </h2>
                     <button
                         onClick={onClose}
@@ -371,6 +516,49 @@ const EditModal: React.FC<EditModalProps> = ({ isOpen, onClose, slide, onSave, o
                             {errors.imageUrl && (
                                 <p className="mt-1 text-sm text-red-500">{errors.imageUrl}</p>
                             )}
+                            {/* Upload button and progress */}
+                            {pendingFile && !isFileUploaded && (
+                                <div className="mt-3">
+                                    <button
+                                        onClick={handleUpload}
+                                        disabled={isUploading}
+                                        className={`w-full px-4 py-2 text-sm font-medium text-white rounded-lg flex items-center justify-center space-x-2 ${isUploading
+                                            ? "bg-gray-400 cursor-not-allowed"
+                                            : "bg-green-600 hover:bg-green-700"
+                                            }`}
+                                    >
+                                        {isUploading ? (
+                                            <>
+                                                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                                                <span>Uploading... {Math.round(uploadProgress)}%</span>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                                                </svg>
+                                                <span>{isFileUploaded ? "Re-upload File" : "Upload File"}</span>
+                                            </>
+                                        )}
+                                    </button>
+                                    {isUploading && (
+                                        <div className="mt-2 w-full bg-gray-200 rounded-full h-2">
+                                            <div
+                                                className="bg-green-600 h-2 rounded-full transition-all duration-300 ease-out"
+                                                style={{ width: `${uploadProgress}%` }}
+                                            ></div>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+
+                            {/* Success message */}
+                            {isFileUploaded && (
+                                <div className="mt-2 p-2 bg-green-100 border border-green-400 text-green-700 rounded-lg text-sm">
+                                    ✅ File uploaded successfully!
+                                </div>
+                            )}
+
                             {/* Preview logic: show pendingPreviewUrl if exists, else show existing url */}
                             {(pendingPreviewUrl || (editedSlide.data as DocumentSlideData).fileUrl) && (
                                 <div className="mt-2 flex justify-center">
@@ -427,6 +615,14 @@ const EditModal: React.FC<EditModalProps> = ({ isOpen, onClose, slide, onSave, o
                             {(errors.imageUrl || errors.videoUrl) && (
                                 <p className="mt-1 text-sm text-red-500">{errors.imageUrl || errors.videoUrl}</p>
                             )}
+
+                            {/* Success message */}
+                            {isFileUploaded && (
+                                <div className="mt-2 p-2 bg-green-100 border border-green-400 text-green-700 rounded-lg text-sm">
+                                    ✅ File uploaded successfully!
+                                </div>
+                            )}
+
                             {/* Preview logic: show pendingPreviewUrl if exists, else show existing url */}
                             {editedSlide.type === SLIDE_TYPES.IMAGE && (pendingPreviewUrl || (editedSlide.data as ImageSlideData).imageUrl) && (
                                 <div className="mt-2 flex justify-center">
@@ -485,20 +681,67 @@ const EditModal: React.FC<EditModalProps> = ({ isOpen, onClose, slide, onSave, o
                     </div>
 
                     {/* Action buttons */}
-                    <div className="flex justify-end space-x-3 mt-6">
-                        <button
-                            onClick={onClose}
-                            className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
-                        >
-                            Cancel
-                        </button>
-                        <button
-                            onClick={handleSave}
-                            disabled={isUploading}
-                            className={`px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg ${isUploading ? "opacity-50 cursor-not-allowed" : "hover:bg-blue-700"}`}
-                        >
-                            {isUploading ? "Uploading..." : "Save Changes"}
-                        </button>
+                    <div className="flex flex-col space-y-4 mt-6">
+                        {/* Progress bar for upload */}
+                        {isUploading && (
+                            <div className="w-full bg-gray-200 rounded-full h-2">
+                                <div
+                                    className="bg-green-600 h-2 rounded-full transition-all duration-300 ease-out"
+                                    style={{ width: `${uploadProgress}%` }}
+                                ></div>
+                            </div>
+                        )}
+
+                        {/* Buttons with Cancel on left, others on right */}
+                        <div className="flex justify-between items-center">
+                            {/* Cancel button - always on left, red/danger style */}
+                            <button
+                                onClick={onClose}
+                                className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
+                            >
+                                Cancel
+                            </button>
+
+                            {/* Right side buttons */}
+                            <div className="flex space-x-3">
+                                {/* Upload button for file-based slides - only show when file needs to be uploaded */}
+                                {(editedSlide.type === SLIDE_TYPES.IMAGE || editedSlide.type === SLIDE_TYPES.VIDEO || editedSlide.type === SLIDE_TYPES.DOCUMENT) && pendingFile && !isFileUploaded && (
+                                    <button
+                                        onClick={handleUpload}
+                                        disabled={isUploading}
+                                        className={`px-4 py-2 text-sm font-medium text-white rounded-lg flex items-center space-x-2 ${isUploading
+                                            ? "bg-gray-400 cursor-not-allowed"
+                                            : "bg-green-600 hover:bg-green-700"
+                                            }`}
+                                    >
+                                        {isUploading ? (
+                                            <>
+                                                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                                                <span>Uploading... {Math.round(uploadProgress)}%</span>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                                                </svg>
+                                                <span>Upload File</span>
+                                            </>
+                                        )}
+                                    </button>
+                                )}
+
+                                {/* Save button - only show when upload is complete or no file upload needed */}
+                                {!((editedSlide.type === SLIDE_TYPES.IMAGE || editedSlide.type === SLIDE_TYPES.VIDEO || editedSlide.type === SLIDE_TYPES.DOCUMENT) && pendingFile && !isFileUploaded) && (
+                                    <button
+                                        onClick={handleSave}
+                                        disabled={isUploading || loading}
+                                        className={`px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg ${(isUploading || loading) ? "opacity-50 cursor-not-allowed" : "hover:bg-blue-700"}`}
+                                    >
+                                        {isUploading ? "Uploading..." : loading ? "Processing..." : isFileUploaded ? "Add to Slides" : "Save Changes"}
+                                    </button>
+                                )}
+                            </div>
+                        </div>
                     </div>
                 </div>
             </motion.div>
@@ -525,7 +768,7 @@ const getSlideTypeLabel = (type: typeof SLIDE_TYPES[keyof typeof SLIDE_TYPES]) =
 };
 
 const AdminPage: React.FC = () => {
-    const { slides, addSlide, updateSlide, deleteSlide, isLoading, isEditing, setIsEditing } = useSlides();
+    const { slides, addSlide, updateSlide, deleteSlide, isLoading, setIsEditing } = useSlides();
     const { addToast } = useToast();
     const [selectedSlide, setSelectedSlide] = useState<Slide | null>(null);
     const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
@@ -546,8 +789,6 @@ const AdminPage: React.FC = () => {
 
 
     const handleCreateSlide = useCallback(() => {
-
-
         const newSlide = (() => {
             switch (activeTabType) {
                 case SLIDE_TYPES.IMAGE:
@@ -629,18 +870,23 @@ const AdminPage: React.FC = () => {
             }
         })();
 
-        addSlide(newSlide);
+        // Don't add the slide yet - just open the modal for editing
         setSelectedSlide(newSlide);
         setIsModalOpen(true);
-    }, [activeTabType, addSlide]);
+    }, [activeTabType]);
 
     const handleSaveSlide = useCallback(async (updatedSlide: Slide) => {
         setIsProcessing(true);
         try {
-            if (selectedSlide?.id) {
+            // Check if this slide already exists in the slides list
+            const existingSlide = slides.find(slide => slide.id === updatedSlide.id);
+
+            if (existingSlide) {
+                // Update existing slide
                 await updateSlide(updatedSlide);
                 addToast("Slide updated successfully", "success");
             } else {
+                // Add new slide
                 await addSlide(updatedSlide);
                 addToast("Slide created successfully", "success");
             }
@@ -652,7 +898,7 @@ const AdminPage: React.FC = () => {
         } finally {
             setIsProcessing(false);
         }
-    }, [selectedSlide, updateSlide, addSlide, addToast]);
+    }, [slides, updateSlide, addSlide, addToast]);
 
     const handleToggleActive = useCallback(async (id: string, active: boolean) => {
         const slide = slides.find((s) => s.id === id);
@@ -682,21 +928,12 @@ const AdminPage: React.FC = () => {
 
     return (
         <div className="container mx-auto px-4 py-8">
-            {/* Add New Slide Button */}
-            <div className="flex justify-between items-center mb-6">
-                <div>
-                    <h1 className="text-2xl font-bold text-gray-900">Slide Management</h1>
-                    <p className="text-sm text-gray-600 mt-1">
-                        Create and edit slides. New slides start as inactive and can be activated from the home page.
-                    </p>
-                </div>
-                <button
-                    onClick={handleCreateSlide}
-                    disabled={isProcessing}
-                    className="px-4 py-2 bg-persivia-blue text-white rounded-lg hover:bg-persivia-blue/90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-persivia-blue disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                    Add New Slide
-                </button>
+            {/* Header */}
+            <div className="mb-6">
+                <h1 className="text-2xl font-bold text-gray-900">Slide Management</h1>
+                <p className="text-sm text-gray-600 mt-1">
+                    Create and edit slides. New slides start as inactive and can be activated from the home page.
+                </p>
             </div>
 
             {/* Tabs */}

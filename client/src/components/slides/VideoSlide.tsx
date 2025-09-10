@@ -78,6 +78,19 @@ export const VideoSlide: React.FC<VideoSlideProps> = ({ slide, onUpdate }) => {
                     autoPlay={slide.data.autoplay}
                     loop={slide.data.loop}
                     muted={slide.data.muted}
+                    playsInline
+                    onError={(e) => {
+                        console.error("Video playback error:", e);
+                    }}
+                    onPlay={() => {
+                        // Video started playing successfully
+                    }}
+                    onPause={() => {
+                        // Video paused successfully
+                    }}
+                    onAbort={() => {
+                        // Video loading was aborted
+                    }}
                 />
                 {captionElement}
                 {onUpdate && (

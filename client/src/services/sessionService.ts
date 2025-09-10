@@ -22,7 +22,7 @@ class SessionService {
     private sessionToken: string | null = null;
 
     constructor() {
-        console.log("🌍 SessionService initialized for database-driven operations");
+        // SessionService initialized for database-driven operations
     }
 
 
@@ -97,7 +97,7 @@ class SessionService {
         try {
             const token = localStorage.getItem("token");
             if (!token) {
-                console.log("No authentication token, skipping display settings update");
+                // No authentication token, skipping display settings update
                 return;
             }
 
@@ -109,7 +109,7 @@ class SessionService {
         } catch (error) {
             console.error("Error updating display settings:", error);
             // Don't throw for display purposes
-            console.log("Continuing without display settings update");
+            // Continuing without display settings update
         }
     }
 
@@ -120,7 +120,7 @@ class SessionService {
         try {
             const token = localStorage.getItem("token");
             if (!token) {
-                console.log("No authentication token, skipping slide data update");
+                // No authentication token, skipping slide data update
                 return;
             }
 
@@ -132,7 +132,7 @@ class SessionService {
         } catch (error) {
             console.error("Error updating slide data:", error);
             // Don't throw for display purposes
-            console.log("Continuing without slide data update");
+            // Continuing without slide data update
         }
     }
 
@@ -143,7 +143,7 @@ class SessionService {
         try {
             const token = localStorage.getItem("token");
             if (!token) {
-                console.log("No authentication token, skipping app settings update");
+                // No authentication token, skipping app settings update
                 return;
             }
 
@@ -155,7 +155,7 @@ class SessionService {
         } catch (error) {
             console.error("Error updating app settings:", error);
             // Don't throw for display purposes
-            console.log("Continuing without app settings update");
+            // Continuing without app settings update
         }
     }
 
@@ -258,7 +258,7 @@ class SessionService {
             // Check if user is authenticated
             const token = localStorage.getItem("token");
             if (!token) {
-                console.log("User not authenticated, skipping server sync");
+                // User not authenticated, skipping server sync
                 return;
             }
 
@@ -283,7 +283,7 @@ class SessionService {
         } catch (error) {
             console.error("Error syncing to database:", error);
             // Don't throw error for display purposes - just log it
-            console.log("Continuing without server sync");
+            // Continuing without server sync
         }
     }
 
@@ -309,13 +309,13 @@ class SessionService {
      */
     async initializeSession(): Promise<void> {
         try {
-            console.log("🌍 Initializing session...");
+            // Initializing session
             await this.createSession();
 
         } catch (error) {
             console.error("Error initializing session:", error);
             // For display purposes, we don't need to fail completely
-            console.log("Continuing without session initialization");
+            // Continuing without session initialization
         }
     }
 

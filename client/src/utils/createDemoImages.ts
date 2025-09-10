@@ -120,7 +120,7 @@ export const saveDemoImageSet = async (
 ): Promise<void> => {
     // This function would require Node.js File System API
     // It's included for completeness but won't work in a browser environment
-    console.log('Note: saveDemoImageSet can only be used in a Node.js environment');
+    // Note: saveDemoImageSet can only be used in a Node.js environment
 
     /* Example implementation for Node.js:
     const fs = require('fs');
@@ -137,7 +137,7 @@ export const saveDemoImageSet = async (
       const buffer = Buffer.from(await blob.arrayBuffer());
       fs.writeFileSync(filePath, buffer);
       
-      console.log(`Saved ${name} to ${filePath}`);
+      // Saved image to file
     }
     */
 }; 

@@ -227,6 +227,15 @@ const SwiperSlideshow: React.FC<{
                             console.error("Video playback error in SwiperSlideshow:", e);
                             setVideoError(true);
                         }}
+                        onPlay={() => {
+                            // Video started playing successfully
+                        }}
+                        onPause={() => {
+                            // Video paused successfully
+                        }}
+                        onAbort={() => {
+                            // Video loading was aborted
+                        }}
 
                     >
                         <source src="/videos/soliton-bg.mp4" type="video/mp4" />
