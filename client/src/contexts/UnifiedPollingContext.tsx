@@ -55,9 +55,23 @@ export const UnifiedPollingProvider: React.FC<UnifiedPollingProviderProps> = ({ 
                         slide && slide.id && slide.type
                     );
 
+                    console.log('🔍 UnifiedPolling - Server data received:', {
+                        totalSlides: serverData.slideData.length,
+                        validSlides: validSlides.length,
+                        slideDetails: validSlides.map((s: any) => ({
+                            id: s.id,
+                            name: s.name,
+                            type: s.type,
+                            active: s.active,
+                            duration: s.duration
+                        }))
+                    });
+
                     if (validSlides.length > 0) {
                         // Update slides with server data, preserving local changes
                         setSlides(prevSlides => {
+                            console.log('🔍 UnifiedPolling - Current local slides:', prevSlides.length);
+
                             const updatedSlides = prevSlides.map(localSlide => {
                                 const serverSlide = validSlides.find((s: any) => s.id === localSlide.id);
                                 if (serverSlide) {
@@ -80,7 +94,11 @@ export const UnifiedPollingProvider: React.FC<UnifiedPollingProviderProps> = ({ 
                                 !prevSlides.some(localSlide => localSlide.id === serverSlide.id)
                             );
 
-                            return [...updatedSlides, ...newSlides];
+                            const finalSlides = [...updatedSlides, ...newSlides];
+                            console.log('🔍 UnifiedPolling - Final slides after merge:', finalSlides.length);
+                            console.log('🔍 UnifiedPolling - Active slides after merge:', finalSlides.filter(s => s.active).length);
+
+                            return finalSlides;
                         });
 
                         console.debug('Slides synced from server:', validSlides.length, 'slides');

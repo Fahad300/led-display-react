@@ -301,6 +301,17 @@ const SlidesDisplay: React.FC = () => {
 
         });
 
+        // Debug logging for slide processing
+        console.log('🔍 SlidesDisplay - Total slides from context:', slides.length);
+        console.log('🔍 SlidesDisplay - Processed slides (allSlides):', allSlides.length);
+        console.log('🔍 SlidesDisplay - All slides details:', allSlides.map(s => ({
+            id: s.id,
+            name: s.name,
+            type: s.type,
+            active: s.active,
+            duration: s.duration
+        })));
+
         return allSlides; // Let SwiperSlideshow handle the active filtering
     }, [slides, isLoading, eventSlideStates, employees]);
 
@@ -382,6 +393,23 @@ const SlidesDisplay: React.FC = () => {
             )}
             {/* Testing overlay - always visible during testing */}
             <TestingOverlay />
+
+            {/* Debug overlay - temporary for troubleshooting */}
+            <div className="absolute top-4 left-4 z-[10000] bg-black/80 text-white p-2 rounded text-xs">
+                <div>Total Slides: {processedSlides.length}</div>
+                <div>Active Slides: {processedSlides.filter(s => s.active).length}</div>
+                <div>Slides with Duration: {processedSlides.filter(s => (s.duration || 0) > 0).length}</div>
+                <button
+                    onClick={() => {
+                        console.log('🔄 Manual refresh triggered');
+                        setIsRefreshing(true);
+                        loadSlides().finally(() => setIsRefreshing(false));
+                    }}
+                    className="mt-1 px-2 py-1 bg-blue-600 text-white rounded text-xs"
+                >
+                    Force Refresh
+                </button>
+            </div>
             {/* Only show logo overlay when there are active slides and not hidden by settings */}
             {hasActiveSlides && !settings.hidePersiviaLogo && <SlideLogoOverlay isFullscreen={true} />}
         </div>

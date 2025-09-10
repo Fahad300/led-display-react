@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useRef, useCallback, ReactNode } from "react";
-import { Slide, SLIDE_TYPES, CurrentEscalationsSlide, TeamComparisonSlide, GraphSlide } from "../types";
+import { Slide, SLIDE_TYPES, CurrentEscalationsSlide, GraphSlide } from "../types";
 import { sessionService } from "../services/sessionService";
 import { currentEscalations } from '../data/currentEscalations';
 import { getTeamComparisonSlide } from '../data/teamComparison';
@@ -17,7 +17,7 @@ interface SlideContextType {
     addSlide: (slide: Slide) => void;
     updateSlide: (slide: Slide) => void;
     deleteSlide: (id: string) => Promise<void>;
-    loadSlides: () => void;
+    loadSlides: () => Promise<void>;
     getSlideById: (id: string) => Slide | undefined;
     reorderSlides: (slides: Slide[]) => void;
     refreshSlidesDataSources: () => void;
@@ -35,7 +35,7 @@ const SlideContext = createContext<SlideContextType>({
     addSlide: () => { },
     updateSlide: () => { },
     deleteSlide: async () => { },
-    loadSlides: () => { },
+    loadSlides: async () => { },
     getSlideById: () => undefined,
     reorderSlides: () => { },
     refreshSlidesDataSources: () => { },
@@ -93,7 +93,7 @@ export const SlideProvider: React.FC<SlideProviderProps> = ({ children }) => {
     const [activeSlide, setActiveSlide] = useState<Slide | null>(null);
     const [isLoading, setIsLoading] = useState<boolean>(true);
     const [isEditing, setIsEditing] = useState<boolean>(false);
-    const lastUpdateRef = useRef<number>(0);
+    // const lastUpdateRef = useRef<number>(0); // Removed unused ref
     const updateTimeoutRef = useRef<NodeJS.Timeout | null>(null);
     const lastLocalChangeRef = useRef<number>(0);
 
@@ -269,7 +269,7 @@ export const SlideProvider: React.FC<SlideProviderProps> = ({ children }) => {
         } finally {
             setIsLoading(false);
         }
-    }, [debouncedSaveSlides, isAuthenticated]);
+    }, [debouncedSaveSlides]);
 
     // Load slides on mount
     useEffect(() => {
@@ -319,9 +319,20 @@ export const SlideProvider: React.FC<SlideProviderProps> = ({ children }) => {
      * Update an existing slide
      */
     const updateSlide = useCallback(async (updatedSlide: Slide) => {
+        console.log('🔍 SlideContext - updateSlide called with:', {
+            id: updatedSlide.id,
+            name: updatedSlide.name,
+            type: updatedSlide.type,
+            active: updatedSlide.active,
+            duration: updatedSlide.duration
+        });
+
         const updatedSlides = slides.map(slide =>
             slide.id === updatedSlide.id ? updatedSlide : slide
         );
+
+        console.log('🔍 SlideContext - Updated slides count:', updatedSlides.length);
+        console.log('🔍 SlideContext - Active slides count:', updatedSlides.filter(s => s.active).length);
 
         // Set the local change timestamp BEFORE updating state
         lastLocalChangeRef.current = Date.now();
@@ -329,15 +340,34 @@ export const SlideProvider: React.FC<SlideProviderProps> = ({ children }) => {
         // Update local state immediately
         setSlides(updatedSlides);
 
-        // Save to database with a small delay to ensure local state is stable
-        setTimeout(async () => {
+        // For slide activation/deactivation, save immediately to database
+        // For other changes, use debounced save
+        if (updatedSlide.active !== slides.find(s => s.id === updatedSlide.id)?.active) {
+            // Slide activation status changed - save immediately
             try {
                 await immediateSaveSlides(updatedSlides);
+                console.log('🔍 SlideContext - Slide activation saved immediately to database');
 
+                // Trigger immediate refresh for display synchronization
+                try {
+                    await sessionService.triggerRemoteRefresh('slides');
+                    console.log('🔍 SlideContext - Remote refresh triggered for slide activation');
+                } catch (refreshError) {
+                    console.error('❌ Error triggering remote refresh:', refreshError);
+                }
             } catch (error) {
-                console.error("❌ Error updating slide in database:", error);
+                console.error("❌ Error immediately saving slide activation to database:", error);
             }
-        }, 100);
+        } else {
+            // Other changes - use debounced save
+            setTimeout(async () => {
+                try {
+                    await immediateSaveSlides(updatedSlides);
+                } catch (error) {
+                    console.error("❌ Error updating slide in database:", error);
+                }
+            }, 100);
+        }
     }, [slides, immediateSaveSlides]);
 
     /**

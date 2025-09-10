@@ -37,6 +37,24 @@ const SwiperSlideshow: React.FC<{
     const activeSlides = useMemo(() => {
         const filtered = slides.filter(slide => slide.active && (slide.duration || 0) > 0);
 
+        // Debug logging for slide filtering
+        console.log('🔍 SwiperSlideshow - Total slides received:', slides.length);
+        console.log('🔍 SwiperSlideshow - Slides details:', slides.map(s => ({
+            id: s.id,
+            name: s.name,
+            type: s.type,
+            active: s.active,
+            duration: s.duration
+        })));
+        console.log('🔍 SwiperSlideshow - Active slides after filtering:', filtered.length);
+        console.log('🔍 SwiperSlideshow - Active slides details:', filtered.map(s => ({
+            id: s.id,
+            name: s.name,
+            type: s.type,
+            active: s.active,
+            duration: s.duration
+        })));
+
         filtered.forEach((slide, index) => {
 
         });
