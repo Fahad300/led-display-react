@@ -82,11 +82,11 @@ router.get("/current", isAuthenticated, async (req, res) => {
             return res.status(404).json({ error: "No active session found" });
         }
 
+        const slideshowData = session.getSlideshowData();
+
         res.json({
             sessionId: session.id,
-            displaySettings: session.getDisplaySettings(),
-            slideData: session.getSlideData(),
-            appSettings: session.getAppSettings(),
+            slideshowData: slideshowData,
             lastActivity: session.lastActivity,
             deviceInfo: session.deviceInfo
         });
@@ -96,114 +96,11 @@ router.get("/current", isAuthenticated, async (req, res) => {
     }
 });
 
-/**
- * @route PUT /api/sessions/display-settings
- * @desc Update display settings for the current session
- * @access Private
- */
-router.put("/display-settings", isAuthenticated, async (req, res) => {
-    try {
-        const userId = (req as any).user.id;
-        const { settings } = req.body;
+// OLD ENDPOINT REMOVED - Using unified slideshow-data endpoint instead
 
-        logger.info(`Updating display settings for user ${userId}:`, settings);
+// OLD ENDPOINT REMOVED - Using unified slideshow-data endpoint instead
 
-        const session = await AppDataSource.getRepository(Session).findOne({
-            where: { userId, isActive: true }
-        });
-
-        if (!session) {
-            logger.warn(`No active session found for user ${userId}`);
-            return res.status(404).json({ error: "No active session found" });
-        }
-
-        logger.info(`Found session ${session.id}, updating display settings`);
-
-        session.setDisplaySettings(settings);
-        session.lastActivity = new Date();
-
-        const savedSession = await AppDataSource.getRepository(Session).save(session);
-        logger.info(`Session ${savedSession.id} updated successfully`);
-
-        res.json({ message: "Display settings updated" });
-    } catch (error) {
-        logger.error("Error updating display settings:", error);
-        if (error instanceof Error) {
-            logger.error(`Error details: ${error.message}`);
-            logger.error(`Stack trace: ${error.stack}`);
-        }
-        res.status(500).json({ error: "Failed to update display settings" });
-    }
-});
-
-/**
- * @route PUT /api/sessions/slide-data
- * @desc Update slide data for the current session
- * @access Private
- */
-router.put("/slide-data", isAuthenticated, async (req, res) => {
-    try {
-        const userId = (req as any).user.id;
-        const { slides } = req.body;
-
-        logger.info(`Updating slide data for user ${userId}:`, slides);
-
-        const session = await AppDataSource.getRepository(Session).findOne({
-            where: { userId, isActive: true }
-        });
-
-        if (!session) {
-            logger.warn(`No active session found for user ${userId}`);
-            return res.status(404).json({ error: "No active session found" });
-        }
-
-        logger.info(`Found session ${session.id}, updating slide data`);
-
-        session.setSlideData(slides);
-        session.lastActivity = new Date();
-
-        const savedSession = await AppDataSource.getRepository(Session).save(session);
-        logger.info(`Session ${savedSession.id} updated successfully`);
-
-        res.json({ message: "Slide data updated" });
-    } catch (error) {
-        logger.error("Error updating slide data:", error);
-        if (error instanceof Error) {
-            logger.error(`Error details: ${error.message}`);
-            logger.error(`Stack trace: ${error.stack}`);
-        }
-        res.status(500).json({ error: "Failed to update slide data" });
-    }
-});
-
-/**
- * @route PUT /api/sessions/app-settings
- * @desc Update app settings for the current session
- * @access Private
- */
-router.put("/app-settings", isAuthenticated, async (req, res) => {
-    try {
-        const userId = (req as any).user.id;
-        const { settings } = req.body;
-
-        const session = await AppDataSource.getRepository(Session).findOne({
-            where: { userId, isActive: true }
-        });
-
-        if (!session) {
-            return res.status(404).json({ error: "No active session found" });
-        }
-
-        session.setAppSettings(settings);
-        session.lastActivity = new Date();
-        await AppDataSource.getRepository(Session).save(session);
-
-        res.json({ message: "App settings updated" });
-    } catch (error) {
-        logger.error("Error updating app settings:", error);
-        res.status(500).json({ error: "Failed to update app settings" });
-    }
-});
+// OLD ENDPOINT REMOVED - Using unified slideshow-data endpoint instead
 
 /**
  * @route DELETE /api/sessions/logout
@@ -231,6 +128,117 @@ router.delete("/logout", isAuthenticated, async (req, res) => {
 });
 
 /**
+ * @route POST /api/sessions/slideshow-data
+ * @desc Save unified slideshow data to the current session
+ * @access Private
+ */
+router.post("/slideshow-data", isAuthenticated, async (req, res) => {
+    try {
+        const userId = (req as any).user.id;
+        const { slideshowData } = req.body;
+
+        logger.info(`Received slideshow data request from user ${userId}:`, {
+            hasSlideshowData: !!slideshowData,
+            bodyKeys: Object.keys(req.body),
+            slideshowDataType: typeof slideshowData
+        });
+
+        if (!slideshowData) {
+            logger.error("Slideshow data is missing from request body");
+            return res.status(400).json({ error: "Slideshow data is required" });
+        }
+
+        // Find the current active session
+        const session = await AppDataSource.getRepository(Session).findOne({
+            where: { userId, isActive: true }
+        });
+
+        if (!session) {
+            return res.status(404).json({ error: "No active session found" });
+        }
+
+        // Update slideshow data
+        session.setSlideshowData(slideshowData);
+        session.lastActivity = new Date();
+
+        await AppDataSource.getRepository(Session).save(session);
+
+        logger.info(`Slideshow data updated for user ${userId}:`, {
+            slidesCount: slideshowData.slides?.length || 0,
+            activeSlidesCount: slideshowData.slides?.filter((slide: any) => slide.active).length || 0,
+            displaySettings: slideshowData.displaySettings,
+            lastUpdated: slideshowData.lastUpdated,
+            version: slideshowData.version
+        });
+        res.json({ message: "Slideshow data saved successfully" });
+    } catch (error) {
+        logger.error("Error saving slideshow data:", error);
+        res.status(500).json({ error: "Failed to save slideshow data" });
+    }
+});
+
+/**
+ * @route GET /api/sessions/slideshow-data
+ * @desc Get unified slideshow data from the current session
+ * @access Private
+ */
+router.get("/slideshow-data", isAuthenticated, async (req, res) => {
+    try {
+        const userId = (req as any).user.id;
+
+        // Find the current active session
+        const session = await AppDataSource.getRepository(Session).findOne({
+            where: { userId, isActive: true }
+        });
+
+        if (!session) {
+            return res.status(404).json({ error: "No active session found" });
+        }
+
+        const slideshowData = session.getSlideshowData();
+
+        if (!slideshowData) {
+            return res.status(404).json({ error: "No slideshow data found" });
+        }
+
+        res.json({ slideshowData });
+    } catch (error) {
+        logger.error("Error getting slideshow data:", error);
+        res.status(500).json({ error: "Failed to get slideshow data" });
+    }
+});
+
+/**
+ * @route GET /api/sessions/slideshow-data/latest
+ * @desc Get the latest slideshow data from any active session (public access for LED displays)
+ * @access Public
+ */
+router.get("/slideshow-data/latest", async (req, res) => {
+    try {
+        // Get the most recent active session from any user
+        const latestSession = await AppDataSource.getRepository(Session).findOne({
+            where: { isActive: true },
+            order: { lastActivity: "DESC" }
+        });
+
+        if (!latestSession) {
+            return res.status(404).json({ error: "No active sessions found" });
+        }
+
+        const slideshowData = latestSession.getSlideshowData();
+
+        if (!slideshowData) {
+            return res.status(404).json({ error: "No slideshow data found" });
+        }
+
+        res.json({ slideshowData });
+    } catch (error) {
+        logger.error("Error getting latest slideshow data:", error);
+        res.status(500).json({ error: "Failed to get latest slideshow data" });
+    }
+});
+
+/**
  * @route GET /api/sessions/latest
  * @desc Get the most recent active session data (public access for LED displays)
  * @access Public
@@ -247,10 +255,10 @@ router.get("/latest", async (req, res) => {
             return res.status(404).json({ error: "No active sessions found" });
         }
 
+        const slideshowData = latestSession.getSlideshowData();
+
         res.json({
-            displaySettings: latestSession.getDisplaySettings(),
-            slideData: latestSession.getSlideData(),
-            appSettings: latestSession.getAppSettings(),
+            slideshowData: slideshowData,
             lastActivity: latestSession.lastActivity,
             deviceInfo: latestSession.deviceInfo
         });

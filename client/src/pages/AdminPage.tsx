@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { useSlides } from "../contexts/SlideContext";
+import { useUnified } from "../contexts/UnifiedContext";
 import { useToast } from "../contexts/ToastContext";
 import SlideCard from "../components/SlideCard";
 import {
@@ -61,7 +61,6 @@ interface EditModalProps {
     onClose: () => void;
     slide: Slide | null;
     onSave: (slide: Slide) => void;
-    onOpen: () => void;
 }
 
 /** Type for slide tabs */
@@ -115,7 +114,7 @@ const uploadFile = async (file: File): Promise<string> => {
     }
 };
 
-const EditModal: React.FC<EditModalProps> = ({ isOpen, onClose, slide, onSave, onOpen }) => {
+const EditModal: React.FC<EditModalProps> = ({ isOpen, onClose, slide, onSave }) => {
 
 
     const { addToast } = useToast();
@@ -140,9 +139,6 @@ const EditModal: React.FC<EditModalProps> = ({ isOpen, onClose, slide, onSave, o
     }, [slide]);
 
     useEffect(() => {
-        if (isOpen) {
-            onOpen(); // Set editing state when modal opens
-        }
         if (!isOpen) {
             setErrors({});
             setIsUploading(false);
@@ -151,7 +147,7 @@ const EditModal: React.FC<EditModalProps> = ({ isOpen, onClose, slide, onSave, o
             setIsFileUploaded(false);
             setUploadProgress(0);
         }
-    }, [isOpen, onOpen]);
+    }, [isOpen]);
 
     const handleFileInput = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
@@ -768,7 +764,7 @@ const getSlideTypeLabel = (type: typeof SLIDE_TYPES[keyof typeof SLIDE_TYPES]) =
 };
 
 const AdminPage: React.FC = () => {
-    const { slides, addSlide, updateSlide, deleteSlide, isLoading, setIsEditing } = useSlides();
+    const { slides, setSlides, updateSlide, isLoading, isEditing, setIsEditing, saveToDatabase } = useUnified();
     const { addToast } = useToast();
     const [selectedSlide, setSelectedSlide] = useState<Slide | null>(null);
     const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
@@ -776,6 +772,15 @@ const AdminPage: React.FC = () => {
     const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
     const [activeTabType, setActiveTabType] = useState<typeof SLIDE_TYPES[keyof typeof SLIDE_TYPES]>(SLIDE_TYPES.IMAGE);
     const [isProcessing, setIsProcessing] = useState<boolean>(false);
+
+    // Auto-detect editing state based on modal state
+    useEffect(() => {
+        if (isModalOpen) {
+            setIsEditing(true);
+        } else {
+            setIsEditing(false);
+        }
+    }, [isModalOpen, setIsEditing]);
 
 
 
@@ -797,7 +802,7 @@ const AdminPage: React.FC = () => {
                         type: SLIDE_TYPES.IMAGE,
                         name: "New Image Slide",
                         active: false, // Start as inactive
-                        duration: 5,
+                        duration: 10, // Default duration
                         data: {
                             imageUrl: "",
                             caption: ""
@@ -826,7 +831,7 @@ const AdminPage: React.FC = () => {
                         type: SLIDE_TYPES.NEWS,
                         name: "New News Slide",
                         active: false, // Start as inactive
-                        duration: 10,
+                        duration: 10, // Default duration
                         data: {
                             title: "",
                             details: "",
@@ -845,7 +850,7 @@ const AdminPage: React.FC = () => {
                         type: SLIDE_TYPES.TEXT,
                         name: "New Text Slide",
                         active: false, // Start as inactive
-                        duration: 10,
+                        duration: 10, // Default duration
                         data: {
                             content: "<h1>Welcome to Your Text Slide</h1><p>Start typing your content here...</p>"
                         },
@@ -857,7 +862,7 @@ const AdminPage: React.FC = () => {
                         type: SLIDE_TYPES.DOCUMENT,
                         name: "New Document Slide",
                         active: false, // Start as inactive
-                        duration: 10,
+                        duration: 10, // Default duration
                         data: {
                             fileUrl: "",
                             fileType: "pdf",
@@ -883,11 +888,20 @@ const AdminPage: React.FC = () => {
 
             if (existingSlide) {
                 // Update existing slide
-                await updateSlide(updatedSlide);
+                updateSlide(updatedSlide);
                 addToast("Slide updated successfully", "success");
             } else {
-                // Add new slide
-                await addSlide(updatedSlide);
+                // Add new slide - use setSlides and then trigger immediate save
+                setSlides(prev => [...prev, updatedSlide]);
+
+                // Trigger immediate save for new slides
+                setTimeout(() => {
+                    // Force save by calling saveToDatabase directly
+                    saveToDatabase().catch(error => {
+                        console.error("❌ Failed to save new slide:", error);
+                    });
+                }, 100);
+
                 addToast("Slide created successfully", "success");
             }
             setIsModalOpen(false);
@@ -898,13 +912,13 @@ const AdminPage: React.FC = () => {
         } finally {
             setIsProcessing(false);
         }
-    }, [slides, updateSlide, addSlide, addToast]);
+    }, [slides, updateSlide, setSlides, addToast, setIsEditing, saveToDatabase]);
 
     const handleToggleActive = useCallback(async (id: string, active: boolean) => {
         const slide = slides.find((s) => s.id === id);
         if (slide) {
             try {
-                await updateSlide({ ...slide, active });
+                updateSlide({ ...slide, active });
                 addToast(`Slide ${active ? "activated" : "deactivated"} successfully`, "success");
             } catch (error) {
                 addToast(error instanceof Error ? error.message : "Failed to update slide status", "error");
@@ -930,10 +944,20 @@ const AdminPage: React.FC = () => {
         <div className="container mx-auto px-4 py-8">
             {/* Header */}
             <div className="mb-6">
-                <h1 className="text-2xl font-bold text-gray-900">Slide Management</h1>
-                <p className="text-sm text-gray-600 mt-1">
-                    Create and edit slides. New slides start as inactive and can be activated from the home page.
-                </p>
+                <div className="flex items-center justify-between">
+                    <div>
+                        <h1 className="text-2xl font-bold text-gray-900">Slide Management</h1>
+                        <p className="text-sm text-gray-600 mt-1">
+                            Create and edit slides. New slides start as inactive and can be activated from the home page.
+                        </p>
+                    </div>
+                    {isEditing && (
+                        <div className="flex items-center space-x-2 px-3 py-2 bg-blue-100 text-blue-800 rounded-lg">
+                            <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
+                            <span className="text-sm font-medium">Editing Mode - Changes auto-save when you close the modal</span>
+                        </div>
+                    )}
+                </div>
             </div>
 
             {/* Tabs */}
@@ -976,7 +1000,10 @@ const AdminPage: React.FC = () => {
                                         setSelectedSlide(slide);
                                         setIsModalOpen(true);
                                     }}
-                                    onDelete={(id) => setDeleteConfirmId(id)}
+                                    onDelete={(id) => {
+                                        setSlides(prev => prev.filter(slide => slide.id !== id));
+                                        setDeleteConfirmId(null);
+                                    }}
                                     onToggleActive={handleToggleActive}
                                 />
                             ))}
@@ -1010,7 +1037,10 @@ const AdminPage: React.FC = () => {
                                     setSelectedSlide(slide);
                                     setIsModalOpen(true);
                                 }}
-                                onDelete={(id) => setDeleteConfirmId(id)}
+                                onDelete={(id) => {
+                                    setSlides(prev => prev.filter(slide => slide.id !== id));
+                                    setDeleteConfirmId(null);
+                                }}
                                 onToggleActive={handleToggleActive}
                             />
                         ))}
@@ -1024,11 +1054,9 @@ const AdminPage: React.FC = () => {
                 onClose={() => {
                     setIsModalOpen(false);
                     setSelectedSlide(null);
-                    setIsEditing(false); // Stop editing when modal closes
                 }}
                 slide={selectedSlide}
                 onSave={handleSaveSlide}
-                onOpen={() => setIsEditing(true)} // Start editing when modal opens
             />
 
             {/* Delete Confirmation Modal */}
@@ -1060,7 +1088,7 @@ const AdminPage: React.FC = () => {
                                         if (!deleteConfirmId) return;
                                         setIsDeleting(true);
                                         try {
-                                            await deleteSlide(deleteConfirmId);
+                                            setSlides(prev => prev.filter(slide => slide.id !== deleteConfirmId));
                                             addToast("Slide deleted successfully", "success");
                                             setDeleteConfirmId(null);
                                         } catch (error) {

@@ -1,6 +1,6 @@
 import React, { useRef } from "react";
 import { GraphSlide as GraphSlideType } from "../../types";
-import { useGraphs } from "../../contexts/GraphContext";
+import { useUnified } from "../../contexts/UnifiedContext";
 import {
     Chart as ChartJS,
     CategoryScale,
@@ -52,10 +52,13 @@ const getPriorityColor = (category: string): string => {
 
 export const GraphSlide: React.FC<{ slide: GraphSlideType }> = ({ slide }) => {
     const chartRef = useRef<ChartJS<"bar">>(null);
-    const { teamWiseData, loading, error } = useGraphs();
+    const { graphData } = useUnified();
+    const teamWiseData = graphData; // graphData is the team data itself
+    const loading = false; // Loading is handled in UnifiedContext
+    const error = null; // Error handling is in UnifiedContext
 
     // Use live data from context if available, otherwise show loading or empty state
-    const graphData = teamWiseData || {
+    const chartData = teamWiseData || {
         title: slide.data.title,
         description: slide.data.description,
         graphType: slide.data.graphType,
@@ -66,13 +69,13 @@ export const GraphSlide: React.FC<{ slide: GraphSlideType }> = ({ slide }) => {
     };
 
     // Transform data to match PHP format for horizontal stacked bars
-    const labels = graphData.data.map(team => team.teamName);
+    const labels = chartData.data.map((team: any) => team.teamName);
 
     // Create datasets for each priority/category (horizontal stacked bars)
-    const datasets = graphData.categories.map((category) => ({
+    const datasets = chartData.categories.map((category: any) => ({
         label: category,
-        data: graphData.data.map(team => {
-            const point = team.dataPoints.find(dp => dp.category === category);
+        data: chartData.data.map((team: any) => {
+            const point = team.dataPoints.find((dp: any) => dp.category === category);
             return point ? point.value : 0;
         }),
         backgroundColor: getPriorityColor(category),
@@ -82,7 +85,7 @@ export const GraphSlide: React.FC<{ slide: GraphSlideType }> = ({ slide }) => {
         barPercentage: 0.8,
     }));
 
-    const chartData: ChartData<"bar"> = {
+    const chartDataForChart: ChartData<"bar"> = {
         labels,
         datasets
     };
@@ -157,7 +160,7 @@ export const GraphSlide: React.FC<{ slide: GraphSlideType }> = ({ slide }) => {
                 const index = elements[0].index;
                 const datasetIndex = elements[0].datasetIndex;
                 const selectedTeam = labels[index];
-                const selectedPriority = graphData.categories[datasetIndex];
+                const selectedPriority = chartData.categories[datasetIndex];
 
                 // Handle click - you can add navigation logic here
                 // Graph clicked
@@ -170,7 +173,7 @@ export const GraphSlide: React.FC<{ slide: GraphSlideType }> = ({ slide }) => {
         <div className="w-full h-full flex flex-col items-center justify-center bg-persivia-white p-4 md:p-6 pb-16 rounded-lg shadow animated-gradient-bg overflow-hidden">
             <div className="text-center mb-4 md:mb-6">
                 <h2 className="text-3xl md:text-4xl font-bold text-white tracking-tight leading-tight">
-                    {graphData.title}
+                    {chartData.title}
                 </h2>
             </div>
             <div className="w-full h-full max-w-7xl rounded-2xl backdrop-blur-md bg-white/10 bg-opacity-70 shadow-xl border border-white/20 p-4 md:p-6 overflow-hidden">
@@ -187,10 +190,10 @@ export const GraphSlide: React.FC<{ slide: GraphSlideType }> = ({ slide }) => {
                                 <p className="text-white/50 text-sm mt-2">Fetching live data from API</p>
                             </div>
                         </div>
-                    ) : (chartData.labels && chartData.labels.length > 0 && chartData.datasets && chartData.datasets.length > 0) ? (
+                    ) : (chartDataForChart.labels && chartDataForChart.labels.length > 0 && chartDataForChart.datasets && chartDataForChart.datasets.length > 0) ? (
                         <Bar
                             ref={chartRef as React.RefObject<ChartJS<"bar">>}
-                            data={chartData as ChartData<"bar">}
+                            data={chartDataForChart as ChartData<"bar">}
                             options={options as ChartOptions<"bar">}
                         />
                     ) : (
@@ -212,11 +215,11 @@ export const GraphSlide: React.FC<{ slide: GraphSlideType }> = ({ slide }) => {
                 <div className="mt-2 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs md:text-sm">
                     <div className="flex items-center gap-2 text-white/70">
                         <div className="w-2 h-2 bg-green-400 rounded-full"></div>
-                        <span className="font-medium">Last updated: {new Date(graphData.lastUpdated).toLocaleString()}</span>
+                        <span className="font-medium">Last updated: {new Date(chartData.lastUpdated).toLocaleString()}</span>
                     </div>
                     <div className="flex items-center gap-2 text-white/70">
                         <div className="w-2 h-2 bg-blue-400 rounded-full"></div>
-                        <span className="font-medium">Time range: {graphData.timeRange.charAt(0).toUpperCase() + graphData.timeRange.slice(1)}</span>
+                        <span className="font-medium">Time range: {chartData.timeRange.charAt(0).toUpperCase() + chartData.timeRange.slice(1)}</span>
                     </div>
                 </div>
             </div>

@@ -1,12 +1,12 @@
 import { AppDataSource } from "../config/database";
 import { User } from "../models/User";
-import { Display } from "../models/Display";
 import { Session } from "../models/Session";
 import { logger } from "../utils/logger";
+import crypto from "crypto";
 
 /**
- * Simple database seeding script
- * Adds basic sample data for development
+ * Clean database seeding script
+ * Adds basic sample data for development - only necessary tables
  */
 const seedDatabase = async (): Promise<void> => {
     try {
@@ -17,10 +17,7 @@ const seedDatabase = async (): Promise<void> => {
         // Seed users
         await seedUsers();
 
-        // Seed displays
-        await seedDisplays();
-
-        // Seed sessions
+        // Seed sessions (optional - for testing)
         await seedSessions();
 
         // Close the connection
@@ -50,105 +47,34 @@ const seedUsers = async (): Promise<void> => {
         return;
     }
 
-    // Create sample users - passwords will be automatically hashed by User model
+    // Create sample users
     const users = [
         {
+            id: "550e8400-e29b-41d4-a716-446655440001",
             username: "admin",
             password: "admin123"
         },
         {
+            id: "550e8400-e29b-41d4-a716-446655440002",
             username: "user1",
-            password: "user123"
+            password: "password123"
         }
     ];
 
     for (const userData of users) {
         const user = userRepository.create(userData);
         await userRepository.save(user);
-        logger.info(`Created user: ${userData.username}`);
+        logger.info(`Created user: ${user.username}`);
     }
+
+    logger.info("User seeding completed");
 };
 
 /**
- * Seed displays table with sample data
- */
-const seedDisplays = async (): Promise<void> => {
-    const displayRepository = AppDataSource.getRepository(Display);
-    const userRepository = AppDataSource.getRepository(User);
-
-    // Check if displays already exist
-    const existingDisplays = await displayRepository.count();
-    if (existingDisplays > 0) {
-        logger.info("Displays already exist, skipping display seeding");
-        return;
-    }
-
-    // Get the first user to use as created_by
-    const firstUser = await userRepository.findOne({ where: { username: "admin" } });
-    if (!firstUser) {
-        logger.warn("No admin user found, skipping display seeding");
-        return;
-    }
-
-    // Create sample displays
-    const displays = [
-        {
-            name: "Main Display",
-            description: "Primary LED display in the lobby",
-            type: "slider" as const,
-            content: {
-                sliderConfig: {
-                    speed: 5000,
-                    direction: "horizontal" as const,
-                    transition: "fade" as const
-                }
-            },
-            settings: {
-                width: 1920,
-                height: 1080,
-                backgroundColor: "#000000",
-                textColor: "#ffffff",
-                fontSize: 24,
-                fontFamily: "Arial",
-                animation: "fade"
-            },
-            isActive: true,
-            createdBy: firstUser
-        },
-        {
-            name: "Conference Room Display",
-            description: "Display in conference room A",
-            type: "text" as const,
-            content: {
-                text: "Welcome to Conference Room A"
-            },
-            settings: {
-                width: 1920,
-                height: 1080,
-                backgroundColor: "#1a1a1a",
-                textColor: "#ffffff",
-                fontSize: 32,
-                fontFamily: "Arial",
-                animation: "slide"
-            },
-            isActive: true,
-            createdBy: firstUser
-        }
-    ];
-
-    for (const displayData of displays) {
-        const display = displayRepository.create(displayData);
-        await displayRepository.save(display);
-        logger.info(`Created display: ${displayData.name}`);
-    }
-};
-
-/**
- * Seed sessions table with sample data
+ * Seed sessions table with sample data (optional)
  */
 const seedSessions = async (): Promise<void> => {
     const sessionRepository = AppDataSource.getRepository(Session);
-    const userRepository = AppDataSource.getRepository(User);
 
     // Check if sessions already exist
     const existingSessions = await sessionRepository.count();
@@ -157,28 +83,95 @@ const seedSessions = async (): Promise<void> => {
         return;
     }
 
-    // Get the first user
-    const firstUser = await userRepository.findOne({ where: { username: "admin" } });
-    if (!firstUser) {
-        logger.warn("No admin user found, skipping session seeding");
+    // Get the admin user
+    const userRepository = AppDataSource.getRepository(User);
+    const adminUser = await userRepository.findOne({ where: { username: "admin" } });
+
+    if (!adminUser) {
+        logger.warn("Admin user not found, skipping session seeding");
         return;
     }
 
-    // Create sample session
+    // Create default slides for the seeded session
+    const defaultSlides = [
+        {
+            id: "current-escalations-1",
+            name: "Current Escalations",
+            type: "current-esc-slide",
+            active: true,
+            duration: 10,
+            dataSource: "manual", // Using mock data instead of API
+            data: {
+                escalations: [
+                    { ticketCategory: "Code Blue", teamName: "Test team", clientName: "Test client", ticketSummary: "Data extraction failed due to timeout", averageResponseTime: "Prompt Response", ticketStatus: "Resolved", currentStatus: "Resolved" },
+                    { ticketCategory: "Code Red", teamName: "Test team", clientName: "Test client", ticketSummary: "Data extraction failed due to timeout", averageResponseTime: "Prompt Response", ticketStatus: "Open", currentStatus: "Open" },
+                    { ticketCategory: "Code Yellow", teamName: "Test team", clientName: "Test client", ticketSummary: "Data extraction failed due to timeout", averageResponseTime: "Prompt Response", ticketStatus: "Resolved", currentStatus: "Resolved" },
+                    { ticketCategory: "Code Green", teamName: "Test team", clientName: "Test client", ticketSummary: "Data extraction failed due to timeout", averageResponseTime: "Prompt Response", ticketStatus: "Pending", currentStatus: "Pending" }
+                ]
+            }
+        },
+        {
+            id: "team-comparison-1",
+            name: "Team Performance Comparison",
+            type: "comparison-slide",
+            active: true,
+            duration: 15,
+            dataSource: "api",
+            data: {
+                teams: [],
+                lastUpdated: new Date().toISOString()
+            }
+        },
+        {
+            id: "graph-1",
+            name: "Team Wise Data",
+            type: "graph-slide",
+            active: false,
+            duration: 12,
+            dataSource: "api",
+            data: {
+                title: "Team Wise Data",
+                description: "Performance metrics by team",
+                graphType: "bar",
+                data: [],
+                timeRange: "daily",
+                lastUpdated: new Date().toISOString(),
+                categories: []
+            }
+        }
+    ];
+
+    // Create a sample session
     const session = sessionRepository.create({
-        sessionToken: "sample-session-token-123",
-        userId: firstUser.id,
-        displaySettings: JSON.stringify({ theme: "default", language: "en" }),
-        slideData: JSON.stringify({ currentSlide: 0, slides: [] }),
-        appSettings: JSON.stringify({ notifications: true, autoPlay: true }),
+        sessionToken: crypto.randomBytes(32).toString("hex"),
+        userId: adminUser.id,
+        slideshowData: JSON.stringify({
+            slides: defaultSlides,
+            displaySettings: {
+                swiperEffect: "slide",
+                showDateStamp: true,
+                hidePagination: false,
+                hideArrows: false,
+                hidePersiviaLogo: false
+            },
+            lastUpdated: new Date().toISOString(),
+            version: "1.0.0"
+        }),
         isActive: true,
-        deviceInfo: "Sample Device",
+        lastActivity: new Date(),
+        deviceInfo: "Sample Device (Seeded)",
         ipAddress: "127.0.0.1"
     });
 
     await sessionRepository.save(session);
-    logger.info("Created sample session");
+    logger.info("Created sample session for admin user");
+
+    logger.info("Session seeding completed");
 };
 
-// Run the seeding
-seedDatabase();
+// Run the seeding if this file is executed directly
+if (require.main === module) {
+    seedDatabase();
+}
+
+export { seedDatabase };

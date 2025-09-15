@@ -1,6 +1,6 @@
 import React, { useMemo, useState, useEffect } from "react";
-import { useSlides } from "../contexts/SlideContext";
-import { useDisplaySettings } from "../contexts/DisplaySettingsContext";
+import { useUnified } from "../contexts/UnifiedContext";
+import { useSettings } from "../contexts/SettingsContext";
 import { sessionService } from "../services/sessionService";
 import { Slide, SLIDE_TYPES, ImageSlide as ImageSlideType, VideoSlide as VideoSlideType, NewsSlide, EventSlide as EventSlideType, TeamComparisonSlide as TeamComparisonSlideType, GraphSlide as GraphSlideType, DocumentSlide as DocumentSlideType, TextSlide as TextSlideType } from "../types";
 import { EventSlideComponent, ImageSlide, CurrentEscalationsSlideComponent, TeamComparisonSlideComponent, GraphSlide, DocumentSlide, TextSlide } from "./slides";
@@ -11,7 +11,6 @@ import { DigitalClock } from "./DigitalClock";
 import { TestingOverlay } from "./TestingOverlay";
 import NewsSlideComponent from "./NewsSlideComponent";
 import { motion } from "framer-motion";
-import { useEmployees } from "../contexts/EmployeeContext";
 
 /**
  * Simple Animated Logo Component for LED Display with Video Background
@@ -109,30 +108,49 @@ const LoadingComponent: React.FC = () => {
  * SlidesDisplay component: shows only the active slides in a fullscreen/clean view.
  */
 const SlidesDisplay: React.FC = () => {
-    const { slides, isLoading, loadSlides } = useSlides();
-    const { settings, onRefreshRequest } = useDisplaySettings();
-    const { employees } = useEmployees();
+    const { slides, employees, isLoading } = useUnified();
+    const { displaySettings } = useSettings();
     const [isRefreshing, setIsRefreshing] = React.useState(false);
     const [eventSlideStates, setEventSlideStates] = useState<{ [key: string]: boolean }>({});
+
+    console.log('📺 SlidesDisplay - Component rendered:', {
+        slidesCount: slides.length,
+        isLoading,
+        isRefreshing,
+        employeesCount: employees.length,
+        eventSlideStates,
+        settings: {
+            swiperEffect: displaySettings.swiperEffect,
+            showDateStamp: displaySettings.showDateStamp,
+            hidePagination: displaySettings.hidePagination,
+            hideArrows: displaySettings.hideArrows,
+            hidePersiviaLogo: displaySettings.hidePersiviaLogo
+        },
+        timestamp: new Date().toISOString()
+    });
 
     // Load event slide states from database only
     useEffect(() => {
         const loadEventSlideStates = async () => {
             try {
+                console.log('🔄 SlidesDisplay - Loading event slide states from database');
 
+                // Event slide states are now managed through unified slideshow data
+                console.log('🔄 SlidesDisplay - Event slide states managed through unified data');
 
-                // Always try to load from database
-                const sessionData = await sessionService.syncFromServer();
-                if (sessionData?.appSettings?.eventSlideStates) {
-
-                    setEventSlideStates(sessionData.appSettings.eventSlideStates);
+                // Note: Event slide states are now managed through the unified slideshow data
+                // For now, we'll use default states since event slide states are no longer stored separately
+                // TODO: Integrate with unified slideshow data when event slide states are needed
+                if (false) { // Disabled until event slide states are integrated with unified data
+                    console.log('✅ SlidesDisplay - Event slide states loaded from database');
+                    setEventSlideStates({});
                 } else {
                     // Default to inactive if no states are saved
                     const defaultStates = {
                         "birthday-event-slide": false,
                         "anniversary-event-slide": false
                     };
-
+                    console.log('⚠️ SlidesDisplay - No event slide states found, using defaults:', defaultStates);
                     setEventSlideStates(defaultStates);
                 }
             } catch (error) {
@@ -149,73 +167,12 @@ const SlidesDisplay: React.FC = () => {
         loadEventSlideStates();
     }, []);
 
-    // Register refresh callback to respond to force refresh requests
-    React.useEffect(() => {
-        const cleanup = onRefreshRequest(() => {
-
-
-            // Show refreshing indicator
-            setIsRefreshing(true);
-
-            // Enhanced refresh with cache clearing
-            const performEnhancedRefresh = async () => {
-                try {
-
-
-                    // Clear any cached data
-                    if ('caches' in window) {
-                        try {
-                            const cacheNames = await caches.keys();
-                            await Promise.all(
-                                cacheNames.map(cacheName => caches.delete(cacheName))
-                            );
-
-                        } catch (cacheError) {
-
-                        }
-                    }
-
-                    // Force reload all images and media in the slides
-                    try {
-                        const images = document.querySelectorAll('img');
-                        images.forEach(img => {
-                            if (img.src) {
-                                img.src = img.src + '?t=' + Date.now();
-                            }
-                        });
-
-                    } catch (imgError) {
-
-                    }
-
-                    // Reload slides from database
-                    await loadSlides();
-
-
-                    // Hide refreshing indicator after a short delay
-                    setTimeout(() => {
-                        setIsRefreshing(false);
-
-                    }, 1500);
-
-                } catch (error) {
-                    console.error("Refresh failed:", error instanceof Error ? error.message : String(error));
-                    // Fallback to simple refresh
-                    loadSlides();
-                    setTimeout(() => {
-                        setIsRefreshing(false);
-                    }, 1000);
-                }
-            };
-
-            performEnhancedRefresh();
-        });
-
-        return cleanup;
-    }, [onRefreshRequest, loadSlides]);
+    // SlidesDisplay no longer periodically reloads from database
+    // It relies on the context's auto-save mechanism and the HomePage as the source of truth
+    // The context will handle data persistence automatically
 
     // Poll for event slide state updates (always active)
-    // Cross-device synchronization now handled by UnifiedPollingContext
+    // Cross-device synchronization now handled by UnifiedContext
 
     // Helper functions for date checks
     const isBirthdayToday = (dob: string): boolean => {
@@ -232,21 +189,32 @@ const SlidesDisplay: React.FC = () => {
 
     // Memoize processed slides to prevent unnecessary re-computations
     const processedSlides = useMemo(() => {
-        if (isLoading) return [];
+        console.log('🔄 SlidesDisplay - Processing slides:', {
+            isLoading,
+            slidesCount: slides.length,
+            employeesCount: employees.length,
+            eventSlideStates
+        });
 
-
+        if (isLoading) {
+            console.log('⏳ SlidesDisplay - Still loading, returning empty array');
+            return [];
+        }
 
         // Remove any existing event slides
         const nonEventSlides = slides.filter(slide => slide.type !== SLIDE_TYPES.EVENT);
+        console.log('📋 SlidesDisplay - Non-event slides:', nonEventSlides.length);
 
 
         // Birthday event slide
         const birthdayEmployees = employees.filter(employee => isBirthdayToday(employee.dob));
         const birthdayActiveState = eventSlideStates["birthday-event-slide"] ?? false;
-        // Debug logging only in development
-        if (process.env.NODE_ENV === 'development') {
-            // Birthday check
-        }
+        console.log('🎂 SlidesDisplay - Birthday check:', {
+            totalEmployees: employees.length,
+            birthdayEmployees: birthdayEmployees.length,
+            birthdayActiveState,
+            birthdayEmployeeNames: birthdayEmployees.map(e => e.name)
+        });
 
         const birthdayEventSlide: EventSlideType | null = birthdayEmployees.length > 0 ? {
             id: "birthday-event-slide",
@@ -269,10 +237,12 @@ const SlidesDisplay: React.FC = () => {
         // Anniversary event slide
         const anniversaryEmployees = employees.filter(employee => isAnniversaryToday(employee.dateOfJoining));
         const anniversaryActiveState = eventSlideStates["anniversary-event-slide"] ?? false;
-        // Debug logging only in development
-        if (process.env.NODE_ENV === 'development') {
-            // Anniversary check
-        }
+        console.log('🎉 SlidesDisplay - Anniversary check:', {
+            totalEmployees: employees.length,
+            anniversaryEmployees: anniversaryEmployees.length,
+            anniversaryActiveState,
+            anniversaryEmployeeNames: anniversaryEmployees.map(e => e.name)
+        });
 
         const anniversaryEventSlide: EventSlideType | null = anniversaryEmployees.length > 0 ? {
             id: "anniversary-event-slide",
@@ -296,9 +266,12 @@ const SlidesDisplay: React.FC = () => {
         const eventSlides: EventSlideType[] = [birthdayEventSlide, anniversaryEventSlide].filter((s): s is EventSlideType => s !== null);
         const allSlides = [...nonEventSlides, ...eventSlides];
 
-
-        eventSlides.forEach(slide => {
-
+        console.log('📊 SlidesDisplay - Final slide composition:', {
+            nonEventSlides: nonEventSlides.length,
+            eventSlides: eventSlides.length,
+            totalSlides: allSlides.length,
+            birthdaySlideCreated: !!birthdayEventSlide,
+            anniversarySlideCreated: !!anniversaryEventSlide
         });
 
         // Debug logging for slide processing
@@ -311,6 +284,12 @@ const SlidesDisplay: React.FC = () => {
             active: s.active,
             duration: s.duration
         })));
+
+        const activeSlides = allSlides.filter(slide => slide.active && slide.duration > 0);
+        console.log('✅ SlidesDisplay - Active slides ready for display:', {
+            activeCount: activeSlides.length,
+            activeSlides: activeSlides.map(s => ({ id: s.id, name: s.name, type: s.type, duration: s.duration }))
+        });
 
         return allSlides; // Let SwiperSlideshow handle the active filtering
     }, [slides, isLoading, eventSlideStates, employees]);
@@ -345,19 +324,28 @@ const SlidesDisplay: React.FC = () => {
 
     // Check if there are active slides (slides with duration > 0 and active = true)
     const hasActiveSlides = useMemo(() => {
-        return processedSlides.some(slide => slide.active && (slide.duration || 0) > 0);
+        const activeSlides = processedSlides.filter(slide => slide.active && (slide.duration || 0) > 0);
+        console.log('🎯 SlidesDisplay - Active slides check:', {
+            totalProcessedSlides: processedSlides.length,
+            activeSlidesCount: activeSlides.length,
+            hasActiveSlides: activeSlides.length > 0,
+            activeSlidesDetails: activeSlides.map(s => ({ id: s.id, name: s.name, type: s.type, duration: s.duration }))
+        });
+        return activeSlides.length > 0;
     }, [processedSlides]);
 
     // Show loading component while slides are being loaded
     if (isLoading) {
+        console.log('⏳ SlidesDisplay - Showing loading component');
         return <LoadingComponent />;
     }
 
     // Show animated logo if no slides to display (LED Display mode)
     if (processedSlides.length === 0) {
+        console.log('🎭 SlidesDisplay - No slides available, showing animated logo');
         return (
             <div className="relative w-full h-screen bg-black">
-                <AnimatedLogo hideLogo={settings.hidePersiviaLogo} />
+                <AnimatedLogo hideLogo={displaySettings.hidePersiviaLogo} />
 
                 {/* Refresh Indicator */}
                 {isRefreshing && (
@@ -374,19 +362,31 @@ const SlidesDisplay: React.FC = () => {
         );
     }
 
+    console.log('🎬 SlidesDisplay - Rendering slideshow with slides:', {
+        slidesCount: processedSlides.length,
+        activeSlidesCount: processedSlides.filter(s => s.active && s.duration > 0).length,
+        settings: {
+            swiperEffect: displaySettings.swiperEffect,
+            hidePagination: displaySettings.hidePagination,
+            hideArrows: displaySettings.hideArrows,
+            showDateStamp: displaySettings.showDateStamp,
+            hidePersiviaLogo: displaySettings.hidePersiviaLogo
+        }
+    });
+
     return (
         <div className="relative w-full h-screen bg-black">
             <SwiperSlideshow
-                key={`swiper-${settings.swiperEffect}`}
+                key={`swiper-${displaySettings.swiperEffect}`}
                 slides={processedSlides}
                 renderSlideContent={renderSlideContent}
-                hidePagination={settings.hidePagination}
-                hideArrows={settings.hideArrows}
-                effect={settings.swiperEffect}
+                hidePagination={displaySettings.hidePagination}
+                hideArrows={displaySettings.hideArrows}
+                effect={displaySettings.swiperEffect}
                 isFullscreen={true}
-                settings={settings}
+                settings={displaySettings}
             />
-            {settings.showDateStamp && (
+            {displaySettings.showDateStamp && (
                 <div className="absolute top-4 right-4 z-[10000]">
                     <DigitalClock />
                 </div>
@@ -394,7 +394,7 @@ const SlidesDisplay: React.FC = () => {
             {/* Testing overlay - always visible during testing */}
             <TestingOverlay />
             {/* Only show logo overlay when there are active slides and not hidden by settings */}
-            {hasActiveSlides && !settings.hidePersiviaLogo && <SlideLogoOverlay isFullscreen={true} />}
+            {hasActiveSlides && !displaySettings.hidePersiviaLogo && <SlideLogoOverlay isFullscreen={true} />}
         </div>
     );
 };

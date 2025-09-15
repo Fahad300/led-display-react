@@ -1,12 +1,8 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { SlideProvider } from './contexts/SlideContext';
-import { SettingsProvider } from './contexts/SettingsContext';
 import { ToastProvider } from './contexts/ToastContext';
-import { DisplaySettingsProvider } from './contexts/DisplaySettingsContext';
-import { EmployeeProvider } from './contexts/EmployeeContext';
-import { GraphProvider } from './contexts/GraphContext';
-import { UnifiedPollingProvider } from './contexts/UnifiedPollingContext';
+import { UnifiedProvider } from './contexts/UnifiedContext';
+import { SettingsProvider } from './contexts/SettingsContext';
 import MainLayout from './components/layout/MainLayout';
 import { AuthProvider } from "./contexts/AuthContext";
 import { ProtectedRoute } from "./components/ProtectedRoute";
@@ -19,73 +15,65 @@ import DisplayPage from "./pages/DisplayPage";
 
 const App: React.FC = () => {
   return (
-    <SettingsProvider>
-      <ToastProvider>
-        <Router>
-          <AuthProvider>
-            <SlideProvider>
-              <DisplaySettingsProvider>
-                <EmployeeProvider>
-                  <GraphProvider>
-                    <UnifiedPollingProvider>
-                      <Routes>
-                        {/* Public Routes */}
-                        <Route path="/login" element={<Login />} />
+    <ToastProvider>
+      <Router>
+        <AuthProvider>
+          <SettingsProvider>
+            <UnifiedProvider>
+              <Routes>
+                {/* Public Routes */}
+                <Route path="/login" element={<Login />} />
 
-                        {/* Display Route - No Header/Footer - Public Access for LED Screen */}
-                        <Route
-                          path="/display"
-                          element={<DisplayPage />}
-                        />
+                {/* Display Route - No Header/Footer - Public Access for LED Screen */}
+                <Route
+                  path="/display"
+                  element={<DisplayPage />}
+                />
 
-                        {/* Protected Routes with Header/Footer */}
-                        <Route element={<MainLayout />}>
-                          <Route
-                            path="/"
-                            element={
-                              <ProtectedRoute>
-                                <HomePage />
-                              </ProtectedRoute>
-                            }
-                          />
-                          <Route
-                            path="/admin"
-                            element={
-                              <ProtectedRoute>
-                                <AdminPage />
-                              </ProtectedRoute>
-                            }
-                          />
-                          <Route
-                            path="/media"
-                            element={
-                              <ProtectedRoute>
-                                <MediaPage />
-                              </ProtectedRoute>
-                            }
-                          />
-                          <Route
-                            path="/register"
-                            element={
-                              <ProtectedRoute>
-                                <Register />
-                              </ProtectedRoute>
-                            }
-                          />
-                        </Route>
+                {/* Protected Routes with Header/Footer */}
+                <Route element={<MainLayout />}>
+                  <Route
+                    path="/"
+                    element={
+                      <ProtectedRoute>
+                        <HomePage />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/admin"
+                    element={
+                      <ProtectedRoute>
+                        <AdminPage />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/media"
+                    element={
+                      <ProtectedRoute>
+                        <MediaPage />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/register"
+                    element={
+                      <ProtectedRoute>
+                        <Register />
+                      </ProtectedRoute>
+                    }
+                  />
+                </Route>
 
-                        {/* Fallback Route */}
-                        <Route path="*" element={<Navigate to="/" replace />} />
-                      </Routes>
-                    </UnifiedPollingProvider>
-                  </GraphProvider>
-                </EmployeeProvider>
-              </DisplaySettingsProvider>
-            </SlideProvider>
-          </AuthProvider>
-        </Router>
-      </ToastProvider>
-    </SettingsProvider>
+                {/* Fallback Route */}
+                <Route path="*" element={<Navigate to="/" replace />} />
+              </Routes>
+            </UnifiedProvider>
+          </SettingsProvider>
+        </AuthProvider>
+      </Router>
+    </ToastProvider>
   );
 };
 

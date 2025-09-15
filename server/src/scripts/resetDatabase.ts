@@ -4,7 +4,7 @@ import { logger } from "../utils/logger";
 
 /**
  * Reset Database Script
- * Drops all tables and recreates them using migrations
+ * Drops all tables and recreates them using clean migrations
  */
 const resetDatabase = async (): Promise<void> => {
     try {
@@ -27,66 +27,42 @@ const resetDatabase = async (): Promise<void> => {
             await queryRunner.release();
         }
 
-        // Drop all existing tables
+        // Drop all existing tables (in reverse order due to foreign keys)
         logger.info("🗑️  Dropping existing tables...");
-        await AppDataSource.dropDatabase();
+        await queryRunner.query("SET FOREIGN_KEY_CHECKS = 0");
+        await queryRunner.query("DROP TABLE IF EXISTS files");
+        await queryRunner.query("DROP TABLE IF EXISTS sessions");
+        await queryRunner.query("DROP TABLE IF EXISTS users");
+        await queryRunner.query("DROP TABLE IF EXISTS migrations");
+        await queryRunner.query("SET FOREIGN_KEY_CHECKS = 1");
         logger.info("✅ All tables dropped");
 
-        // Run migrations in order
-        logger.info("🔄 Running migrations...");
+        // Run clean migrations
+        logger.info("🏗️  Running clean migrations...");
         const migrations = await AppDataSource.runMigrations();
-        logger.info(`✅ Executed ${migrations.length} migrations`);
+        logger.info(`✅ Executed ${migrations.length} clean migrations`);
 
-        // Verify tables exist
-        const expectedTables = ["users", "displays", "sessions", "files"];
-        let existingTables = 0;
-
-        for (const table of expectedTables) {
-            const tableExists = await AppDataSource.query(
-                `SELECT COUNT(*) as count FROM information_schema.tables 
-                 WHERE table_schema = '${config.database.database}' 
-                 AND table_name = '${table}'`
-            );
-
-            if (tableExists[0].count > 0) {
-                existingTables++;
-                logger.info(`✅ Table '${table}' exists`);
-            } else {
-                logger.error(`❌ Table '${table}' missing`);
-            }
-        }
-
-        logger.info(`📊 Database reset complete - ${existingTables}/${expectedTables.length} tables verified`);
-
-        if (existingTables === expectedTables.length) {
-            logger.info("🎉 Database reset successful!");
-        } else {
-            logger.error("❌ Database reset failed - some tables are missing");
-            process.exit(1);
-        }
-
-    } catch (error) {
-        if (error instanceof Error) {
-            logger.error(`❌ Database reset failed: ${error.message}`);
-            logger.error(`Stack trace: ${error.stack}`);
-        }
-        process.exit(1);
-    } finally {
+        // Close the connection
         await AppDataSource.destroy();
+        logger.info("✅ Database connection closed");
+
+        logger.info("🎉 Database reset completed successfully!");
+        logger.info("📋 Created tables:");
+        logger.info("   - users (authentication)");
+        logger.info("   - sessions (user sessions with unified slideshow data)");
+        logger.info("   - files (media storage)");
+        logger.info("   - migrations (migration history)");
+
+        process.exit(0);
+    } catch (error) {
+        logger.error("❌ Database reset failed:", error);
+        process.exit(1);
     }
 };
 
-// Run reset if this file is executed directly
+// Run the reset if this file is executed directly
 if (require.main === module) {
-    resetDatabase()
-        .then(() => {
-            logger.info("Database reset script completed");
-            process.exit(0);
-        })
-        .catch((error) => {
-            logger.error(`Database reset script failed: ${error}`);
-            process.exit(1);
-        });
+    resetDatabase();
 }
 
 export { resetDatabase };

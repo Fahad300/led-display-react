@@ -168,30 +168,11 @@ export class FileService {
     }
 
     /**
-     * Check if a file is used in any display
+     * Check if a file is used in any display (legacy method - no longer needed)
      */
     private static async isFileUsedInDisplays(fileId: string): Promise<boolean> {
-        try {
-            const file = await this.getFileById(fileId);
-            if (!file) return false;
-
-            const displayRepository = AppDataSource.getRepository(require("../models/Display").Display);
-            const displays = await displayRepository.find();
-
-            // Check if file URL is referenced in any display content
-            const fileUrl = file.getUrl();
-
-            for (const display of displays) {
-                if (display.content.images?.includes(fileUrl) ||
-                    display.content.videos?.includes(fileUrl)) {
-                    return true;
-                }
-            }
-
-            return false;
-        } catch (error) {
-            logger.error("Error checking if file is used:", error);
-            return false;
-        }
+        // Since we removed the Display model, files are not used in displays anymore
+        // This method is kept for compatibility but always returns false
+        return false;
     }
 } 

@@ -17,13 +17,7 @@ export class Session {
     user!: User;
 
     @Column({ type: "text", nullable: true })
-    displaySettings!: string; // JSON string of display settings
-
-    @Column({ type: "text", nullable: true })
-    slideData!: string; // JSON string of slide configurations
-
-    @Column({ type: "text", nullable: true })
-    appSettings!: string; // JSON string of app settings
+    slideshowData!: string; // JSON string of unified slideshow data
 
     @Column({ default: true })
     isActive!: boolean;
@@ -44,39 +38,15 @@ export class Session {
     updatedAt!: Date;
 
     // Helper methods for JSON handling
-    getDisplaySettings(): any {
+    getSlideshowData(): any {
         try {
-            return this.displaySettings ? JSON.parse(this.displaySettings) : {};
+            return this.slideshowData ? JSON.parse(this.slideshowData) : null;
         } catch {
-            return {};
+            return null;
         }
     }
 
-    setDisplaySettings(settings: any): void {
-        this.displaySettings = JSON.stringify(settings);
-    }
-
-    getSlideData(): any {
-        try {
-            return this.slideData ? JSON.parse(this.slideData) : [];
-        } catch {
-            return [];
-        }
-    }
-
-    setSlideData(slides: any): void {
-        this.slideData = JSON.stringify(slides);
-    }
-
-    getAppSettings(): any {
-        try {
-            return this.appSettings ? JSON.parse(this.appSettings) : {};
-        } catch {
-            return {};
-        }
-    }
-
-    setAppSettings(settings: any): void {
-        this.appSettings = JSON.stringify(settings);
+    setSlideshowData(data: any): void {
+        this.slideshowData = JSON.stringify(data);
     }
 } 

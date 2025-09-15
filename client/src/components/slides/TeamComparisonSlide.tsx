@@ -1,13 +1,16 @@
 import React from "react";
 import type { TeamComparisonSlide } from "../../types";
-import { useGraphs } from "../../contexts/GraphContext";
+import { useUnified } from "../../contexts/UnifiedContext";
 
 /**
  * TeamComparisonSlideComponent
- * Displays a comparison of team metrics in a table format using data from GraphContext
+ * Displays a comparison of team metrics in a table format using data from UnifiedContext
  */
 export const TeamComparisonSlideComponent: React.FC<{ slide: TeamComparisonSlide }> = ({ slide }) => {
-    const { teamWiseData, loading, error } = useGraphs();
+    const { graphData } = useUnified();
+    const teamWiseData = graphData; // graphData is the team data itself
+    const loading = false; // Loading is handled in UnifiedContext
+    const error = null; // Error handling is in UnifiedContext
 
     // Format date range for display
     const formatDateRange = (lastUpdated: string): string => {
@@ -27,13 +30,13 @@ export const TeamComparisonSlideComponent: React.FC<{ slide: TeamComparisonSlide
             return [];
         }
 
-        const allTeams = teamWiseData.data.map(team => {
+        const allTeams = teamWiseData.data.map((team: any) => {
             // Calculate totals for each priority level
-            const cLevelCount = team.dataPoints.find(dp => dp.category.includes('C-Level'))?.value || 0;
-            const p1Count = team.dataPoints.find(dp => dp.category.includes('P1'))?.value || 0;
-            const p2Count = team.dataPoints.find(dp => dp.category.includes('P2'))?.value || 0;
-            const p3Count = team.dataPoints.find(dp => dp.category.includes('P3'))?.value || 0;
-            const p4Count = team.dataPoints.find(dp => dp.category.includes('P4'))?.value || 0;
+            const cLevelCount = team.dataPoints.find((dp: any) => dp.category.includes('C-Level'))?.value || 0;
+            const p1Count = team.dataPoints.find((dp: any) => dp.category.includes('P1'))?.value || 0;
+            const p2Count = team.dataPoints.find((dp: any) => dp.category.includes('P2'))?.value || 0;
+            const p3Count = team.dataPoints.find((dp: any) => dp.category.includes('P3'))?.value || 0;
+            const p4Count = team.dataPoints.find((dp: any) => dp.category.includes('P4'))?.value || 0;
 
             const totalTickets = cLevelCount + p1Count + p2Count + p3Count + p4Count;
 
@@ -50,7 +53,7 @@ export const TeamComparisonSlideComponent: React.FC<{ slide: TeamComparisonSlide
 
         // Sort by total tickets (descending) and return top 5
         return allTeams
-            .sort((a, b) => b.totalTickets - a.totalTickets)
+            .sort((a: any, b: any) => b.totalTickets - a.totalTickets)
             .slice(0, 10);
     };
 
@@ -109,7 +112,7 @@ export const TeamComparisonSlideComponent: React.FC<{ slide: TeamComparisonSlide
                             </tr>
                         </thead>
                         <tbody>
-                            {teams.map((team, index) => (
+                            {teams.map((team: any, index: number) => (
                                 <tr
                                     key={team.teamName}
                                     className={`${index % 2 === 0 ? 'bg-white/10' : 'bg-white/5'} hover:bg-white/20 transition-colors`}

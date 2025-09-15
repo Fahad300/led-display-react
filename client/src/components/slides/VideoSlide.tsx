@@ -5,13 +5,14 @@ import { MediaSelector } from "../MediaSelector";
 interface VideoSlideProps {
     slide: VideoSlideType;
     onUpdate?: (slide: VideoSlideType) => void;
+    onVideoEnd?: () => void;
 }
 
 /**
  * VideoSlide Component
  * Displays a video with optional caption and controls
  */
-export const VideoSlide: React.FC<VideoSlideProps> = ({ slide, onUpdate }) => {
+export const VideoSlide: React.FC<VideoSlideProps> = ({ slide, onUpdate, onVideoEnd }) => {
     const [isMediaSelectorOpen, setIsMediaSelectorOpen] = useState(false);
 
     const handleVideoSelect = (url: string) => {
@@ -83,13 +84,35 @@ export const VideoSlide: React.FC<VideoSlideProps> = ({ slide, onUpdate }) => {
                         console.error("Video playback error:", e);
                     }}
                     onPlay={() => {
-                        // Video started playing successfully
+                        console.log("🔍 VideoSlide - Video started playing");
+                        // Dispatch event to pause autoplay timer
+                        const event = new CustomEvent('videoSlideStart', {
+                            detail: { slideId: slide.id, slideName: slide.name }
+                        });
+                        window.dispatchEvent(event);
                     }}
                     onPause={() => {
-                        // Video paused successfully
+                        console.log("🔍 VideoSlide - Video paused");
+                        // Dispatch event to resume autoplay timer
+                        const event = new CustomEvent('videoSlidePause', {
+                            detail: { slideId: slide.id, slideName: slide.name }
+                        });
+                        window.dispatchEvent(event);
                     }}
                     onAbort={() => {
-                        // Video loading was aborted
+                        console.log("🔍 VideoSlide - Video loading was aborted");
+                    }}
+                    onEnded={() => {
+                        console.log("🔍 VideoSlide - Video ended, triggering next slide");
+                        // Dispatch event for video end
+                        const event = new CustomEvent('videoSlideEnd', {
+                            detail: { slideId: slide.id, slideName: slide.name }
+                        });
+                        window.dispatchEvent(event);
+
+                        if (onVideoEnd && !slide.data.loop) {
+                            onVideoEnd();
+                        }
                     }}
                 />
                 {captionElement}

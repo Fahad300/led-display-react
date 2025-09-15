@@ -1,10 +1,10 @@
 import { backendApi } from './api';
+import { SlideshowData } from '../types';
 
 export interface SessionData {
     sessionId: string;
     displaySettings: any;
     slideData: any[];
-    appSettings: any;
     lastActivity: string;
     deviceInfo: string;
 }
@@ -20,12 +20,6 @@ export interface SessionInfo {
 
 class SessionService {
     private sessionToken: string | null = null;
-
-    constructor() {
-        // SessionService initialized for database-driven operations
-    }
-
-
 
     /**
      * Get device information
@@ -47,11 +41,15 @@ class SessionService {
     async createSession(): Promise<string> {
         try {
             const token = localStorage.getItem("token");
-            const headers: any = {};
 
-            if (token) {
-                headers.Authorization = `Bearer ${token}`;
+            // If no token, create a display-only session
+            if (!token) {
+                this.sessionToken = "display-session-" + Date.now();
+                return this.sessionToken;
             }
+
+            const headers: any = {};
+            headers.Authorization = `Bearer ${token}`;
 
             const response = await backendApi.post(`/api/sessions/create`, {
                 deviceInfo: this.getDeviceInfo(),
@@ -66,7 +64,8 @@ class SessionService {
         } catch (error) {
             console.error("Error creating session:", error);
             // For display purposes, we don't need to throw - just return a fallback
-            return "display-session";
+            this.sessionToken = "display-session-" + Date.now();
+            return this.sessionToken;
         }
     }
 
@@ -93,25 +92,6 @@ class SessionService {
     /**
  * Update display settings
  */
-    async updateDisplaySettings(settings: any): Promise<void> {
-        try {
-            const token = localStorage.getItem("token");
-            if (!token) {
-                // No authentication token, skipping display settings update
-                return;
-            }
-
-            const headers = { Authorization: `Bearer ${token}` };
-
-            await backendApi.put(`/api/sessions/display-settings`, {
-                settings
-            }, { headers });
-        } catch (error) {
-            console.error("Error updating display settings:", error);
-            // Don't throw for display purposes
-            // Continuing without display settings update
-        }
-    }
 
     /**
  * Update slide data
@@ -205,19 +185,17 @@ class SessionService {
     async syncFromServer(): Promise<{
         displaySettings: any;
         slideData: any[];
-        appSettings: any;
     } | null> {
         try {
 
 
             try {
                 const response = await backendApi.get(`/api/sessions/latest`);
-                if (response.data) {
-
+                if (response.data && response.data.slideshowData) {
+                    const slideshowData = response.data.slideshowData;
                     return {
-                        displaySettings: response.data.displaySettings,
-                        slideData: response.data.slideData,
-                        appSettings: response.data.appSettings
+                        displaySettings: slideshowData.displaySettings,
+                        slideData: slideshowData.slides
                     };
                 }
             } catch (error) {
@@ -231,8 +209,7 @@ class SessionService {
 
                     return {
                         displaySettings: sessionData.displaySettings,
-                        slideData: sessionData.slideData,
-                        appSettings: sessionData.appSettings
+                        slideData: sessionData.slideData
                     };
                 }
             } catch (error) {
@@ -252,7 +229,6 @@ class SessionService {
     async syncToServer(data: {
         displaySettings?: any;
         slideData?: any[];
-        appSettings?: any;
     }): Promise<void> {
         try {
             // Check if user is authenticated
@@ -266,17 +242,13 @@ class SessionService {
 
             const promises: Promise<void>[] = [];
 
-            if (data.displaySettings) {
-                promises.push(this.updateDisplaySettings(data.displaySettings));
-            }
+            // displaySettings now handled by unified slideshow data
 
             if (data.slideData) {
                 promises.push(this.updateSlideData(data.slideData));
             }
 
-            if (data.appSettings) {
-                promises.push(this.updateAppSettings(data.appSettings));
-            }
+            // appSettings removed - using unified slideshow data instead
 
             await Promise.all(promises);
 
@@ -284,6 +256,91 @@ class SessionService {
             console.error("Error syncing to database:", error);
             // Don't throw error for display purposes - just log it
             // Continuing without server sync
+        }
+    }
+
+    /**
+     * Save unified slideshow data to the database
+     */
+    async saveSlideshowData(slideshowData: SlideshowData): Promise<void> {
+        try {
+            const token = localStorage.getItem("token");
+            if (!token) {
+                console.log("No token found, skipping slideshow data save (display-only mode)");
+                return;
+            }
+
+            const headers: any = {};
+            headers.Authorization = `Bearer ${token}`;
+
+            await backendApi.post(`/api/sessions/slideshow-data`, { slideshowData }, { headers });
+            console.log("✅ Slideshow data saved to database:", {
+                slidesCount: slideshowData.slides.length,
+                activeSlidesCount: slideshowData.slides.filter((slide: any) => slide.active).length,
+                displaySettings: slideshowData.displaySettings,
+                timestamp: slideshowData.lastUpdated,
+                version: slideshowData.version
+            });
+        } catch (error) {
+            console.error("Error saving slideshow data:", error);
+            throw error;
+        }
+    }
+
+    /**
+     * Load unified slideshow data from the database
+     */
+    async loadSlideshowData(): Promise<SlideshowData | null> {
+        try {
+            const token = localStorage.getItem("token");
+
+            if (token) {
+                // Try authenticated endpoint first
+                try {
+                    const headers: any = {};
+                    headers.Authorization = `Bearer ${token}`;
+
+                    const response = await backendApi.get(`/api/sessions/slideshow-data`, { headers });
+                    const slideshowData = response.data.slideshowData;
+
+                    if (slideshowData) {
+                        console.log("✅ Slideshow data loaded from database (authenticated):", {
+                            slidesCount: slideshowData.slides?.length || 0,
+                            activeSlidesCount: slideshowData.slides?.filter((slide: any) => slide.active).length || 0,
+                            displaySettings: slideshowData.displaySettings,
+                            lastUpdated: slideshowData.lastUpdated,
+                            version: slideshowData.version
+                        });
+                        return slideshowData;
+                    }
+                } catch (authError) {
+                    console.log("Authenticated endpoint failed, trying public endpoint:", authError);
+                }
+            }
+
+            // Fallback to public endpoint (works for both authenticated and unauthenticated users)
+            try {
+                const response = await backendApi.get(`/api/sessions/latest`);
+                const slideshowData = response.data.slideshowData;
+
+                if (slideshowData) {
+                    console.log("✅ Slideshow data loaded from database (public):", {
+                        slidesCount: slideshowData.slides?.length || 0,
+                        activeSlidesCount: slideshowData.slides?.filter((slide: any) => slide.active).length || 0,
+                        displaySettings: slideshowData.displaySettings,
+                        lastUpdated: slideshowData.lastUpdated,
+                        version: slideshowData.version
+                    });
+                    return slideshowData;
+                }
+            } catch (publicError) {
+                console.log("Public endpoint also failed:", publicError);
+            }
+
+            return null;
+        } catch (error) {
+            console.error("Error loading slideshow data:", error);
+            return null;
         }
     }
 

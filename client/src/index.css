@@ -397,6 +397,24 @@ input#slideImageFile {
   }
 }
 
+/* Custom logo pulsing animation for no slides state */
+@keyframes logoPulse {
+  0% {
+    transform: scale(1);
+    opacity: 0.9;
+  }
+
+  50% {
+    transform: scale(1.05);
+    opacity: 1;
+  }
+
+  100% {
+    transform: scale(1);
+    opacity: 0.9;
+  }
+}
+
 /* Display Page Fullscreen Styles - Enhanced for LED displays */
 .display-page-fullscreen {
   position: fixed !important;

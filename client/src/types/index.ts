@@ -316,3 +316,25 @@ export interface AppSettings {
     slideShowAutoPlay: boolean;
     defaultSlideDuration: number;
 }
+
+/**
+ * Unified slideshow data object that contains all data needed for the slideshow
+ * This object is saved to the database and used by both HomePage and DisplayPage
+ */
+export interface SlideshowData {
+    // Slides data
+    slides: Slide[];
+
+    // Display settings
+    displaySettings: {
+        swiperEffect: string;
+        showDateStamp: boolean;
+        hidePagination: boolean;
+        hideArrows: boolean;
+        hidePersiviaLogo: boolean;
+    };
+
+    // Metadata
+    lastUpdated: string;
+    version: string;
+}

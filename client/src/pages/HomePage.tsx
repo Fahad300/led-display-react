@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import { useSlides } from '../contexts/SlideContext';
+import { useUnified } from '../contexts/UnifiedContext';
+import { useSettings } from '../contexts/SettingsContext';
 import { Slide, SLIDE_TYPES, ImageSlide as ImageSlideType, VideoSlide as VideoSlideType, NewsSlide, EventSlide as EventSlideType, TeamComparisonSlide as TeamComparisonSlideType, GraphSlide as GraphSlideType, DocumentSlide as DocumentSlideType, TextSlide as TextSlideType, Employee } from '../types';
 import { EventSlideComponent, ImageSlide, CurrentEscalationsSlideComponent, TeamComparisonSlideComponent, GraphSlide, DocumentSlide, TextSlide } from "../components/slides";
 import {
@@ -19,29 +20,17 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import SlideLogoOverlay from "../components/SlideLogoOverlay";
-import { useEmployees } from "../contexts/EmployeeContext";
-import { useVideoPlayback } from "../hooks/useVideoPlayback";
-import { Swiper, SwiperSlide } from "swiper/react";
-import { EffectFade, EffectCube, EffectCoverflow, EffectFlip, EffectCards, Autoplay, Navigation, Pagination } from "swiper/modules";
-import type { Swiper as SwiperType } from "swiper";
+import SwiperSlideshow from "../components/SwiperSlideshow";
 import "swiper/css";
 import "swiper/css/effect-fade";
-import "swiper/css/effect-cube";
-import "swiper/css/effect-coverflow";
-import "swiper/css/effect-flip";
-import "swiper/css/effect-cards";
 import "swiper/css/navigation";
 import "swiper/css/pagination";
 import { faCompress, faExpand, faTicket } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { useDisplaySettings } from "../contexts/DisplaySettingsContext";
 import { VideoSlide } from "../components/slides/VideoSlide";
-import { useNavigate } from 'react-router-dom';
 import { DigitalClock } from "../components/DigitalClock";
 import NewsSlideComponent from "../components/NewsSlideComponent";
-import { sessionService } from "../services/sessionService";
 import { useToast } from "../contexts/ToastContext";
-import { useUnifiedPolling } from "../contexts/UnifiedPollingContext";
 
 // Version constant - update this when releasing new versions
 const VERSION = "1.0.1";
@@ -55,11 +44,7 @@ interface ReorderResult {
 // Update the TRANSITION_EFFECTS constant
 const TRANSITION_EFFECTS = [
     { value: "slide", label: "Slide" },
-    { value: "fade", label: "Fade" },
-    { value: "cube", label: "Cube" },
-    { value: "coverflow", label: "Coverflow" },
-    { value: "flip", label: "Flip" },
-    { value: "cards", label: "Cards" }
+    { value: "fade", label: "Fade" }
 ] as const;
 
 /**
@@ -110,39 +95,11 @@ const getSlideTypeIcon = (type: string): React.ReactElement | null => {
     }
 };
 
-/**
- * Get the label for a slide type
- */
-const getSlideTypeLabel = (type: typeof SLIDE_TYPES[keyof typeof SLIDE_TYPES]) => {
-    switch (type) {
-        case SLIDE_TYPES.IMAGE:
-            return "Image";
-        case SLIDE_TYPES.VIDEO:
-            return "Video";
-        case SLIDE_TYPES.NEWS:
-            return "News";
-        case SLIDE_TYPES.EVENT:
-            return "Event";
-        case SLIDE_TYPES.DOCUMENT:
-            return "Document";
-        case SLIDE_TYPES.CURRENT_ESCALATIONS:
-            return "Escalations";
-        case SLIDE_TYPES.TEAM_COMPARISON:
-            return "Team Comparison";
-        case SLIDE_TYPES.GRAPH:
-            return "Graph";
-        case SLIDE_TYPES.TEXT:
-            return "Text";
-        default:
-            return "Unknown";
-    }
-};
 
 /**
  * Slide Preview Component
  */
 const SlidePreview: React.FC<{ slide: Slide }> = ({ slide }) => {
-    const { safePlay, safePause } = useVideoPlayback();
 
     const renderPreview = () => {
         switch (slide.type) {
@@ -424,187 +381,16 @@ const SlideManagementColumn: React.FC<{
     );
 };
 
-/**
- * Swiper Slideshow Component
- */
-const SwiperSlideshow: React.FC<{
-    slides: Slide[];
-    renderSlideContent: (slide: Slide) => React.ReactNode;
-    onSlideChange?: (index: number) => void;
-    hidePagination?: boolean;
-    hideArrows?: boolean;
-    effect?: string;
-    isFullscreen?: boolean;
-}> = ({ slides, renderSlideContent, onSlideChange, hidePagination = false, hideArrows = false, effect = "slide", isFullscreen = false }) => {
-    // Get the appropriate effect module
-    const getEffectModule = () => {
-        switch (effect) {
-            case "fade": return EffectFade;
-            case "cube": return EffectCube;
-            case "coverflow": return EffectCoverflow;
-            case "flip": return EffectFlip;
-            case "cards": return EffectCards;
-            default: return undefined;
-        }
-    };
-
-    // Get the effect configuration
-    const getEffectConfig = () => {
-        switch (effect) {
-            case "fade":
-                return {
-                    fadeEffect: {
-                        crossFade: true
-                    }
-                };
-            case "cube":
-                return {
-                    cubeEffect: {
-                        shadow: true,
-                        slideShadows: true,
-                        shadowOffset: 20,
-                        shadowScale: 0.94,
-                        rotate: 50,
-                        stretch: 0,
-                        depth: 100,
-                        modifier: 1
-                    }
-                };
-            case "coverflow":
-                return {
-                    coverflowEffect: {
-                        rotate: 50,
-                        stretch: 0,
-                        depth: 100,
-                        modifier: 1,
-                        slideShadows: true
-                    }
-                };
-            case "flip":
-                return {
-                    flipEffect: {
-                        slideShadows: true,
-                        limitRotation: true
-                    }
-                };
-            case "cards":
-                return {
-                    cardsEffect: {
-                        perSlideOffset: 8,
-                        perSlideRotate: 2,
-                        rotate: true,
-                        slideShadows: true
-                    }
-                };
-            default:
-                return {};
-        }
-    };
-
-    // Combine all required modules
-    const effectModule = getEffectModule();
-    const modules = [
-        Autoplay,
-        Navigation,
-        Pagination,
-        ...(effectModule ? [effectModule] : [])
-    ];
-
-    return (
-        <div className="relative w-full h-full">
-            <Swiper
-                key={effect}
-                modules={modules}
-                effect={effect}
-                {...getEffectConfig()}
-                spaceBetween={0}
-                slidesPerView={1}
-                navigation={!hideArrows}
-                pagination={!hidePagination ? {
-                    clickable: true,
-                    dynamicBullets: true
-                } : false}
-                autoplay={{
-                    delay: 5000,
-                    disableOnInteraction: false
-                }}
-                onSlideChange={(swiper: SwiperType) => onSlideChange?.(swiper.activeIndex)}
-                className="w-full h-full"
-                speed={800}
-                grabCursor={true}
-                observer={true}
-                observeParents={true}
-            >
-                {slides.map((slide) => (
-                    <SwiperSlide key={slide.id}>
-                        <div className="w-full h-full">
-                            {renderSlideContent(slide)}
-                        </div>
-                    </SwiperSlide>
-                ))}
-            </Swiper>
-        </div>
-    );
-};
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const isVideoSlide = (slide: Slide): slide is VideoSlideType => {
     return slide.type === SLIDE_TYPES.VIDEO;
 };
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-const VideoSlideComponent: React.FC<{ slide: VideoSlideType }> = ({ slide }) => {
-    const videoRef = useRef<HTMLVideoElement>(null);
-    const { safePlay } = useVideoPlayback();
-
-    useEffect(() => {
-        // Ensure video plays when it becomes active
-        if (videoRef.current) {
-            const playVideo = async () => {
-                if (slide.data.autoplay) {
-                    await safePlay(videoRef.current!);
-                }
-            };
-            playVideo();
-        }
-    }, [slide.data.autoplay, safePlay]);
-
-    return (
-        <div className="relative w-full h-full bg-black">
-            <video
-                ref={videoRef}
-                key={slide.data.videoUrl}
-                src={slide.data.videoUrl}
-                className="absolute inset-0 w-full h-full object-contain"
-                controls={false}
-                autoPlay={slide.data.autoplay}
-                muted={slide.data.muted}
-                loop={slide.data.loop}
-                playsInline
-                onError={(e) => {
-                    console.error("Video playback error:", e);
-                    const target = e.target as HTMLVideoElement;
-                    target.parentElement!.innerHTML = `
-                        <div class="flex flex-col items-center justify-center h-full">
-                            <svg class="w-16 h-16 text-red-500 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                            </svg>
-                            <h3 class="text-xl font-bold mb-2 text-white">Video Error</h3>
-                            <p class="text-gray-300">Failed to load video: ${slide.data.videoUrl}</p>
-                        </div>
-                    `;
-                }}
-            />
-            {slide.data.caption && (
-                <div className="absolute bottom-0 left-0 right-0 p-4 bg-black bg-opacity-50 text-white">
-                    <p className="text-center">{slide.data.caption}</p>
-                </div>
-            )}
-        </div>
-    );
-};
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
+
+
 
 
 
@@ -617,26 +403,53 @@ const VideoSlideComponent: React.FC<{ slide: VideoSlideType }> = ({ slide }) => 
 
 
 const HomePage: React.FC = () => {
-    const { slides, reorderSlides, updateSlide, isEditing } = useSlides();
-    const { settings, updateSettings, forceRefresh } = useDisplaySettings();
-    const { employees } = useEmployees();
+    const {
+        slides,
+        reorderSlides,
+        updateSlide,
+        employees,
+        saveToDatabase,
+        syncToRemoteDisplays,
+        refreshApiData,
+        isEditing,
+        setIsEditing,
+        isDisplayPage
+    } = useUnified();
+    const { displaySettings, updateDisplaySettings } = useSettings();
     const { addToast } = useToast();
-    const { refreshAll, triggerImmediateRefresh } = useUnifiedPolling();
-    const navigate = useNavigate();
-    const [dateTime, setDateTime] = useState(new Date().toLocaleString());
     const [isFullscreen, setIsFullscreen] = useState(false);
-    const [activeSlideIndex, setActiveSlideIndex] = useState(0);
-    const [swiperInstance, setSwiperInstance] = useState<SwiperType | null>(null);
-    const [orderedSlides, setOrderedSlides] = useState<Slide[]>([]);
-    const [activeSlides, setActiveSlides] = useState<Slide[]>([]);
     const slidesContainerRef = useRef<HTMLDivElement>(null);
-    const [, setDateTimeState] = useState<string>("");
-    const [currentSlideIndex, setCurrentSlideIndex] = useState(0);
-    const [eventSlideStates, setEventSlideStates] = useState<{ [key: string]: boolean }>({});
 
-    // Ref to track previous eventSlideStates to prevent unnecessary updates
-    const prevEventSlideStates = useRef(eventSlideStates);
+    // Get active slides directly from context - no local state needed
+    const activeSlides = slides.filter(slide => slide.active);
 
+    // Debug log for page detection
+    useEffect(() => {
+        console.log("🏠 HomePage: isDisplayPage =", isDisplayPage);
+    }, [isDisplayPage]);
+
+    // Simple test function
+    const testDataFlow = async () => {
+        console.log("🧪 Testing data flow...");
+        console.log("Current slides:", slides.length);
+        console.log("Active slides:", activeSlides.length);
+        console.log("Display settings:", displaySettings);
+
+        // Test saving data
+        try {
+            console.log("🧪 Testing save to database...");
+            await saveToDatabase();
+            console.log("✅ Save test successful!");
+        } catch (error) {
+            console.error("❌ Save test failed:", error);
+        }
+    };
+
+    // Make test function available globally for browser console testing
+    (window as any).testDataFlow = testDataFlow;
+
+    // Auto-save is now handled by UnifiedContext only
+    // No duplicate auto-save logic needed here
 
     // Helper functions for date checks - use API flags instead of recalculating
     const isBirthdayToday = (employee: Employee): boolean => {
@@ -647,12 +460,9 @@ const HomePage: React.FC = () => {
         return employee.isAnniversary === true;
     };
 
-    // Process active slides to adjust EVENT slide duration and active state
-    const processedActiveSlides = useMemo(() => {
-        // Debug logging for slides
-
-
-        return orderedSlides.map(slide => {
+    // Process slides for event handling
+    const processedSlides = useMemo(() => {
+        return slides.map(slide => {
             if (slide.type === SLIDE_TYPES.EVENT) {
                 // Birthday event slide
                 if (slide.id === "birthday-event-slide") {
@@ -689,204 +499,78 @@ const HomePage: React.FC = () => {
             }
             return slide;
         });
-    }, [orderedSlides]);
+    }, [slides, employees]);
 
-    // Load event slide states from database app settings
-    useEffect(() => {
-        const loadEventSlideStates = async () => {
-            try {
-                const sessionData = await sessionService.syncFromServer();
-                if (sessionData?.appSettings?.eventSlideStates) {
-                    setEventSlideStates(sessionData.appSettings.eventSlideStates);
-                } else {
-                    // Initialize with default values if none exist
-                    const defaultStates = {
-                        "birthday-event-slide": false,
-                        "anniversary-event-slide": false
-                    };
-                    setEventSlideStates(defaultStates);
-                    // Save default states to database
-                    await sessionService.updateAppSettings({ eventSlideStates: defaultStates });
-                }
-            } catch (error) {
-                console.error("Error loading event slide states:", error);
-                // Fallback to default states
-                const defaultStates = {
-                    "birthday-event-slide": false,
-                    "anniversary-event-slide": false
-                };
-                setEventSlideStates(defaultStates);
-            }
-        };
+    // Event slide states are now managed through the unified slideshow data
 
-        loadEventSlideStates();
-    }, []);
-
-    // Initialize ordered slides and update active slides
-    useEffect(() => {
-        // Debug logging only in development
-        if (process.env.NODE_ENV === 'development') {
-            // Event slides update
-        }
-
-        // Always recreate event slides when employees data changes or when eventSlideStates change
-        // This ensures event slides have correct hasEvents values based on current employee data
-        const hasEmployeesData = employees.length > 0;
-        const shouldUpdate = orderedSlides.length === 0 ||
-            eventSlideStates !== prevEventSlideStates.current ||
-            hasEmployeesData;
-
-        if (shouldUpdate) {
-            // Remove any existing event slides
-            const nonEventSlides = slides.filter(slide => slide.type !== SLIDE_TYPES.EVENT);
-
-            // Birthday event slide - always create, but only active if there are birthdays
-            const birthdayEmployees = employees.filter(employee => isBirthdayToday(employee));
-            const birthdayActiveState = eventSlideStates["birthday-event-slide"];
-            const hasBirthdays = birthdayEmployees.length > 0;
-
-            // Debug logging only in development
-            if (process.env.NODE_ENV === 'development') {
-                // Birthday slide status
-            }
-
-            const birthdayEventSlide: EventSlideType = {
-                id: "birthday-event-slide",
-                name: "Birthday Celebrations",
-                type: SLIDE_TYPES.EVENT,
-                active: hasBirthdays ? (birthdayActiveState ?? false) : false, // Only active if there are birthdays
-                duration: hasBirthdays ? 10 : 0, // Only show duration if there are birthdays
-                data: {
-                    title: "Birthday Celebrations",
-                    description: hasBirthdays
-                        ? "Celebrating our team members' birthdays"
-                        : "No birthdays today - cannot activate this slide",
-                    date: new Date().toISOString(),
-                    isEmployeeSlide: true,
-                    employees: birthdayEmployees,
-                    eventType: "birthday",
-                    hasEvents: hasBirthdays
-                },
-                dataSource: "manual"
-            };
-
-            // Anniversary event slide - always create, but only active if there are anniversaries
-            const anniversaryEmployees = employees.filter(employee => isAnniversaryToday(employee));
-            const anniversaryActiveState = eventSlideStates["anniversary-event-slide"];
-            const hasAnniversaries = anniversaryEmployees.length > 0;
-
-            // Debug logging only in development
-            if (process.env.NODE_ENV === 'development') {
-                // Anniversary slide status
-            }
-
-            const anniversaryEventSlide: EventSlideType = {
-                id: "anniversary-event-slide",
-                name: "Work Anniversaries",
-                type: SLIDE_TYPES.EVENT,
-                active: hasAnniversaries ? (anniversaryActiveState ?? false) : false, // Only active if there are anniversaries
-                duration: hasAnniversaries ? 10 : 0, // Only show duration if there are anniversaries
-                data: {
-                    title: "Work Anniversaries",
-                    description: hasAnniversaries
-                        ? "Celebrating our team members' work anniversaries"
-                        : "No work anniversaries today - cannot activate this slide",
-                    date: new Date().toISOString(),
-                    isEmployeeSlide: true,
-                    employees: anniversaryEmployees,
-                    eventType: "anniversary",
-                    hasEvents: hasAnniversaries
-                },
-                dataSource: "manual"
-            };
-
-            // Always add both event slides (they will show as inactive if no events)
-            const eventSlides: EventSlideType[] = [birthdayEventSlide, anniversaryEventSlide];
-            setOrderedSlides([...nonEventSlides, ...eventSlides]);
-        } else {
-            // Just update the non-event slides without recreating the entire array
-            const nonEventSlides = slides.filter(slide => slide.type !== SLIDE_TYPES.EVENT);
-            const eventSlides = orderedSlides.filter(slide => slide.type === SLIDE_TYPES.EVENT);
-
-            setOrderedSlides([...nonEventSlides, ...eventSlides]);
-        }
-
-        // Store current eventSlideStates for comparison
-        prevEventSlideStates.current = eventSlideStates;
-
-    }, [slides, eventSlideStates, employees]);
-
-    // Update active slides when processedActiveSlides change
-    useEffect(() => {
-        const active = processedActiveSlides.filter(slide => slide.active);
-        setActiveSlides(active);
-    }, [processedActiveSlides]);
 
     // Handle slide reordering
     const handleReorder = ({ sourceIndex, destinationIndex }: ReorderResult) => {
-        const newSlides = Array.from(orderedSlides);
+        if (sourceIndex === destinationIndex) return;
+
+        const newSlides = [...slides];
         const [removed] = newSlides.splice(sourceIndex, 1);
         newSlides.splice(destinationIndex, 0, removed);
-        setOrderedSlides(newSlides);
+
         reorderSlides(newSlides);
     };
 
     // Handle slide activation toggle
     const handleToggleActive = async (slideId: string) => {
-        // Debug logging only in development
-        if (process.env.NODE_ENV === 'development') {
-            // Toggle slide
-        }
-        const slideToUpdate = orderedSlides.find(s => s.id === slideId);
+        console.log('🔄 HomePage - Slide activation toggle started:', {
+            slideId: slideId,
+            timestamp: new Date().toISOString()
+        });
+
+        const slideToUpdate = slides.find(s => s.id === slideId);
 
         if (slideToUpdate) {
+            const newActiveState = !slideToUpdate.active;
+
+            console.log('🔄 HomePage - Slide activation toggle details:', {
+                slideId: slideToUpdate.id,
+                slideName: slideToUpdate.name,
+                slideType: slideToUpdate.type,
+                currentActiveState: slideToUpdate.active,
+                newActiveState: newActiveState,
+                slideDuration: slideToUpdate.duration,
+                timestamp: new Date().toISOString()
+            });
+
             // For event slides, log the toggle action
             if (slideToUpdate.type === SLIDE_TYPES.EVENT) {
                 const eventSlide = slideToUpdate as EventSlideType;
                 const hasEvents = eventSlide.data.hasEvents;
 
-                // Debug logging only in development
-                if (process.env.NODE_ENV === 'development') {
-                    // Event slide toggle status
-                }
+                console.log('🎉 HomePage - Event slide toggle:', {
+                    eventSlideId: eventSlide.id,
+                    eventSlideName: eventSlide.name,
+                    eventType: eventSlide.data.eventType,
+                    hasEvents: hasEvents,
+                    newActiveState: newActiveState
+                });
             }
 
-            const updatedSlide = { ...slideToUpdate, active: !slideToUpdate.active };
+            const updatedSlide = { ...slideToUpdate, active: newActiveState };
+
+            console.log('💾 HomePage - Calling updateSlide with:', {
+                slideId: updatedSlide.id,
+                slideName: updatedSlide.name,
+                slideType: updatedSlide.type,
+                active: updatedSlide.active,
+                duration: updatedSlide.duration,
+                timestamp: new Date().toISOString()
+            });
+
             updateSlide(updatedSlide);
 
             // Update local state to reflect the change immediately
-            const newSlides = orderedSlides.map(slide =>
-                slide.id === slideId ? updatedSlide : slide
-            );
-            setOrderedSlides(newSlides);
+            // Context handles the update automatically
 
-            // Store event slide state separately for persistence
-            if (slideId === "birthday-event-slide" || slideId === "anniversary-event-slide") {
-                const newEventStates = {
-                    ...eventSlideStates,
-                    [slideId]: updatedSlide.active
-                };
-
-                setEventSlideStates(newEventStates);
-
-                // Save to database via app settings
-                try {
-                    await sessionService.updateAppSettings({ eventSlideStates: newEventStates });
-
-                } catch (error) {
-                    console.error("Error saving event slide states to database:", error);
-                }
-            }
+            // Event slide states are now managed through the unified context
         }
     };
 
-    // Date/time updater
-    useEffect(() => {
-        const update = () => setDateTimeState(new Date().toLocaleString());
-        update();
-        const interval = setInterval(update, 1000);
-        return () => clearInterval(interval);
-    }, []);
 
     const handleToggleFullscreen = useCallback(() => {
         if (!document.fullscreenElement) {
@@ -930,12 +614,12 @@ const HomePage: React.FC = () => {
     /**
      * Render content based on slide type
      */
-    const renderSlideContent = (slide: Slide) => {
+    const renderSlideContent = (slide: Slide, onVideoEnd?: () => void) => {
         switch (slide.type) {
             case SLIDE_TYPES.IMAGE:
                 return <ImageSlide slide={slide as ImageSlideType} />;
             case SLIDE_TYPES.VIDEO:
-                return <VideoSlide slide={slide as VideoSlideType} />;
+                return <VideoSlide slide={slide as VideoSlideType} onVideoEnd={onVideoEnd} />;
             case SLIDE_TYPES.NEWS:
                 return <NewsSlideComponent slide={slide as NewsSlide} />;
             case SLIDE_TYPES.EVENT:
@@ -955,53 +639,107 @@ const HomePage: React.FC = () => {
         }
     };
 
-    // Update settings handlers
+    // Update displaySettings handlers
     const handleEffectChange = async (effect: string) => {
+        console.log('⚙️ HomePage - Effect change started:', {
+            newEffect: effect,
+            currentEffect: displaySettings.swiperEffect,
+            timestamp: new Date().toISOString()
+        });
+
         try {
-            await updateSettings({ swiperEffect: effect });
+            await updateDisplaySettings({ swiperEffect: effect });
+            console.log('✅ HomePage - Effect change successful:', {
+                newEffect: effect,
+                timestamp: new Date().toISOString()
+            });
             addToast("✅ Slide effect updated successfully", "success");
         } catch (error) {
-            console.error("Error updating slide effect:", error);
+            console.error("❌ HomePage - Error updating slide effect:", error);
             addToast("❌ Failed to update slide effect", "error");
         }
     };
 
     const handleDateStampToggle = async () => {
+        const newValue = !displaySettings.showDateStamp;
+        console.log('⚙️ HomePage - Date stamp toggle started:', {
+            newValue: newValue,
+            currentValue: displaySettings.showDateStamp,
+            timestamp: new Date().toISOString()
+        });
+
         try {
-            await updateSettings({ showDateStamp: !settings.showDateStamp });
+            await updateDisplaySettings({ showDateStamp: newValue });
+            console.log('✅ HomePage - Date stamp toggle successful:', {
+                newValue: newValue,
+                timestamp: new Date().toISOString()
+            });
             addToast("✅ Date stamp setting updated successfully", "success");
         } catch (error) {
-            console.error("Error updating date stamp setting:", error);
+            console.error("❌ HomePage - Error updating date stamp setting:", error);
             addToast("❌ Failed to update date stamp setting", "error");
         }
     };
 
     const handlePaginationToggle = async () => {
+        const newValue = !displaySettings.hidePagination;
+        console.log('⚙️ HomePage - Pagination toggle started:', {
+            newValue: newValue,
+            currentValue: displaySettings.hidePagination,
+            timestamp: new Date().toISOString()
+        });
+
         try {
-            await updateSettings({ hidePagination: !settings.hidePagination });
+            await updateDisplaySettings({ hidePagination: newValue });
+            console.log('✅ HomePage - Pagination toggle successful:', {
+                newValue: newValue,
+                timestamp: new Date().toISOString()
+            });
             addToast("✅ Pagination setting updated successfully", "success");
         } catch (error) {
-            console.error("Error updating pagination setting:", error);
+            console.error("❌ HomePage - Error updating pagination setting:", error);
             addToast("❌ Failed to update pagination setting", "error");
         }
     };
 
     const handleArrowsToggle = async () => {
+        const newValue = !displaySettings.hideArrows;
+        console.log('⚙️ HomePage - Arrows toggle started:', {
+            newValue: newValue,
+            currentValue: displaySettings.hideArrows,
+            timestamp: new Date().toISOString()
+        });
+
         try {
-            await updateSettings({ hideArrows: !settings.hideArrows });
+            await updateDisplaySettings({ hideArrows: newValue });
+            console.log('✅ HomePage - Arrows toggle successful:', {
+                newValue: newValue,
+                timestamp: new Date().toISOString()
+            });
             addToast("✅ Arrow navigation setting updated successfully", "success");
         } catch (error) {
-            console.error("Error updating arrow navigation setting:", error);
+            console.error("❌ HomePage - Error updating arrow navigation setting:", error);
             addToast("❌ Failed to update arrow navigation setting", "error");
         }
     };
 
     const handleHidePersiviaLogoToggle = async () => {
+        const newValue = !displaySettings.hidePersiviaLogo;
+        console.log('⚙️ HomePage - Logo visibility toggle started:', {
+            newValue: newValue,
+            currentValue: displaySettings.hidePersiviaLogo,
+            timestamp: new Date().toISOString()
+        });
+
         try {
-            await updateSettings({ hidePersiviaLogo: !settings.hidePersiviaLogo });
+            await updateDisplaySettings({ hidePersiviaLogo: newValue });
+            console.log('✅ HomePage - Logo visibility toggle successful:', {
+                newValue: newValue,
+                timestamp: new Date().toISOString()
+            });
             addToast("✅ Logo visibility setting updated successfully", "success");
         } catch (error) {
-            console.error("Error updating logo visibility setting:", error);
+            console.error("❌ HomePage - Error updating logo visibility setting:", error);
             addToast("❌ Failed to update logo visibility setting", "error");
         }
     };
@@ -1010,10 +748,10 @@ const HomePage: React.FC = () => {
 
     // --- UI ---
     return (
-        <div className="flex h-full bg-persivia-light-gray">
+        <div className="flex h-full bg-persivia-light-gray" data-editing={isEditing ? "true" : "false"}>
             {/* Slide Management - First Column */}
             <SlideManagementColumn
-                slides={orderedSlides}
+                slides={slides}
                 onReorder={handleReorder}
                 onToggleActive={handleToggleActive}
                 employees={employees}
@@ -1100,15 +838,12 @@ const HomePage: React.FC = () => {
                         <div className={`absolute inset-[1px] bg-persivia-white rounded-lg overflow-hidden ${isFullscreen ? "rounded-none" : ""}`}>
                             {activeSlides.length > 0 ? (
                                 <SwiperSlideshow
-                                    key={`swiper-${settings.swiperEffect}`}
-                                    slides={processedActiveSlides.filter(slide => slide.active)}
+                                    key={`swiper-${displaySettings.swiperEffect}`}
+                                    slides={processedSlides.filter(slide => slide.active)}
                                     renderSlideContent={renderSlideContent}
-                                    onSlideChange={(index) => {
-                                        setCurrentSlideIndex(index);
-                                    }}
-                                    hidePagination={settings.hidePagination}
-                                    hideArrows={settings.hideArrows}
-                                    effect={settings.swiperEffect}
+                                    hidePagination={displaySettings.hidePagination}
+                                    hideArrows={displaySettings.hideArrows}
+                                    effect={displaySettings.swiperEffect}
                                     isFullscreen={isFullscreen}
                                 />
                             ) : (
@@ -1121,13 +856,13 @@ const HomePage: React.FC = () => {
                                 </div>
                             )}
                             {/* Date/Time Stamp Overlay - Moved to top right */}
-                            {settings.showDateStamp && (
+                            {displaySettings.showDateStamp && (
                                 <div className="absolute top-4 right-4 z-[10000]">
                                     <DigitalClock />
                                 </div>
                             )}
 
-                            <SlideLogoOverlay isFullscreen={isFullscreen} hideLogo={settings.hidePersiviaLogo} />
+                            <SlideLogoOverlay isFullscreen={isFullscreen} hideLogo={displaySettings.hidePersiviaLogo} />
                         </div>
                     </div>
                 </div>
@@ -1151,13 +886,13 @@ const HomePage: React.FC = () => {
                     <div className="grid grid-cols-2 gap-4">
                         <div className="text-center">
                             <div className="text-2xl font-bold text-persivia-blue">
-                                {orderedSlides.length}
+                                {slides.length}
                             </div>
                             <div className="text-sm text-gray-600">Total Slides</div>
                         </div>
                         <div className="text-center">
                             <div className="text-2xl font-bold text-persivia-teal">
-                                {orderedSlides.filter(slide => slide.active).length}
+                                {slides.filter(slide => slide.active).length}
                             </div>
                             <div className="text-sm text-gray-600">Active Slides</div>
                         </div>
@@ -1175,7 +910,7 @@ const HomePage: React.FC = () => {
                             </label>
                             <select
                                 id="effect"
-                                value={settings.swiperEffect}
+                                value={displaySettings.swiperEffect}
                                 onChange={(e) => handleEffectChange(e.target.value)}
                                 className="w-full rounded-lg border border-persivia-light-gray bg-white px-3 py-2 text-sm"
                             >
@@ -1219,11 +954,11 @@ const HomePage: React.FC = () => {
                                 id="datetime"
                                 type="button"
                                 role="switch"
-                                aria-checked={settings.showDateStamp}
+                                aria-checked={displaySettings.showDateStamp}
                                 onClick={handleDateStampToggle}
-                                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${settings.showDateStamp ? "bg-persivia-teal" : "bg-slate-200"}`}
+                                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${displaySettings.showDateStamp ? "bg-persivia-teal" : "bg-slate-200"}`}
                             >
-                                <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${settings.showDateStamp ? "translate-x-5" : "translate-x-1"}`} />
+                                <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${displaySettings.showDateStamp ? "translate-x-5" : "translate-x-1"}`} />
                             </button>
                         </div>
 
@@ -1236,11 +971,11 @@ const HomePage: React.FC = () => {
                                 id="hidePagination"
                                 type="button"
                                 role="switch"
-                                aria-checked={settings.hidePagination}
+                                aria-checked={displaySettings.hidePagination}
                                 onClick={handlePaginationToggle}
-                                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${settings.hidePagination ? "bg-persivia-teal" : "bg-slate-200"}`}
+                                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${displaySettings.hidePagination ? "bg-persivia-teal" : "bg-slate-200"}`}
                             >
-                                <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${settings.hidePagination ? "translate-x-5" : "translate-x-1"}`} />
+                                <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${displaySettings.hidePagination ? "translate-x-5" : "translate-x-1"}`} />
                             </button>
                         </div>
 
@@ -1253,11 +988,11 @@ const HomePage: React.FC = () => {
                                 id="hideArrows"
                                 type="button"
                                 role="switch"
-                                aria-checked={settings.hideArrows}
+                                aria-checked={displaySettings.hideArrows}
                                 onClick={handleArrowsToggle}
-                                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${settings.hideArrows ? "bg-persivia-teal" : "bg-slate-200"}`}
+                                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${displaySettings.hideArrows ? "bg-persivia-teal" : "bg-slate-200"}`}
                             >
-                                <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${settings.hideArrows ? "translate-x-5" : "translate-x-1"}`} />
+                                <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${displaySettings.hideArrows ? "translate-x-5" : "translate-x-1"}`} />
                             </button>
                         </div>
 
@@ -1270,42 +1005,87 @@ const HomePage: React.FC = () => {
                                 id="hidePersiviaLogo"
                                 type="button"
                                 role="switch"
-                                aria-checked={settings.hidePersiviaLogo}
+                                aria-checked={displaySettings.hidePersiviaLogo}
                                 onClick={handleHidePersiviaLogoToggle}
-                                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${settings.hidePersiviaLogo ? "bg-persivia-teal" : "bg-slate-200"}`}
+                                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${displaySettings.hidePersiviaLogo ? "bg-persivia-teal" : "bg-slate-200"}`}
                             >
-                                <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${settings.hidePersiviaLogo ? "translate-x-5" : "translate-x-1"}`} />
+                                <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${displaySettings.hidePersiviaLogo ? "translate-x-5" : "translate-x-1"}`} />
                             </button>
                         </div>
                     </div>
                 </div>
 
-                {/* Force Refresh Button - Single button for immediate refresh on all displays */}
+
+                {/* Save and Sync Button */}
                 <button
                     onClick={async () => {
                         try {
-                            // Refresh both local data and trigger remote refresh
-                            await Promise.all([
-                                triggerImmediateRefresh(), // Immediate local data refresh
-                                sessionService.triggerRemoteRefresh("all") // Remote refresh for all displays
-                            ]);
-                            addToast("✅ Force refresh sent to all remote displays", "success");
+                            // First save to database
+                            await saveToDatabase();
+                            // Then sync to remote displays
+                            await syncToRemoteDisplays();
+                            addToast("✅ Changes saved and synced to displays", "success");
                         } catch (error) {
-                            console.error("Error triggering force refresh:", error);
-                            addToast("❌ Failed to trigger force refresh", "error");
+                            console.error("Error saving/syncing:", error);
+                            addToast("❌ Failed to save/sync changes", "error");
                         }
                     }}
-                    className="w-full font-medium py-2 px-4 rounded-lg transition-colors mt-2 flex items-center justify-center gap-2 bg-orange-600 hover:bg-orange-700 text-white"
+                    className="w-full font-medium py-2 px-4 rounded-lg transition-colors mt-2 flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white"
                 >
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                     </svg>
-                    Force Refresh All Displays
+                    Save & Sync Displays
                 </button>
 
-                {/* Auto-polling info */}
+                {/* API Data Refresh Button */}
+                <button
+                    onClick={async () => {
+                        try {
+                            await refreshApiData();
+                            addToast("✅ API data refreshed successfully", "success");
+                        } catch (error) {
+                            console.error("Error refreshing API data:", error);
+                            addToast("❌ Failed to refresh API data", "error");
+                        }
+                    }}
+                    className="w-full font-medium py-2 px-4 rounded-lg transition-colors mt-2 flex items-center justify-center gap-2 bg-green-600 hover:bg-green-700 text-white"
+                >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                    </svg>
+                    Refresh API Data
+                </button>
+
+                {/* Stop Editing Button - Only show when editing */}
+                {isEditing && (
+                    <button
+                        onClick={() => {
+                            setIsEditing(false);
+                            addToast("✏️ Editing mode disabled - auto-save resumed", "info");
+                        }}
+                        className="w-full font-medium py-2 px-4 rounded-lg transition-colors mt-2 flex items-center justify-center gap-2 bg-red-600 hover:bg-red-700 text-white"
+                    >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                        Stop Editing
+                    </button>
+                )}
+
+
+
+                {/* Auto-save info */}
                 <div className="text-xs text-gray-500 text-center mt-2">
-                    Data auto-syncs every 5 minutes • Use Force Refresh for immediate updates
+                    {isEditing ? (
+                        <div className="text-red-600 font-semibold">
+                            ✏️ EDITING MODE - Auto-save disabled • Use Save & Sync to save and sync • Use Stop Editing to resume auto-save
+                        </div>
+                    ) : (
+                        <div>
+                            Auto-save: 2 seconds after changes • Database-backed persistence • API data refreshes every 8 hours • Use buttons above for immediate updates
+                        </div>
+                    )}
                 </div>
 
                 {/* Version info */}

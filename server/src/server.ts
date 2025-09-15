@@ -6,7 +6,7 @@ import { errorHandler } from "./middleware/errorHandler";
 import { logger } from "./utils/logger";
 import authRoutes from "./routes/auth";
 import adminRoutes from "./routes/admin";
-import displayRoutes from "./routes/display";
+// Display routes removed - using unified slideshow data instead
 import sessionsRoutes from "./routes/sessions";
 import filesRoutes from "./routes/files";
 import proxyRoutes from "./routes/proxy";
@@ -70,7 +70,7 @@ initializePassport();
 // Use routes
 app.use("/api/auth", authRoutes);
 app.use("/api/admin", adminRoutes);
-app.use("/api/display", displayRoutes);
+// Display routes removed - using unified slideshow data instead
 app.use("/api/sessions", sessionsRoutes);
 app.use("/api/files", filesRoutes);
 app.use("/api/proxy", proxyRoutes);

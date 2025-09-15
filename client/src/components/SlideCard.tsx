@@ -1,6 +1,6 @@
 import React, { useState, useCallback } from "react";
 import { Slide, SLIDE_TYPES, ImageSlide, VideoSlide, NewsSlide, EventSlide, TextSlide } from "../types";
-import { useEmployees } from "../contexts/EmployeeContext";
+import { useUnified } from "../contexts/UnifiedContext";
 
 /** Props for the slide card component */
 interface SlideCardProps {
@@ -14,7 +14,7 @@ interface SlideCardProps {
 const SlideCard: React.FC<SlideCardProps> = ({ slide, onEdit, onDelete, onToggleActive }) => {
     const [mediaError, setMediaError] = useState<boolean>(false);
     const [isProcessing, setIsProcessing] = useState<boolean>(false);
-    const { employees, loading: employeesLoading, error: employeesError } = useEmployees();
+    const { employees } = useUnified();
 
     const getMediaUrl = useCallback(() => {
         switch (slide.type) {
@@ -80,7 +80,7 @@ const SlideCard: React.FC<SlideCardProps> = ({ slide, onEdit, onDelete, onToggle
     if (slide.type === SLIDE_TYPES.EVENT) {
         const eventSlide = slide as EventSlide;
 
-        if (employeesLoading) {
+        if (false) { // No longer needed as employees are loaded in UnifiedContext
             return (
                 <div className="bg-white rounded-lg shadow-md p-4">
                     <div className="flex items-center justify-between mb-4">
@@ -103,7 +103,7 @@ const SlideCard: React.FC<SlideCardProps> = ({ slide, onEdit, onDelete, onToggle
             );
         }
 
-        if (employeesError) {
+        if (false) { // No longer needed as employees are loaded in UnifiedContext
             return (
                 <div className="bg-white rounded-lg shadow-md p-4">
                     <div className="flex items-center justify-between mb-4">

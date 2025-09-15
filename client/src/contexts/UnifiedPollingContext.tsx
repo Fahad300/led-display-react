@@ -1,250 +1,297 @@
-import React, { createContext, useContext, useEffect, useRef, useCallback } from 'react';
+import React, { createContext, useContext, useEffect, useRef, useCallback, ReactNode } from 'react';
 import { sessionService } from '../services/sessionService';
-import { useSlides } from './SlideContext';
-import { useDisplaySettings } from './DisplaySettingsContext';
-import { useEmployees } from './EmployeeContext';
-import { useGraphs } from './GraphContext';
+import { SlideshowData } from '../types';
+
+/**
+ * Unified Polling Context - Intelligent, less aggressive syncing
+ * Prevents settings reversion and reduces excessive database calls
+ */
+
+interface PollingState {
+    isPolling: boolean;
+    lastSync: Date | null;
+    lastUserAction: Date | null;
+    hasUnsavedChanges: boolean;
+    syncInProgress: boolean;
+}
 
 interface UnifiedPollingContextType {
-    refreshAll: () => Promise<void>;
-    triggerImmediateRefresh: () => Promise<void>;
-    isPolling: boolean;
+    // State
+    pollingState: PollingState;
+
+    // Actions
+    markUserAction: () => void;
+    markUnsavedChanges: (hasChanges: boolean) => void;
+    forceSync: () => Promise<void>;
+    startPolling: () => void;
+    stopPolling: () => void;
+
+    // Sync functions
+    syncFromDatabase: () => Promise<SlideshowData | null>;
+    syncToDatabase: (data: SlideshowData) => Promise<void>;
 }
 
 const UnifiedPollingContext = createContext<UnifiedPollingContextType | undefined>(undefined);
 
-export const useUnifiedPolling = () => {
-    const context = useContext(UnifiedPollingContext);
-    if (!context) {
-        throw new Error('useUnifiedPolling must be used within a UnifiedPollingProvider');
-    }
-    return context;
-};
-
 interface UnifiedPollingProviderProps {
-    children: React.ReactNode;
+    children: ReactNode;
 }
 
+// Configuration constants
+const POLLING_INTERVALS = {
+    NORMAL: 30000,      // 30 seconds - normal polling
+    IDLE: 60000,        // 60 seconds - when no user activity
+    ACTIVE: 10000,      // 10 seconds - when user is actively making changes
+    MINIMUM: 5000       // 5 seconds - minimum interval
+};
+
+const USER_ACTION_GRACE_PERIOD = 10000; // 10 seconds after user action before normal polling
+
 export const UnifiedPollingProvider: React.FC<UnifiedPollingProviderProps> = ({ children }) => {
-    const { slides, setSlides } = useSlides();
-    const { settings, setSettings } = useDisplaySettings();
-    const { refetch: refetchEmployees } = useEmployees();
-    const { refetchTeamWiseData } = useGraphs();
+    const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null);
+    const userActionTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-    const isPolling = useRef(false);
-    const lastSlideSync = useRef<number>(0);
-    const lastDisplaySettingsSync = useRef<number>(0);
-    const lastEventStatesSync = useRef<number>(0);
-    const lastEmployeeSync = useRef<number>(0);
-    const lastGraphSync = useRef<number>(0);
+    const [pollingState, setPollingState] = React.useState<PollingState>({
+        isPolling: false,
+        lastSync: null,
+        lastUserAction: null,
+        hasUnsavedChanges: false,
+        syncInProgress: false
+    });
 
-    // Unified polling function
-    const performUnifiedPoll = useCallback(async () => {
-        if (isPolling.current) return;
+    // Mark when user makes changes
+    const markUserAction = useCallback(() => {
+        const now = new Date();
+        setPollingState(prev => ({
+            ...prev,
+            lastUserAction: now,
+            hasUnsavedChanges: true
+        }));
 
-        isPolling.current = true;
+        // Clear existing timeout
+        if (userActionTimeoutRef.current) {
+            clearTimeout(userActionTimeoutRef.current);
+        }
+
+        // Set timeout to reset to normal polling after grace period
+        userActionTimeoutRef.current = setTimeout(() => {
+            setPollingState(prev => ({
+                ...prev,
+                lastUserAction: null
+            }));
+        }, USER_ACTION_GRACE_PERIOD);
+    }, []);
+
+    // Mark if there are unsaved changes
+    const markUnsavedChanges = useCallback((hasChanges: boolean) => {
+        setPollingState(prev => ({
+            ...prev,
+            hasUnsavedChanges: hasChanges
+        }));
+    }, []);
+
+    // Determine appropriate polling interval based on current state
+    const getPollingInterval = useCallback((): number => {
         const now = Date.now();
+        const lastUserActionTime = pollingState.lastUserAction?.getTime() || 0;
+        const timeSinceUserAction = now - lastUserActionTime;
 
-        try {
-            // Poll slides every 30 seconds - increased from 20s
-            if (now - lastSlideSync.current >= 30000) {
-                console.debug('🔄 Unified Poll: Syncing slides from server');
-                const serverData = await sessionService.syncFromServer();
-                if (serverData?.slideData && Array.isArray(serverData.slideData)) {
-                    const validSlides = serverData.slideData.filter((slide: any) =>
-                        slide && slide.id && slide.type
-                    );
-
-                    console.log('🔍 UnifiedPolling - Server data received:', {
-                        totalSlides: serverData.slideData.length,
-                        validSlides: validSlides.length,
-                        slideDetails: validSlides.map((s: any) => ({
-                            id: s.id,
-                            name: s.name,
-                            type: s.type,
-                            active: s.active,
-                            duration: s.duration
-                        }))
-                    });
-
-                    if (validSlides.length > 0) {
-                        // Update slides with server data, preserving local changes
-                        setSlides(prevSlides => {
-                            console.log('🔍 UnifiedPolling - Current local slides:', prevSlides.length);
-
-                            const updatedSlides = prevSlides.map(localSlide => {
-                                const serverSlide = validSlides.find((s: any) => s.id === localSlide.id);
-                                if (serverSlide) {
-                                    // Merge server data with local slide, prioritizing server for active state
-                                    return {
-                                        ...localSlide,
-                                        active: serverSlide.active,
-                                        duration: serverSlide.duration || localSlide.duration,
-                                        data: {
-                                            ...localSlide.data,
-                                            ...serverSlide.data
-                                        }
-                                    };
-                                }
-                                return localSlide;
-                            });
-
-                            // Add any new slides from server
-                            const newSlides = validSlides.filter((serverSlide: any) =>
-                                !prevSlides.some(localSlide => localSlide.id === serverSlide.id)
-                            );
-
-                            const finalSlides = [...updatedSlides, ...newSlides];
-                            console.log('🔍 UnifiedPolling - Final slides after merge:', finalSlides.length);
-                            console.log('🔍 UnifiedPolling - Active slides after merge:', finalSlides.filter(s => s.active).length);
-
-                            return finalSlides;
-                        });
-
-                        console.debug('Slides synced from server:', validSlides.length, 'slides');
-                    }
-                }
-                lastSlideSync.current = now;
-            }
-
-            // Poll display settings every 20 seconds - increased from 10s
-            if (now - lastDisplaySettingsSync.current >= 20000) {
-                console.debug('🔄 Unified Poll: Syncing display settings from server');
-                const serverData = await sessionService.syncFromServer();
-                if (serverData?.displaySettings) {
-                    // Update display settings from server
-                    setSettings(prevSettings => ({
-                        ...prevSettings,
-                        ...serverData.displaySettings
-                    }));
-                    console.debug('Display settings synced from server');
-                }
-                lastDisplaySettingsSync.current = now;
-            }
-
-            // Poll employee data every 2 hours (event data changes daily at midnight)
-            if (now - lastEmployeeSync.current >= 2 * 60 * 60 * 1000) {
-                console.debug('🔄 Unified Poll: Refreshing employee data');
-                try {
-                    await refetchEmployees();
-                    lastEmployeeSync.current = now;
-                } catch (error) {
-                    console.error('Error refreshing employee data:', error);
-                }
-            }
-
-            // Poll graph data every 5 minutes (live data that changes frequently)
-            if (now - lastGraphSync.current >= 5 * 60 * 1000) {
-                console.debug('🔄 Unified Poll: Refreshing graph data');
-                try {
-                    await refetchTeamWiseData();
-                    lastGraphSync.current = now;
-                } catch (error) {
-                    console.error('Error refreshing graph data:', error);
-                }
-            }
-
-            // Poll event slide states every 15 seconds - increased from 8s
-            if (now - lastEventStatesSync.current >= 15000) {
-                console.debug('🔄 Unified Poll: Syncing event slide states from server');
-                const serverData = await sessionService.syncFromServer();
-                if (serverData?.appSettings?.eventSlideStates) {
-                    // Update event slide states from server
-                    const eventStates = serverData.appSettings.eventSlideStates;
-
-                    setSlides(prevSlides => {
-                        return prevSlides.map(slide => {
-                            if (slide.type === 'event-slide' && eventStates && eventStates[slide.id] !== undefined) {
-                                return {
-                                    ...slide,
-                                    active: eventStates[slide.id]
-                                };
-                            }
-                            return slide;
-                        });
-                    });
-
-                    console.debug('Event slide states synced from server');
-                }
-                lastEventStatesSync.current = now;
-            }
-
-        } catch (error) {
-            console.error('Unified polling error:', error);
-        } finally {
-            isPolling.current = false;
+        // If user just made changes, use active polling
+        if (timeSinceUserAction < USER_ACTION_GRACE_PERIOD) {
+            return POLLING_INTERVALS.ACTIVE;
         }
-    }, [setSlides, setSettings]);
 
-    // Manual refresh function
-    const refreshAll = useCallback(async () => {
-        console.debug('🔄 Manual refresh requested');
-        lastSlideSync.current = 0;
-        lastDisplaySettingsSync.current = 0;
-        lastEventStatesSync.current = 0;
-        lastEmployeeSync.current = 0;
-        lastGraphSync.current = 0;
-
-        // Refresh all data sources
-        try {
-            await Promise.all([
-                performUnifiedPoll(),
-                refetchEmployees(),
-                refetchTeamWiseData()
-            ]);
-        } catch (error) {
-            console.error('Error during manual refresh:', error);
+        // If there are unsaved changes, use shorter interval
+        if (pollingState.hasUnsavedChanges) {
+            return POLLING_INTERVALS.NORMAL;
         }
-    }, [performUnifiedPoll, refetchEmployees, refetchTeamWiseData]);
 
-    // Start unified polling with initial delay
-    useEffect(() => {
-        const initialDelay = setTimeout(() => {
-            performUnifiedPoll();
-        }, 5000); // 5 second initial delay for faster startup
+        // If no recent user activity, use longer interval
+        return POLLING_INTERVALS.IDLE;
+    }, [pollingState.lastUserAction, pollingState.hasUnsavedChanges]);
 
-        // Regular polling every 5 minutes for data updates
-        const regularInterval = setInterval(performUnifiedPoll, 300000);
+    // Sync from database (read-only, doesn't overwrite user changes)
+    const syncFromDatabase = useCallback(async (): Promise<SlideshowData | null> => {
+        try {
+            console.log("📥 Polling: Syncing from database...");
+            const data = await sessionService.loadSlideshowData();
 
-        // More frequent polling every 30 seconds to catch refresh triggers
-        const refreshInterval = setInterval(performUnifiedPoll, 30000);
+            setPollingState(prev => ({
+                ...prev,
+                lastSync: new Date(),
+                syncInProgress: false
+            }));
 
-        return () => {
-            clearTimeout(initialDelay);
-            clearInterval(regularInterval);
-            clearInterval(refreshInterval);
+            if (data) {
+                console.log("📥 Polling: Data loaded from database:", {
+                    slidesCount: data.slides?.length || 0,
+                    activeSlidesCount: data.slides?.filter((slide: any) => slide.active).length || 0,
+                    hasDisplaySettings: !!data.displaySettings
+                });
+            }
+
+            return data;
+        } catch (error) {
+            console.error("❌ Polling: Error syncing from database:", error);
+            setPollingState(prev => ({
+                ...prev,
+                syncInProgress: false
+            }));
+            return null;
+        }
+    }, []);
+
+    // Sync to database (saves user changes)
+    const syncToDatabase = useCallback(async (data: SlideshowData): Promise<void> => {
+        try {
+            console.log("📤 Polling: Syncing to database...");
+            setPollingState(prev => ({
+                ...prev,
+                syncInProgress: true
+            }));
+
+            await sessionService.saveSlideshowData(data);
+
+            setPollingState(prev => ({
+                ...prev,
+                lastSync: new Date(),
+                hasUnsavedChanges: false,
+                syncInProgress: false
+            }));
+
+            console.log("✅ Polling: Successfully synced to database");
+        } catch (error) {
+            console.error("❌ Polling: Error syncing to database:", error);
+            setPollingState(prev => ({
+                ...prev,
+                syncInProgress: false
+            }));
+            throw error;
+        }
+    }, []);
+
+    // Force immediate sync
+    const forceSync = useCallback(async (): Promise<void> => {
+        if (pollingState.syncInProgress) {
+            console.log("⏳ Polling: Sync already in progress, skipping...");
+            return;
+        }
+
+        console.log("🔄 Polling: Force sync requested");
+
+        // Clear any existing polling
+        if (pollingIntervalRef.current) {
+            clearInterval(pollingIntervalRef.current);
+        }
+
+        // Perform sync and restart polling
+        await syncFromDatabase();
+        startPolling();
+    }, [pollingState.syncInProgress, syncFromDatabase]);
+
+    // Start intelligent polling
+    const startPolling = useCallback(() => {
+        if (pollingState.isPolling) {
+            console.log("⚠️ Polling: Already polling, skipping start");
+            return;
+        }
+
+        console.log("🚀 Polling: Starting intelligent polling...");
+
+        setPollingState(prev => ({
+            ...prev,
+            isPolling: true
+        }));
+
+        const poll = async () => {
+            if (pollingState.syncInProgress) {
+                console.log("⏳ Polling: Sync in progress, skipping poll cycle");
+                return;
+            }
+
+            // Check if user is currently editing - if so, skip polling completely
+            const isCurrentlyEditing = document.querySelector('[data-editing="true"]') !== null;
+            if (isCurrentlyEditing) {
+                console.log("✏️ Polling: User is editing, skipping poll cycle to preserve changes");
+                return;
+            }
+
+            const interval = getPollingInterval();
+            console.log(`🔄 Polling: Next poll in ${interval / 1000}s (${pollingState.hasUnsavedChanges ? 'has changes' : 'no changes'})`);
+
+            // Only sync from database if no unsaved changes
+            // This prevents overwriting user changes
+            if (!pollingState.hasUnsavedChanges) {
+                await syncFromDatabase();
+            } else {
+                console.log("💾 Polling: Has unsaved changes, skipping database read to preserve user changes");
+            }
         };
-    }, [performUnifiedPoll]);
 
-    // Enhanced refresh function that triggers immediate polling
-    const triggerImmediateRefresh = useCallback(async () => {
-        console.debug('🔄 Immediate refresh triggered - forcing immediate sync');
+        // Initial poll
+        poll();
 
-        // Reset all sync timers to force immediate refresh
-        lastSlideSync.current = 0;
-        lastDisplaySettingsSync.current = 0;
-        lastEventStatesSync.current = 0;
-        lastEmployeeSync.current = 0;
-        lastGraphSync.current = 0;
+        // Set up recurring polling with dynamic interval
+        const scheduleNextPoll = () => {
+            const interval = getPollingInterval();
+            pollingIntervalRef.current = setTimeout(() => {
+                poll().then(() => {
+                    if (pollingState.isPolling) {
+                        scheduleNextPoll();
+                    }
+                });
+            }, interval);
+        };
 
-        // Perform immediate sync
-        await performUnifiedPoll();
+        scheduleNextPoll();
+    }, [pollingState.isPolling, pollingState.syncInProgress, pollingState.hasUnsavedChanges, getPollingInterval, syncFromDatabase]);
 
-        // Also trigger a second sync after a short delay to catch any delayed updates
-        setTimeout(() => {
-            performUnifiedPoll();
-        }, 2000);
-    }, [performUnifiedPoll]);
+    // Stop polling
+    const stopPolling = useCallback(() => {
+        console.log("🛑 Polling: Stopping polling...");
 
-    const value: UnifiedPollingContextType = {
-        refreshAll,
-        triggerImmediateRefresh,
-        isPolling: isPolling.current
+        setPollingState(prev => ({
+            ...prev,
+            isPolling: false
+        }));
+
+        if (pollingIntervalRef.current) {
+            clearInterval(pollingIntervalRef.current);
+            pollingIntervalRef.current = null;
+        }
+    }, []);
+
+    // Cleanup on unmount
+    useEffect(() => {
+        return () => {
+            if (pollingIntervalRef.current) {
+                clearInterval(pollingIntervalRef.current);
+            }
+            if (userActionTimeoutRef.current) {
+                clearTimeout(userActionTimeoutRef.current);
+            }
+        };
+    }, []);
+
+    const contextValue: UnifiedPollingContextType = {
+        pollingState,
+        markUserAction,
+        markUnsavedChanges,
+        forceSync,
+        startPolling,
+        stopPolling,
+        syncFromDatabase,
+        syncToDatabase
     };
 
     return (
-        <UnifiedPollingContext.Provider value={value}>
+        <UnifiedPollingContext.Provider value={contextValue}>
             {children}
         </UnifiedPollingContext.Provider>
     );
+};
+
+export const useUnifiedPolling = (): UnifiedPollingContextType | undefined => {
+    const context = useContext(UnifiedPollingContext);
+    return context;
 };

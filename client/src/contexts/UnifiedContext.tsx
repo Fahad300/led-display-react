@@ -1,0 +1,467 @@
+/**
+ * UNIFIED CONTEXT - Database-backed state management
+ * Simple, reliable persistence with proper error handling
+ */
+
+import React, { createContext, useContext, useState, useEffect, useCallback, useMemo, useRef, ReactNode } from 'react';
+import { Slide, Employee, GraphSlideData, SlideshowData, SLIDE_TYPES, CurrentEscalationsSlide, TeamComparisonSlide, GraphSlide, EventSlide } from '../types';
+import { sessionService } from '../services/sessionService';
+import { fetchEmployeesData } from '../services/eventsService';
+import { fetchTeamWiseData } from '../services/graphService';
+import { DEFAULT_SLIDE_CONFIGS } from '../config/defaultSlides';
+import { currentEscalations } from '../data/currentEscalations';
+
+interface UnifiedContextType {
+    // Slides
+    slides: Slide[];
+    setSlides: (slides: Slide[] | ((prev: Slide[]) => Slide[])) => void;
+    updateSlide: (slide: Slide) => void;
+    reorderSlides: (slides: Slide[]) => void;
+
+    // Display Settings - Now handled by SettingsContext
+    // displaySettings and updateDisplaySettings removed
+
+    // Data
+    employees: Employee[];
+    graphData: GraphSlideData | null;
+
+    // Loading states
+    isLoading: boolean;
+    isEditing: boolean;
+    setIsEditing: (editing: boolean) => void;
+
+    // Page detection
+    isDisplayPage: boolean;
+
+    // Actions
+    saveToDatabase: () => Promise<void>;
+    syncFromDatabase: () => Promise<void>;
+    refreshApiData: () => Promise<void>;
+    syncToRemoteDisplays: () => Promise<void>;
+}
+
+const UnifiedContext = createContext<UnifiedContextType | undefined>(undefined);
+
+// Function to create default slides
+const createDefaultSlides = (): Slide[] => {
+    const defaultSlides: Slide[] = [];
+
+    DEFAULT_SLIDE_CONFIGS.forEach(config => {
+        switch (config.type) {
+            case 'current-escalations':
+                const currentEscalationsSlide: CurrentEscalationsSlide = {
+                    id: config.id,
+                    name: config.name,
+                    type: SLIDE_TYPES.CURRENT_ESCALATIONS,
+                    active: config.active,
+                    duration: config.duration || 10,
+                    dataSource: 'manual',
+                    data: {
+                        escalations: currentEscalations
+                    }
+                };
+                defaultSlides.push(currentEscalationsSlide);
+                break;
+
+            case 'comparison-slide':
+                const teamComparisonSlide: TeamComparisonSlide = {
+                    id: config.id,
+                    name: config.name,
+                    type: SLIDE_TYPES.TEAM_COMPARISON,
+                    active: config.active,
+                    duration: config.duration || 15,
+                    dataSource: 'api',
+                    data: {
+                        teams: [],
+                        lastUpdated: new Date().toISOString()
+                    }
+                };
+                defaultSlides.push(teamComparisonSlide);
+                break;
+
+            case 'graph-slide':
+                const graphSlide: GraphSlide = {
+                    id: config.id,
+                    name: config.name,
+                    type: SLIDE_TYPES.GRAPH,
+                    active: config.active,
+                    duration: config.duration || 12,
+                    dataSource: 'api',
+                    data: {
+                        title: "Team Wise Data",
+                        description: "Performance metrics by team",
+                        graphType: 'bar',
+                        data: [],
+                        timeRange: 'daily',
+                        lastUpdated: new Date().toISOString(),
+                        categories: []
+                    }
+                };
+                defaultSlides.push(graphSlide);
+                break;
+
+            case 'event':
+                const eventSlide: EventSlide = {
+                    id: config.id,
+                    name: config.name,
+                    type: SLIDE_TYPES.EVENT,
+                    active: config.active,
+                    duration: config.duration || 8,
+                    dataSource: 'api',
+                    data: {
+                        title: config.name,
+                        description: "",
+                        date: new Date().toISOString(),
+                        eventType: config.name.toLowerCase().includes('birthday') ? 'birthday' : 'anniversary',
+                        employees: [],
+                        hasEvents: false
+                    }
+                };
+                defaultSlides.push(eventSlide);
+                break;
+        }
+    });
+
+    return defaultSlides;
+};
+
+interface UnifiedProviderProps {
+    children: ReactNode;
+}
+
+export const UnifiedProvider: React.FC<UnifiedProviderProps> = ({ children }) => {
+    // State
+    const [slides, setSlides] = useState<Slide[]>([]);
+    // Display settings now handled by SettingsContext
+    const [employees, setEmployees] = useState<Employee[]>([]);
+    const [graphData, setGraphData] = useState<GraphSlideData | null>(null);
+    const [isLoading, setIsLoading] = useState(true);
+    const [isEditing, setIsEditing] = useState(false);
+
+    // Track last saved state to prevent unnecessary saves
+    const lastSavedStateRef = useRef<string>("");
+
+    // Check if we're on the display page
+    const isDisplayPage = useMemo(() => {
+        return window.location.pathname === '/display' || window.location.pathname === '/display/';
+    }, []);
+
+    // Save to database with proper error handling
+    const saveToDatabase = useCallback(async () => {
+        try {
+            // Load current settings from localStorage to avoid overwriting user settings
+            let currentSettings = {
+                swiperEffect: "slide",
+                showDateStamp: true,
+                hidePagination: false,
+                hideArrows: false,
+                hidePersiviaLogo: false
+            };
+
+            try {
+                const savedSettings = localStorage.getItem('displaySettings');
+                if (savedSettings) {
+                    const parsed = JSON.parse(savedSettings);
+                    currentSettings = { ...currentSettings, ...parsed };
+                    console.log("🔄 UnifiedContext: Using settings from localStorage:", currentSettings);
+                } else {
+                    console.log("🔄 UnifiedContext: No settings in localStorage, using defaults");
+                }
+            } catch (error) {
+                console.warn("Failed to load settings from localStorage, using defaults:", error);
+            }
+
+            const slideshowData: SlideshowData = {
+                slides,
+                displaySettings: currentSettings, // Use actual settings from localStorage
+                lastUpdated: new Date().toISOString(),
+                version: "1.0.0"
+            };
+
+            await sessionService.saveSlideshowData(slideshowData);
+
+            // Update the last saved state to prevent unnecessary saves
+            lastSavedStateRef.current = JSON.stringify({ slides });
+            console.log("✅ UnifiedContext: Data saved to database successfully with settings:", currentSettings);
+        } catch (error) {
+            console.error("❌ Error saving data to database:", error);
+            throw error; // Re-throw so calling code can handle it
+        }
+    }, [slides]);
+
+
+    // Refresh API data (employees and graph data)
+    const refreshApiData = useCallback(async () => {
+        try {
+            console.log("🔄 Refreshing API data (employees and graph data)...");
+            const [employeesData, graphDataResult] = await Promise.all([
+                fetchEmployeesData(),
+                fetchTeamWiseData().catch(() => null)
+            ]);
+
+            setEmployees(employeesData);
+            setGraphData(graphDataResult);
+            console.log("✅ API data refreshed successfully");
+        } catch (error) {
+            console.error("❌ Error refreshing API data:", error);
+        }
+    }, []);
+
+    // Sync data from database (for DisplayPage - only updates if data is newer)
+    const syncFromDatabase = useCallback(async () => {
+        try {
+            console.log("🔄 Syncing data from database...");
+            const slideshowData = await sessionService.loadSlideshowData();
+
+            if (slideshowData) {
+                // Only update if we have slides and the data is different
+                if (slideshowData.slides && slideshowData.slides.length > 0) {
+                    // Debug: Log the active status of slides being synced
+                    console.log("📥 DisplayPage: Syncing slides with active status:", slideshowData.slides.map(slide => ({
+                        id: slide.id,
+                        name: slide.name,
+                        active: slide.active,
+                        type: slide.type
+                    })));
+
+                    setSlides(prevSlides => {
+                        // Check if the data is actually different
+                        const isDifferent = JSON.stringify(prevSlides) !== JSON.stringify(slideshowData.slides);
+                        if (isDifferent) {
+                            console.log("📥 DisplayPage: Updating slides from database");
+                            console.log("📥 DisplayPage: Previous slides count:", prevSlides.length);
+                            console.log("📥 DisplayPage: New slides count:", slideshowData.slides.length);
+                            console.log("📥 DisplayPage: New slides active count:", slideshowData.slides.filter(s => s.active).length);
+                            console.log("📥 DisplayPage: New slides details:", slideshowData.slides.map(s => ({ id: s.id, name: s.name, active: s.active, type: s.type })));
+
+                            // Dispatch custom event for slides change
+                            setTimeout(() => {
+                                window.dispatchEvent(new CustomEvent('slidesChanged', {
+                                    detail: {
+                                        slidesCount: slideshowData.slides.length,
+                                        activeSlidesCount: slideshowData.slides.filter(s => s.active).length,
+                                        slides: slideshowData.slides
+                                    }
+                                }));
+                            }, 100);
+
+                            return slideshowData.slides;
+                        } else {
+                            console.log("📥 DisplayPage: No changes detected, keeping existing slides");
+                        }
+                        return prevSlides;
+                    });
+
+                    // Display settings now handled by SettingsContext
+                } else {
+                    console.log("📥 DisplayPage: No slides found in database data");
+                }
+            } else {
+                console.log("📥 DisplayPage: No slideshow data found in database");
+            }
+        } catch (error) {
+            console.error("❌ Error syncing data from database:", error);
+        }
+    }, []);
+
+    // Sync to remote displays
+    const syncToRemoteDisplays = useCallback(async () => {
+        try {
+            console.log("🔄 Syncing to remote displays...");
+            await sessionService.triggerRemoteRefresh("all");
+            console.log("✅ Remote displays synced successfully");
+        } catch (error) {
+            console.error("❌ Error syncing to remote displays:", error);
+            throw error;
+        }
+    }, []);
+
+    // Update slide with immediate save for critical changes (only on non-display pages)
+    const updateSlide = useCallback((updatedSlide: Slide) => {
+        setSlides(prev => prev.map(slide =>
+            slide.id === updatedSlide.id ? updatedSlide : slide
+        ));
+
+        // Immediate save for critical changes (active status, order changes) - only on non-display pages
+        if (updatedSlide.active !== undefined && !isDisplayPage) {
+            console.log("🔄 Critical change detected, saving immediately...");
+            setTimeout(() => {
+                saveToDatabase().catch(error => {
+                    console.error("❌ Immediate save failed:", error);
+                });
+            }, 100); // Very short delay for critical changes
+        }
+    }, [saveToDatabase, isDisplayPage]);
+
+    // Reorder slides with immediate save (only on non-display pages)
+    const reorderSlides = useCallback((reorderedSlides: Slide[]) => {
+        setSlides(reorderedSlides);
+
+        // Immediate save for reorder operations - only on non-display pages
+        if (!isDisplayPage) {
+            console.log("🔄 Reorder detected, saving immediately...");
+            setTimeout(() => {
+                saveToDatabase().catch(error => {
+                    console.error("❌ Immediate save failed:", error);
+                });
+            }, 100); // Very short delay for reorder changes
+        }
+    }, [saveToDatabase, isDisplayPage]);
+
+    // Display settings now handled by SettingsContext
+
+    // Auto-save when data changes (simple debounced save)
+    const saveTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
+    useEffect(() => {
+        if (saveTimeoutRef.current) {
+            clearTimeout(saveTimeoutRef.current);
+        }
+
+        // Only auto-save when not editing, not on display page, and we have slides
+        if (slides.length > 0 && !isEditing && !isDisplayPage) {
+            // Create a hash of current state to detect actual changes
+            const currentState = JSON.stringify({ slides });
+            const hasChanges = currentState !== lastSavedStateRef.current;
+
+            if (hasChanges) {
+                saveTimeoutRef.current = setTimeout(() => {
+                    saveToDatabase().catch(error => {
+                        console.error("❌ Auto-save failed:", error);
+                    });
+                }, 3000); // 3 second debounce to reduce database pressure
+            }
+        }
+
+        return () => {
+            if (saveTimeoutRef.current) {
+                clearTimeout(saveTimeoutRef.current);
+            }
+        };
+    }, [slides, saveToDatabase, isEditing, isDisplayPage]);
+
+    // Load data on mount - ensure data is loaded before rendering
+    useEffect(() => {
+        const initializeData = async () => {
+            try {
+                console.log("🔄 UnifiedContext: Initializing data...");
+                console.log("🔄 UnifiedContext: isDisplayPage =", isDisplayPage);
+
+                // Display settings now handled by SettingsContext
+
+                // Attempt to load saved data from database FIRST
+                setIsLoading(true);
+                console.log("🔄 UnifiedContext: Attempting to load saved data from database...");
+                const slideshowData = await sessionService.loadSlideshowData();
+
+                if (slideshowData) {
+                    console.log("📥 Loaded slideshow data from database:", {
+                        slidesCount: slideshowData.slides?.length || 0,
+                        loadedSlidesDetails: slideshowData.slides?.map(s => ({ id: s.id, name: s.name, active: s.active, type: s.type })),
+                        displaySettings: slideshowData.displaySettings
+                    });
+
+                    // Smart merge: Use database data if available, fallback to defaults
+                    const finalSlides = slideshowData.slides && slideshowData.slides.length > 0
+                        ? slideshowData.slides
+                        : createDefaultSlides();
+
+                    console.log("🔄 UnifiedContext: Setting slides from database:", {
+                        finalSlidesCount: finalSlides.length,
+                        activeSlidesCount: finalSlides.filter(s => s.active).length,
+                        finalSlidesDetails: finalSlides.map(s => ({ id: s.id, name: s.name, active: s.active, type: s.type }))
+                    });
+
+                    setSlides(finalSlides);
+                    lastSavedStateRef.current = JSON.stringify({ slides: finalSlides });
+
+                    // Settings are handled by SettingsContext, so we don't need to do anything with them here
+                    console.log("✅ UnifiedContext: Smart merge applied:", {
+                        slidesSource: slideshowData.slides && slideshowData.slides.length > 0 ? 'database' : 'defaults',
+                        settingsHandledBy: 'SettingsContext'
+                    });
+                } else {
+                    console.log("🔄 No saved data found in database. Using defaults...");
+                    // No database data, use defaults
+                    const defaultSlides = createDefaultSlides();
+                    setSlides(defaultSlides);
+                    lastSavedStateRef.current = JSON.stringify({ slides: defaultSlides });
+                }
+
+                // Load API data only once on mount
+                console.log("🔄 UnifiedContext: Loading API data...");
+                await refreshApiData();
+
+                console.log("✅ UnifiedContext: Initial data loading complete.");
+            } catch (error) {
+                console.error("❌ UnifiedContext: Failed to initialize data:", error);
+                // Ensure default slides are set even on error
+                const defaultSlides = createDefaultSlides();
+                setSlides(defaultSlides);
+                lastSavedStateRef.current = JSON.stringify({ slides: defaultSlides });
+            } finally {
+                setIsLoading(false);
+            }
+        };
+
+        initializeData();
+    }, [refreshApiData, isDisplayPage]); // Run only once on mount - intentionally omitting slides and isLoading to prevent infinite loops
+
+    // Periodically refresh API data (every 8 hours) - only when not editing and not on display page
+    useEffect(() => {
+        const refreshInterval = setInterval(() => {
+            if (!isEditing && !isDisplayPage) {
+                console.log("🔄 Periodic API data refresh...");
+                refreshApiData();
+            }
+        }, 8 * 60 * 60 * 1000); // 8 hours - very infrequent to reduce API calls
+
+        return () => clearInterval(refreshInterval);
+    }, [refreshApiData, isEditing, isDisplayPage]);
+
+    // Save data before page unload (only on non-display pages)
+    useEffect(() => {
+        const handleBeforeUnload = () => {
+            if (slides.length > 0 && !isDisplayPage) {
+                // Use synchronous save for beforeunload
+                saveToDatabase().catch(error => {
+                    console.error("❌ Save on unload failed:", error);
+                });
+            }
+        };
+
+        window.addEventListener('beforeunload', handleBeforeUnload);
+        return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+    }, [slides, saveToDatabase, isDisplayPage]);
+
+    const value: UnifiedContextType = {
+        slides,
+        setSlides,
+        updateSlide,
+        reorderSlides,
+        // displaySettings and updateDisplaySettings removed - now handled by SettingsContext
+        employees,
+        graphData,
+        isLoading,
+        isEditing,
+        setIsEditing,
+        isDisplayPage,
+        saveToDatabase,
+        syncFromDatabase,
+        refreshApiData,
+        syncToRemoteDisplays
+    };
+
+    return (
+        <UnifiedContext.Provider value={value}>
+            {children}
+        </UnifiedContext.Provider>
+    );
+};
+
+export const useUnified = (): UnifiedContextType => {
+    const context = useContext(UnifiedContext);
+    if (context === undefined) {
+        throw new Error('useUnified must be used within a UnifiedProvider');
+    }
+    return context;
+};

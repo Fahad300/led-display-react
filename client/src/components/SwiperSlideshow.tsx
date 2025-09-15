@@ -1,325 +1,368 @@
 import React, { useRef, useEffect, useCallback, useMemo, useState } from "react";
 import { Slide } from "../types";
 import { Swiper, SwiperSlide } from 'swiper/react';
-import { EffectFade, EffectCube, EffectCoverflow, EffectFlip, EffectCards, Navigation, Pagination, Autoplay } from "swiper/modules";
+import { EffectFade, Navigation, Pagination, Autoplay } from "swiper/modules";
 import type { Swiper as SwiperType } from "swiper";
+import { TestingOverlay } from "./TestingOverlay";
 import "swiper/css";
 import "swiper/css/effect-fade";
-import "swiper/css/effect-cube";
-import "swiper/css/effect-coverflow";
-import "swiper/css/effect-flip";
-import "swiper/css/effect-cards";
 import "swiper/css/navigation";
 import "swiper/css/pagination";
+import "swiper/css/autoplay";
 
 /**
- * Swiper Slideshow Component with Dynamic Autoplay Timing
+ * Rock-Solid Swiper Slideshow Component with Individual Slide Durations
+ * 
+ * Key improvements:
+ * - Uses realIndex for loop mode compatibility
+ * - Single autoplay timer management
+ * - Video slide handling with timer pause/resume
+ * - Enhanced event dispatching with countdown data
+ * - Proper cleanup and error handling
  */
 const SwiperSlideshow: React.FC<{
     slides: Slide[];
-    renderSlideContent: (slide: Slide) => React.ReactNode;
+    renderSlideContent: (slide: Slide, onVideoEnd?: () => void) => React.ReactNode;
     onSlideChange?: (index: number) => void;
     hidePagination?: boolean;
     hideArrows?: boolean;
     effect?: string;
     isFullscreen?: boolean;
     settings?: any;
-}> = ({ slides, renderSlideContent, onSlideChange, hidePagination = false, hideArrows = false, effect = "slide", isFullscreen = false, settings }) => {
-    const [timeRemaining, setTimeRemaining] = useState<number>(0);
-    const [currentSlideDuration, setCurrentSlideDuration] = useState<number>(0);
-    const [currentSlideIndex, setCurrentSlideIndex] = useState<number>(0);
-    const [videoError, setVideoError] = useState<boolean>(false);
-
+}> = ({ slides, renderSlideContent, onSlideChange, hidePagination = false, hideArrows = false, effect = "slide", isFullscreen = false }) => {
+    // Debug mode - only log when explicitly enabled
+    const isDebugMode = process.env.REACT_APP_DEBUG_SWIPER_SLIDESHOW === 'true';
     const swiperRef = useRef<SwiperType | null>(null);
-    const countdownRef = useRef<NodeJS.Timeout | null>(null);
+    const autoplayTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+    const countdownIntervalRef = useRef<NodeJS.Timeout | null>(null);
+    const [currentSlideIndex, setCurrentSlideIndex] = useState(0);
+    const [remainingTime, setRemainingTime] = useState(0);
+    const [isVideoPlaying, setIsVideoPlaying] = useState(false);
 
-    // Filter out slides with 0 duration or inactive slides
+    // Filter out inactive slides
     const activeSlides = useMemo(() => {
-        const filtered = slides.filter(slide => slide.active && (slide.duration || 0) > 0);
-
-        // Debug logging for slide filtering
-        console.log('🔍 SwiperSlideshow - Total slides received:', slides.length);
-        console.log('🔍 SwiperSlideshow - Slides details:', slides.map(s => ({
-            id: s.id,
-            name: s.name,
-            type: s.type,
-            active: s.active,
-            duration: s.duration
-        })));
-        console.log('🔍 SwiperSlideshow - Active slides after filtering:', filtered.length);
-        console.log('🔍 SwiperSlideshow - Active slides details:', filtered.map(s => ({
-            id: s.id,
-            name: s.name,
-            type: s.type,
-            active: s.active,
-            duration: s.duration
-        })));
-
-        filtered.forEach((slide, index) => {
-
-        });
-        return filtered;
+        return slides.filter(slide => slide.active);
     }, [slides]);
 
-    // Memoize the effect module
-    const effectModule = useMemo(() => {
+    // Get the appropriate effect module
+    const getEffectModule = () => {
         switch (effect) {
             case "fade": return EffectFade;
-            case "cube": return EffectCube;
-            case "coverflow": return EffectCoverflow;
-            case "flip": return EffectFlip;
-            case "cards": return EffectCards;
             default: return undefined;
         }
-    }, [effect]);
+    };
 
-    // Memoize the effect configuration
-    const effectConfig = useMemo(() => {
+    // Get the effect configuration
+    const getEffectConfig = () => {
         switch (effect) {
             case "fade":
-                return { fadeEffect: { crossFade: true } };
-            case "cube":
                 return {
-                    cubeEffect: {
-                        shadow: true,
-                        slideShadows: true,
-                        shadowOffset: 20,
-                        shadowScale: 0.94,
-                        rotate: 50,
-                        stretch: 0,
-                        depth: 100,
-                        modifier: 1
-                    }
-                };
-            case "coverflow":
-                return {
-                    coverflowEffect: {
-                        rotate: 50,
-                        stretch: 0,
-                        depth: 100,
-                        modifier: 1,
-                        slideShadows: true
-                    }
-                };
-            case "flip":
-                return {
-                    flipEffect: {
-                        slideShadows: true,
-                        limitRotation: true
-                    }
-                };
-            case "cards":
-                return {
-                    cardsEffect: {
-                        perSlideOffset: 8,
-                        perSlideRotate: 2,
-                        rotate: true,
-                        slideShadows: true
+                    fadeEffect: {
+                        crossFade: true
                     }
                 };
             default:
                 return {};
         }
-    }, [effect]);
+    };
 
-    // Memoize modules array
-    const modules = useMemo(() => {
-        const baseModules = [Navigation, Pagination, Autoplay];
-        return effectModule ? [...baseModules, effectModule] : baseModules;
-    }, [effectModule]);
+    // Combine all required modules
+    const effectModule = getEffectModule();
+    const modules = [
+        Navigation,
+        Pagination,
+        Autoplay,
+        ...(effectModule ? [effectModule] : [])
+    ];
 
-    // Clear countdown timer
-    const clearCountdown = useCallback(() => {
-        if (countdownRef.current) {
-            clearInterval(countdownRef.current);
-            countdownRef.current = null;
+    // Clear all timers
+    const clearAllTimers = useCallback(() => {
+        if (autoplayTimeoutRef.current) {
+            clearTimeout(autoplayTimeoutRef.current);
+            autoplayTimeoutRef.current = null;
+        }
+        if (countdownIntervalRef.current) {
+            clearInterval(countdownIntervalRef.current);
+            countdownIntervalRef.current = null;
         }
     }, []);
 
-    // Start countdown for current slide
-    const startCountdown = useCallback(() => {
-        if (activeSlides.length === 0) return;
+    // Start countdown timer for TestingOverlay
+    const startCountdownTimer = useCallback((duration: number) => {
+        clearAllTimers();
+        setRemainingTime(duration);
 
-        const currentSlide = activeSlides[currentSlideIndex];
-        const duration = currentSlide.duration || 5;
-
-
-
-        // Set initial countdown
-        setCurrentSlideDuration(duration);
-        setTimeRemaining(duration);
-
-        // Start countdown
-        countdownRef.current = setInterval(() => {
-            setTimeRemaining(prev => {
+        countdownIntervalRef.current = setInterval(() => {
+            setRemainingTime(prev => {
                 if (prev <= 1) {
-                    clearInterval(countdownRef.current!);
-                    countdownRef.current = null;
-
-                    // Transition to next slide
-                    if (swiperRef.current && activeSlides.length > 1) {
-                        const nextIndex = (currentSlideIndex + 1) % activeSlides.length;
-                        swiperRef.current.slideTo(nextIndex);
-                    }
-
                     return 0;
                 }
                 return prev - 1;
             });
         }, 1000);
-    }, [activeSlides, currentSlideIndex]);
+    }, [clearAllTimers]);
 
-    // Handle slide change
+    // Custom autoplay function that respects individual slide durations
+    const startCustomAutoplay = useCallback((slideIndex: number) => {
+        // Clear any existing timeout
+        clearAllTimers();
+
+        if (slideIndex >= 0 && slideIndex < activeSlides.length && swiperRef.current) {
+            const slide = activeSlides[slideIndex];
+            const duration = slide.duration || 10; // Duration in seconds
+
+            if (isDebugMode) {
+                console.log('SwiperSlideshow: Starting custom autoplay', {
+                    slideIndex,
+                    realIndex: swiperRef.current.realIndex,
+                    slideName: slide.name,
+                    duration,
+                    isVideoSlide: slide.type === 'video-slide'
+                });
+            }
+
+            // Start countdown timer for TestingOverlay
+            startCountdownTimer(duration);
+
+            // Set timeout to move to next slide (only if not a video playing)
+            autoplayTimeoutRef.current = setTimeout(() => {
+                if (swiperRef.current && activeSlides.length > 1 && !isVideoPlaying) {
+                    if (isDebugMode) {
+                        console.log('SwiperSlideshow: Moving to next slide via custom autoplay');
+                    }
+                    swiperRef.current.slideNext();
+                }
+            }, duration * 1000); // Convert to milliseconds
+        }
+    }, [activeSlides, clearAllTimers, startCountdownTimer, isVideoPlaying, isDebugMode]);
+
+    // Get autoplay configuration - disable built-in autoplay, use custom instead
+    const getAutoplayConfig = useCallback(() => {
+        return false; // Disable built-in autoplay, use custom implementation
+    }, []);
+
+    // Handle slide change with realIndex for loop mode compatibility
     const handleSlideChange = useCallback((swiper: SwiperType) => {
-        const newIndex = swiper.activeIndex;
-
-
+        // Use realIndex for loop mode compatibility
+        const newIndex = swiper.realIndex;
         setCurrentSlideIndex(newIndex);
+
+        if (isDebugMode) {
+            console.log('SwiperSlideshow: Slide changed', {
+                activeIndex: swiper.activeIndex,
+                realIndex: swiper.realIndex,
+                totalSlides: activeSlides.length,
+                slideName: activeSlides[newIndex]?.name
+            });
+        }
+
+        // Start custom autoplay for the new slide
+        startCustomAutoplay(newIndex);
+
         onSlideChange?.(newIndex);
 
-        // Clear existing countdown and start new one
-        clearCountdown();
-        startCountdown();
-    }, [onSlideChange, clearCountdown, startCountdown]);
+        // Dispatch enhanced custom event for TestingOverlay
+        const currentSlide = activeSlides[newIndex];
+        const event = new CustomEvent('slideshowSlideChange', {
+            detail: {
+                slideIndex: newIndex,
+                slideName: currentSlide?.name,
+                duration: currentSlide?.duration || 10,
+                remainingTime: currentSlide?.duration || 10,
+                isVideoSlide: currentSlide?.type === 'video-slide'
+            }
+        });
+        window.dispatchEvent(event);
+    }, [onSlideChange, activeSlides, startCustomAutoplay, isDebugMode]);
 
-    // Handle swiper initialization
+    // Handle video end - advance to next slide immediately
+    const handleVideoEnd = useCallback(() => {
+        if (isDebugMode) {
+            console.log('SwiperSlideshow: Video ended, advancing to next slide');
+        }
+        setIsVideoPlaying(false);
+        clearAllTimers();
+
+        if (swiperRef.current && activeSlides.length > 1) {
+            swiperRef.current.slideNext();
+        }
+    }, [activeSlides.length, clearAllTimers, isDebugMode]);
+
+
+    // Enhanced render function that passes video handlers
+    const enhancedRenderSlideContent = useCallback((slide: Slide) => {
+        return renderSlideContent(slide, handleVideoEnd);
+    }, [renderSlideContent, handleVideoEnd]);
+
+    // Initialize autoplay when swiper is ready (ONLY in onSwiper, not useEffect)
     const handleSwiperInit = useCallback((swiper: SwiperType) => {
+        if (isDebugMode) {
+            console.log('SwiperSlideshow: Swiper initialized', {
+                activeIndex: swiper.activeIndex,
+                realIndex: swiper.realIndex,
+                slides: swiper.slides.length,
+                autoplayConfig: getAutoplayConfig()
+            });
+        }
         swiperRef.current = swiper;
 
-
-        // Start countdown for first slide
-        if (activeSlides.length > 0) {
-            setCurrentSlideIndex(0);
-            startCountdown();
+        // Start autoplay when swiper is ready (only if multiple slides)
+        if (activeSlides.length > 1) {
+            setTimeout(() => {
+                startCustomAutoplay(0);
+            }, 500); // Small delay to ensure swiper is fully ready
         }
-    }, [activeSlides, startCountdown]);
+    }, [activeSlides.length, startCustomAutoplay, getAutoplayConfig, isDebugMode]);
 
-    // Reset countdown when slides change
+    // Listen for video events to pause/resume autoplay
     useEffect(() => {
+        const handleVideoStart = () => {
+            if (isDebugMode) {
+                console.log('SwiperSlideshow: Video started, pausing autoplay timer');
+            }
+            setIsVideoPlaying(true);
+            if (autoplayTimeoutRef.current) {
+                clearTimeout(autoplayTimeoutRef.current);
+                autoplayTimeoutRef.current = null;
+            }
+        };
 
-        clearCountdown();
-        setCurrentSlideIndex(0);
+        const handleVideoPause = () => {
+            if (isDebugMode) {
+                console.log('SwiperSlideshow: Video paused, resuming autoplay timer');
+            }
+            setIsVideoPlaying(false);
+            // Restart autoplay for current slide
+            if (swiperRef.current) {
+                startCustomAutoplay(swiperRef.current.realIndex);
+            }
+        };
 
-        if (activeSlides.length > 0) {
-            startCountdown();
-        }
-    }, [activeSlides, clearCountdown, startCountdown]);
+        const handleVideoEnd = () => {
+            if (isDebugMode) {
+                console.log('SwiperSlideshow: Video ended, resuming autoplay timer');
+            }
+            setIsVideoPlaying(false);
+            // Restart autoplay for current slide
+            if (swiperRef.current) {
+                startCustomAutoplay(swiperRef.current.realIndex);
+            }
+        };
 
-    // Handle slide transition when timeRemaining reaches 0
+        window.addEventListener('videoSlideStart', handleVideoStart);
+        window.addEventListener('videoSlidePause', handleVideoPause);
+        window.addEventListener('videoSlideEnd', handleVideoEnd);
+
+        return () => {
+            window.removeEventListener('videoSlideStart', handleVideoStart);
+            window.removeEventListener('videoSlidePause', handleVideoPause);
+            window.removeEventListener('videoSlideEnd', handleVideoEnd);
+        };
+    }, [startCustomAutoplay, isDebugMode]);
+
+    // Update Swiper settings when props change
     useEffect(() => {
-        if (timeRemaining === 0 && swiperRef.current && activeSlides.length > 1) {
-            const nextIndex = (currentSlideIndex + 1) % activeSlides.length;
-            swiperRef.current.slideTo(nextIndex);
+        if (swiperRef.current) {
+            if (isDebugMode) {
+                console.log('SwiperSlideshow: Updating Swiper settings', {
+                    effect,
+                    hideArrows,
+                    hidePagination
+                });
+            }
+
+            // Update navigation
+            if (hideArrows) {
+                swiperRef.current.navigation?.destroy();
+            } else {
+                swiperRef.current.navigation?.init();
+            }
+
+            // Update pagination
+            if (hidePagination) {
+                swiperRef.current.pagination?.destroy();
+            } else {
+                swiperRef.current.pagination?.init();
+            }
+
+            // Update effect if it changed - force re-render by updating params
+            if (effect !== swiperRef.current.params.effect) {
+                swiperRef.current.params.effect = effect;
+                swiperRef.current.update();
+            }
         }
-    }, [timeRemaining, currentSlideIndex, activeSlides.length]);
+    }, [effect, hideArrows, hidePagination, isDebugMode]);
 
     // Cleanup on unmount
     useEffect(() => {
         return () => {
-            clearCountdown();
+            clearAllTimers();
+            if (swiperRef.current) {
+                swiperRef.current.autoplay?.stop();
+            }
         };
-    }, [clearCountdown]);
+    }, [clearAllTimers]);
 
-    // Memoize pagination configuration
-    const paginationConfig = useMemo(() => {
-        return !hidePagination ? {
-            clickable: true,
-            dynamicBullets: true
-        } : false;
-    }, [hidePagination]);
-
-    // Don't render if no active slides - show animated logo instead
+    // Don't render if no active slides
     if (activeSlides.length === 0) {
         return (
-            <div className="w-full h-full bg-black flex items-center justify-center relative overflow-hidden">
-                {/* Video Background */}
-                {!videoError && (
-                    <video
-                        autoPlay
-                        muted
-                        loop
-                        playsInline
-                        className="absolute inset-0 w-full h-full object-cover opacity-20"
-                        style={{ zIndex: 1 }}
-                        onError={(e) => {
-                            console.error("Video playback error in SwiperSlideshow:", e);
-                            setVideoError(true);
-                        }}
-                        onPlay={() => {
-                            // Video started playing successfully
-                        }}
-                        onPause={() => {
-                            // Video paused successfully
-                        }}
-                        onAbort={() => {
-                            // Video loading was aborted
-                        }}
-
-                    >
-                        <source src="/videos/soliton-bg.mp4" type="video/mp4" />
-                        Your browser does not support the video tag.
-                    </video>
-                )}
-
-                {/* Overlay for better logo visibility */}
-                <div
-                    className="absolute inset-0 bg-black/30"
-                    style={{ zIndex: 2 }}
-                />
-
-                {/* Pulsating Logo - only show if not hidden by settings */}
-                {!settings?.hidePersiviaLogo && (
-                    <div className="relative z-10">
-                        <img
-                            src="/images/logo-persivia.svg"
-                            alt="Persivia Logo"
-                            className="display-logo"
-                            style={{
-                                animation: "pulse 3s ease-in-out infinite"
-                            }}
-                        />
-                    </div>
-                )}
+            <div className="w-full h-full flex items-center justify-center bg-gray-100">
+                <div className="text-center">
+                    <h3 className="text-xl font-semibold mb-2 text-gray-600">No Active Slides</h3>
+                    <p className="text-gray-500">Create and activate slides to see them here</p>
+                </div>
             </div>
         );
+    }
+
+    if (isDebugMode) {
+        console.log('SwiperSlideshow: Rendering with', {
+            activeSlidesCount: activeSlides.length,
+            effect,
+            hideArrows,
+            hidePagination,
+            currentSlideIndex,
+            remainingTime,
+            isVideoPlaying,
+            modules: modules.map(m => m.name || 'unknown')
+        });
     }
 
     return (
         <div className="relative w-full h-full">
             <Swiper
-                key={`swiper-${effect}`}
+                key={`swiper-${effect}-${hideArrows}-${hidePagination}-${activeSlides.length}`}
                 modules={modules}
                 effect={effect}
-                {...effectConfig}
+                {...getEffectConfig()}
                 spaceBetween={0}
                 slidesPerView={1}
                 navigation={!hideArrows}
-                pagination={paginationConfig}
-                autoplay={{
-                    delay: activeSlides[currentSlideIndex]?.duration * 1000 || 5000,
-                    disableOnInteraction: false,
-                    pauseOnMouseEnter: false
-                }}
-                onSlideChange={handleSlideChange}
+                pagination={!hidePagination ? {
+                    clickable: true,
+                    dynamicBullets: true
+                } : false}
+                autoplay={getAutoplayConfig()}
                 onSwiper={handleSwiperInit}
-                className="w-full h-full relative z-10"
+                onSlideChange={handleSlideChange}
+                className="w-full h-full"
                 speed={800}
-                grabCursor={false}
-                allowTouchMove={false}
+                grabCursor={true}
                 observer={true}
                 observeParents={true}
-                loop={true}
+                loop={activeSlides.length > 1} // Enable loop if there are multiple slides
             >
                 {activeSlides.map((slide) => (
                     <SwiperSlide key={slide.id}>
                         <div className="w-full h-full">
-                            {renderSlideContent(slide)}
+                            {enhancedRenderSlideContent(slide)}
                         </div>
                     </SwiperSlide>
                 ))}
             </Swiper>
+            <TestingOverlay />
         </div>
     );
 };
 
-export default SwiperSlideshow; 
+export default SwiperSlideshow;

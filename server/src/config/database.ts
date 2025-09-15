@@ -1,6 +1,5 @@
 import { DataSource } from "typeorm";
 import { User } from "../models/User";
-import { Display } from "../models/Display";
 import { Session } from "../models/Session";
 import { File } from "../models/File";
 import { config } from "./env";
@@ -19,7 +18,7 @@ export const AppDataSource = new DataSource({
     database: config.database.database,
     synchronize: false, // Disable synchronize - use migrations instead
     logging: false, // Disable verbose SQL query logging
-    entities: [User, Display, Session, File],
+    entities: [User, Session, File],
     migrations: ["src/migrations/*.ts"],
     subscribers: [],
     charset: "utf8mb4",
