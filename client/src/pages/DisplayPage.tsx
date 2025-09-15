@@ -208,16 +208,44 @@ const DisplayPage: React.FC = () => {
         forceFullscreen();
     }, []);
 
-    // Periodic sync from database (every 30 seconds for display page)
-    // This ensures the display page gets updates when HomePage makes changes
+    // Listen for data changes from intelligent polling system
     useEffect(() => {
-        const syncInterval = setInterval(() => {
-            console.log("🔄 DisplayPage: Periodic sync triggered...");
-            directSync();
-        }, 30000); // 30 seconds for more responsive updates
+        const handleDataChange = (e: CustomEvent) => {
+            console.log("🔄 DisplayPage: Data change event received from polling system");
+            const { data, source } = e.detail;
+            if (source === 'polling' && data) {
+                // Force slideshow update when data changes
+                setTimeout(() => {
+                    forceSlideshowUpdate();
+                }, 100);
+            }
+        };
 
-        return () => clearInterval(syncInterval);
-    }, [directSync]);
+        window.addEventListener('dataChanged', handleDataChange as EventListener);
+        return () => {
+            window.removeEventListener('dataChanged', handleDataChange as EventListener);
+        };
+    }, [forceSlideshowUpdate]);
+
+    // Listen for force reload events from HomePage
+    useEffect(() => {
+        const handleForceReload = (e: CustomEvent) => {
+            console.log("🔄 DisplayPage: Force reload event received:", e.detail);
+            const { source } = e.detail;
+
+            if (source === 'homepage-save-sync') {
+                console.log("🔄 DisplayPage: Performing physical reload due to HomePage save & sync...");
+
+                // Add a small delay to ensure the save operation completes
+                setTimeout(() => {
+                    window.location.reload();
+                }, 500);
+            }
+        };
+
+        window.addEventListener('forceDisplayReload', handleForceReload as EventListener);
+        return () => window.removeEventListener('forceDisplayReload', handleForceReload as EventListener);
+    }, []);
 
     if (isLoading) {
         return (

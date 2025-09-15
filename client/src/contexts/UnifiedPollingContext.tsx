@@ -37,15 +37,15 @@ interface UnifiedPollingProviderProps {
     children: ReactNode;
 }
 
-// Configuration constants
+// Configuration constants - Balanced polling
 const POLLING_INTERVALS = {
     NORMAL: 30000,      // 30 seconds - normal polling
     IDLE: 60000,        // 60 seconds - when no user activity
-    ACTIVE: 10000,      // 10 seconds - when user is actively making changes
+    ACTIVE: 15000,      // 15 seconds - when user is actively making changes
     MINIMUM: 5000       // 5 seconds - minimum interval
 };
 
-const USER_ACTION_GRACE_PERIOD = 10000; // 10 seconds after user action before normal polling
+const USER_ACTION_GRACE_PERIOD = 15000; // 15 seconds after user action before normal polling
 
 export const UnifiedPollingProvider: React.FC<UnifiedPollingProviderProps> = ({ children }) => {
     const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null);
@@ -110,6 +110,9 @@ export const UnifiedPollingProvider: React.FC<UnifiedPollingProviderProps> = ({ 
         return POLLING_INTERVALS.IDLE;
     }, [pollingState.lastUserAction, pollingState.hasUnsavedChanges]);
 
+    // Track last known data hash to detect changes
+    const lastDataHashRef = useRef<string>("");
+
     // Sync from database (read-only, doesn't overwrite user changes)
     const syncFromDatabase = useCallback(async (): Promise<SlideshowData | null> => {
         try {
@@ -123,14 +126,45 @@ export const UnifiedPollingProvider: React.FC<UnifiedPollingProviderProps> = ({ 
             }));
 
             if (data) {
-                console.log("📥 Polling: Data loaded from database:", {
-                    slidesCount: data.slides?.length || 0,
-                    activeSlidesCount: data.slides?.filter((slide: any) => slide.active).length || 0,
-                    hasDisplaySettings: !!data.displaySettings
+                // Create a hash of the current data to detect changes
+                const currentDataHash = JSON.stringify({
+                    slides: data.slides?.map(slide => ({
+                        id: slide.id,
+                        name: slide.name,
+                        type: slide.type,
+                        active: slide.active,
+                        duration: slide.duration,
+                        data: slide.data
+                    })) || [],
+                    displaySettings: data.displaySettings,
+                    lastUpdated: data.lastUpdated
                 });
+
+                // Always proceed if this is the first load (empty hash) or if data has changed
+                if (lastDataHashRef.current === "" || currentDataHash !== lastDataHashRef.current) {
+                    console.log("📥 Polling: Data changed, updating:", {
+                        slidesCount: data.slides?.length || 0,
+                        activeSlidesCount: data.slides?.filter((slide: any) => slide.active).length || 0,
+                        hasDisplaySettings: !!data.displaySettings,
+                        isFirstLoad: lastDataHashRef.current === ""
+                    });
+
+                    lastDataHashRef.current = currentDataHash;
+
+                    // Dispatch event to notify UnifiedContext of data change
+                    const event = new CustomEvent('dataChanged', {
+                        detail: { data, source: 'polling' }
+                    });
+                    window.dispatchEvent(event);
+
+                    return data;
+                } else {
+                    console.log("📥 Polling: No changes detected, skipping update");
+                    return null;
+                }
             }
 
-            return data;
+            return null;
         } catch (error) {
             console.error("❌ Polling: Error syncing from database:", error);
             setPollingState(prev => ({
@@ -219,12 +253,17 @@ export const UnifiedPollingProvider: React.FC<UnifiedPollingProviderProps> = ({ 
             const interval = getPollingInterval();
             console.log(`🔄 Polling: Next poll in ${interval / 1000}s (${pollingState.hasUnsavedChanges ? 'has changes' : 'no changes'})`);
 
-            // Only sync from database if no unsaved changes
-            // This prevents overwriting user changes
-            if (!pollingState.hasUnsavedChanges) {
-                await syncFromDatabase();
+            // Always try to sync from database to check for changes
+            // The syncFromDatabase function will only return data if it actually changed
+            const data = await syncFromDatabase();
+            if (data) {
+                console.log("🔄 Polling: Data changed, triggering update");
+                // Dispatch custom event to notify components of data change
+                window.dispatchEvent(new CustomEvent('dataChanged', {
+                    detail: { data, source: 'polling' }
+                }));
             } else {
-                console.log("💾 Polling: Has unsaved changes, skipping database read to preserve user changes");
+                console.log("📥 Polling: No changes detected, skipping update");
             }
         };
 
@@ -260,6 +299,20 @@ export const UnifiedPollingProvider: React.FC<UnifiedPollingProviderProps> = ({ 
             pollingIntervalRef.current = null;
         }
     }, []);
+
+    // Start polling on mount and immediately sync data
+    useEffect(() => {
+        const initializePolling = async () => {
+            // First, immediately sync data from database
+            console.log("🔄 Polling: Initial sync on mount...");
+            await syncFromDatabase();
+
+            // Then start regular polling
+            startPolling();
+        };
+
+        initializePolling();
+    }, [startPolling, syncFromDatabase]);
 
     // Cleanup on unmount
     useEffect(() => {

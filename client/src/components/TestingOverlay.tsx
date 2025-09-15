@@ -69,19 +69,17 @@ export const TestingOverlay: React.FC = () => {
         };
     }, [currentSlideIndex, activeSlides.length, currentSlide]);
 
-    // Check if we're on a slideshow page (display page or home page)
+    // Check if we're on the display page only
     useEffect(() => {
-        const checkSlideshowPage = () => {
+        const checkDisplayPage = () => {
             const isDisplayPage = window.location.pathname === '/display';
-            const isHomePage = window.location.pathname === '/';
-            const isActive = isDisplayPage || isHomePage;
-            setIsSlideshowActive(isActive);
+            setIsSlideshowActive(isDisplayPage);
         };
 
-        checkSlideshowPage();
-        window.addEventListener('popstate', checkSlideshowPage);
+        checkDisplayPage();
+        window.addEventListener('popstate', checkDisplayPage);
 
-        return () => window.removeEventListener('popstate', checkSlideshowPage);
+        return () => window.removeEventListener('popstate', checkDisplayPage);
     }, []);
 
     // Listen for slide changes from SwiperSlideshow component

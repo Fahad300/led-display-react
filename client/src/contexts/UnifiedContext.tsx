@@ -10,6 +10,13 @@ import { fetchEmployeesData } from '../services/eventsService';
 import { fetchTeamWiseData } from '../services/graphService';
 import { DEFAULT_SLIDE_CONFIGS } from '../config/defaultSlides';
 import { currentEscalations } from '../data/currentEscalations';
+import {
+    addDataChangeListener,
+    addPollingStateListener,
+    forceApiCheck,
+    startApiPolling,
+    stopApiPolling
+} from '../services/api';
 
 interface UnifiedContextType {
     // Slides
@@ -33,11 +40,23 @@ interface UnifiedContextType {
     // Page detection
     isDisplayPage: boolean;
 
+    // API Polling state
+    apiPollingState: {
+        isPolling: boolean;
+        lastApiCheck: Date | null;
+        lastDataHash: string;
+        hasApiChanges: boolean;
+        pollingInProgress: boolean;
+    };
+
     // Actions
     saveToDatabase: () => Promise<void>;
     syncFromDatabase: () => Promise<void>;
     refreshApiData: () => Promise<void>;
     syncToRemoteDisplays: () => Promise<void>;
+    forceApiCheck: () => Promise<void>;
+    startApiPolling: () => void;
+    stopApiPolling: () => void;
 }
 
 const UnifiedContext = createContext<UnifiedContextType | undefined>(undefined);
@@ -138,6 +157,15 @@ export const UnifiedProvider: React.FC<UnifiedProviderProps> = ({ children }) =>
     const [isLoading, setIsLoading] = useState(true);
     const [isEditing, setIsEditing] = useState(false);
 
+    // API Polling state
+    const [apiPollingState, setApiPollingState] = useState({
+        isPolling: false,
+        lastApiCheck: null as Date | null,
+        lastDataHash: "",
+        hasApiChanges: false,
+        pollingInProgress: false
+    });
+
     // Track last saved state to prevent unnecessary saves
     const lastSavedStateRef = useRef<string>("");
 
@@ -216,23 +244,31 @@ export const UnifiedProvider: React.FC<UnifiedProviderProps> = ({ children }) =>
             if (slideshowData) {
                 // Only update if we have slides and the data is different
                 if (slideshowData.slides && slideshowData.slides.length > 0) {
-                    // Debug: Log the active status of slides being synced
-                    console.log("📥 DisplayPage: Syncing slides with active status:", slideshowData.slides.map(slide => ({
-                        id: slide.id,
-                        name: slide.name,
-                        active: slide.active,
-                        type: slide.type
-                    })));
-
                     setSlides(prevSlides => {
-                        // Check if the data is actually different
-                        const isDifferent = JSON.stringify(prevSlides) !== JSON.stringify(slideshowData.slides);
-                        if (isDifferent) {
-                            console.log("📥 DisplayPage: Updating slides from database");
-                            console.log("📥 DisplayPage: Previous slides count:", prevSlides.length);
-                            console.log("📥 DisplayPage: New slides count:", slideshowData.slides.length);
-                            console.log("📥 DisplayPage: New slides active count:", slideshowData.slides.filter(s => s.active).length);
-                            console.log("📥 DisplayPage: New slides details:", slideshowData.slides.map(s => ({ id: s.id, name: s.name, active: s.active, type: s.type })));
+                        // Check if the data is actually different using a more efficient comparison
+                        const prevSlidesHash = JSON.stringify(prevSlides.map(s => ({
+                            id: s.id,
+                            name: s.name,
+                            type: s.type,
+                            active: s.active,
+                            duration: s.duration,
+                            data: s.data
+                        })));
+
+                        const newSlidesHash = JSON.stringify(slideshowData.slides.map(s => ({
+                            id: s.id,
+                            name: s.name,
+                            type: s.type,
+                            active: s.active,
+                            duration: s.duration,
+                            data: s.data
+                        })));
+
+                        if (prevSlidesHash !== newSlidesHash) {
+                            console.log("📥 UnifiedContext: Data changed, updating slides");
+                            console.log("📥 UnifiedContext: Previous slides count:", prevSlides.length);
+                            console.log("📥 UnifiedContext: New slides count:", slideshowData.slides.length);
+                            console.log("📥 UnifiedContext: New slides active count:", slideshowData.slides.filter(s => s.active).length);
 
                             // Dispatch custom event for slides change
                             setTimeout(() => {
@@ -247,17 +283,15 @@ export const UnifiedProvider: React.FC<UnifiedProviderProps> = ({ children }) =>
 
                             return slideshowData.slides;
                         } else {
-                            console.log("📥 DisplayPage: No changes detected, keeping existing slides");
+                            console.log("📥 UnifiedContext: No changes detected, keeping existing slides");
                         }
                         return prevSlides;
                     });
-
-                    // Display settings now handled by SettingsContext
                 } else {
-                    console.log("📥 DisplayPage: No slides found in database data");
+                    console.log("📥 UnifiedContext: No slides found in database data");
                 }
             } else {
-                console.log("📥 DisplayPage: No slideshow data found in database");
+                console.log("📥 UnifiedContext: No slideshow data found in database");
             }
         } catch (error) {
             console.error("❌ Error syncing data from database:", error);
@@ -310,7 +344,7 @@ export const UnifiedProvider: React.FC<UnifiedProviderProps> = ({ children }) =>
 
     // Display settings now handled by SettingsContext
 
-    // Auto-save when data changes (simple debounced save)
+    // Auto-save when data changes (less aggressive, only for critical changes)
     const saveTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
     useEffect(() => {
         if (saveTimeoutRef.current) {
@@ -324,11 +358,25 @@ export const UnifiedProvider: React.FC<UnifiedProviderProps> = ({ children }) =>
             const hasChanges = currentState !== lastSavedStateRef.current;
 
             if (hasChanges) {
-                saveTimeoutRef.current = setTimeout(() => {
-                    saveToDatabase().catch(error => {
-                        console.error("❌ Auto-save failed:", error);
-                    });
-                }, 3000); // 3 second debounce to reduce database pressure
+                // Only auto-save for critical changes (active status, order changes)
+                const hasCriticalChanges = slides.some(slide => {
+                    const prevSlide = JSON.parse(lastSavedStateRef.current || '{}').slides?.find((s: any) => s.id === slide.id);
+                    return prevSlide && (
+                        prevSlide.active !== slide.active ||
+                        prevSlide.duration !== slide.duration
+                    );
+                });
+
+                if (hasCriticalChanges) {
+                    console.log("🔄 UnifiedContext: Critical changes detected, auto-saving...");
+                    saveTimeoutRef.current = setTimeout(() => {
+                        saveToDatabase().catch(error => {
+                            console.error("❌ Auto-save failed:", error);
+                        });
+                    }, 5000); // 5 second debounce for critical changes only
+                } else {
+                    console.log("🔄 UnifiedContext: Non-critical changes detected, skipping auto-save");
+                }
             }
         }
 
@@ -338,6 +386,146 @@ export const UnifiedProvider: React.FC<UnifiedProviderProps> = ({ children }) =>
             }
         };
     }, [slides, saveToDatabase, isEditing, isDisplayPage]);
+
+    // Listen for data changes from polling system
+    useEffect(() => {
+        const handleDataChange = (e: CustomEvent) => {
+            console.log("🔄 UnifiedContext: Data change event received from polling system");
+            const { data, source } = e.detail;
+            if (source === 'polling' && data) {
+                // Update slides if they have changed
+                if (data.slides && data.slides.length > 0) {
+                    setSlides(prevSlides => {
+                        // Check if the data is actually different
+                        const prevSlidesHash = JSON.stringify(prevSlides.map(s => ({
+                            id: s.id,
+                            name: s.name,
+                            type: s.type,
+                            active: s.active,
+                            duration: s.duration,
+                            data: s.data
+                        })));
+
+                        const newSlidesHash = JSON.stringify(data.slides.map((s: any) => ({
+                            id: s.id,
+                            name: s.name,
+                            type: s.type,
+                            active: s.active,
+                            duration: s.duration,
+                            data: s.data
+                        })));
+
+                        if (prevSlidesHash !== newSlidesHash) {
+                            console.log("📥 UnifiedContext: Polling data changed, updating slides");
+                            return data.slides;
+                        } else {
+                            console.log("📥 UnifiedContext: Polling data unchanged, keeping existing slides");
+                        }
+                        return prevSlides;
+                    });
+                }
+            }
+        };
+
+        window.addEventListener('dataChanged', handleDataChange as EventListener);
+        return () => {
+            window.removeEventListener('dataChanged', handleDataChange as EventListener);
+        };
+    }, []);
+
+    // API Polling integration
+    useEffect(() => {
+        // Listen for API data changes
+        const unsubscribeDataChange = addDataChangeListener((data) => {
+            console.log("🔄 UnifiedContext: API data change received:", data);
+
+            // Update employees and graph data when API data changes
+            if (data.employees) {
+                setEmployees(data.employees);
+            }
+            if (data.graphData) {
+                setGraphData(data.graphData);
+            }
+
+            // Trigger a refresh of slides that depend on API data
+            if (data.employees || data.graphData) {
+                console.log("🔄 UnifiedContext: Refreshing slides with updated API data");
+                // Force a re-render by updating slides that depend on API data
+                setSlides(prevSlides => {
+                    return prevSlides.map(slide => {
+                        if (slide.type === SLIDE_TYPES.EVENT && slide.data.employees) {
+                            // Update event slides with new employee data
+                            return {
+                                ...slide,
+                                data: {
+                                    ...slide.data,
+                                    employees: data.employees || slide.data.employees
+                                }
+                            };
+                        }
+                        if (slide.type === SLIDE_TYPES.GRAPH && data.graphData) {
+                            // Update graph slides with new graph data
+                            return {
+                                ...slide,
+                                data: {
+                                    ...slide.data,
+                                    ...data.graphData
+                                }
+                            };
+                        }
+                        if (slide.type === SLIDE_TYPES.TEAM_COMPARISON && data.graphData) {
+                            // Update team comparison slides with new graph data
+                            return {
+                                ...slide,
+                                data: {
+                                    ...slide.data,
+                                    lastUpdated: new Date().toISOString()
+                                }
+                            };
+                        }
+                        return slide;
+                    });
+                });
+            }
+        });
+
+        // Listen for polling state changes
+        const unsubscribePollingState = addPollingStateListener((state) => {
+            console.log("🔄 UnifiedContext: API polling state changed:", state);
+            setApiPollingState(state);
+        });
+
+        // Initialize API polling
+        startApiPolling();
+
+        return () => {
+            unsubscribeDataChange();
+            unsubscribePollingState();
+            stopApiPolling();
+        };
+    }, []);
+
+    // Force API check function
+    const handleForceApiCheck = useCallback(async () => {
+        try {
+            console.log("🔄 UnifiedContext: Forcing API check...");
+            await forceApiCheck();
+        } catch (error) {
+            console.error("❌ Error forcing API check:", error);
+        }
+    }, []);
+
+    // Start API polling function
+    const handleStartApiPolling = useCallback(() => {
+        console.log("🔄 UnifiedContext: Starting API polling...");
+        startApiPolling();
+    }, []);
+
+    // Stop API polling function
+    const handleStopApiPolling = useCallback(() => {
+        console.log("🔄 UnifiedContext: Stopping API polling...");
+        stopApiPolling();
+    }, []);
 
     // Load data on mount - ensure data is loaded before rendering
     useEffect(() => {
@@ -445,10 +633,14 @@ export const UnifiedProvider: React.FC<UnifiedProviderProps> = ({ children }) =>
         isEditing,
         setIsEditing,
         isDisplayPage,
+        apiPollingState,
         saveToDatabase,
         syncFromDatabase,
         refreshApiData,
-        syncToRemoteDisplays
+        syncToRemoteDisplays,
+        forceApiCheck: handleForceApiCheck,
+        startApiPolling: handleStartApiPolling,
+        stopApiPolling: handleStopApiPolling
     };
 
     return (

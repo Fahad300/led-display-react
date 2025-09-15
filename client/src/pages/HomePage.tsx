@@ -1024,7 +1024,20 @@ const HomePage: React.FC = () => {
                             await saveToDatabase();
                             // Then sync to remote displays
                             await syncToRemoteDisplays();
-                            addToast("✅ Changes saved and synced to displays", "success");
+
+                            // Trigger physical reload of display page
+                            console.log("🔄 HomePage: Triggering display page reload...");
+
+                            // Dispatch a custom event to trigger display page reload
+                            const reloadEvent = new CustomEvent('forceDisplayReload', {
+                                detail: {
+                                    source: 'homepage-save-sync',
+                                    timestamp: new Date().toISOString()
+                                }
+                            });
+                            window.dispatchEvent(reloadEvent);
+
+                            addToast("✅ Changes saved, synced, and display reloaded", "success");
                         } catch (error) {
                             console.error("Error saving/syncing:", error);
                             addToast("❌ Failed to save/sync changes", "error");
