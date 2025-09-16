@@ -72,6 +72,26 @@ const DisplayPage: React.FC = () => {
         return () => clearInterval(refreshInterval);
     }, [syncSettings, syncFromDatabase]);
 
+    // Listen for force reload event from home page
+    useEffect(() => {
+        const handleForceReload = (event: Event) => {
+            const customEvent = event as CustomEvent;
+            console.log("🔄 DisplayPage: Force reload event received", customEvent.detail);
+            try {
+                // Reload the page silently
+                window.location.reload();
+            } catch (error) {
+                console.error("❌ DisplayPage: Failed to reload:", error);
+            }
+        };
+
+        window.addEventListener('forceDisplayReload', handleForceReload);
+
+        return () => {
+            window.removeEventListener('forceDisplayReload', handleForceReload);
+        };
+    }, []);
+
     // Render slide content
     const renderSlideContent = (slide: any, onVideoEnd?: () => void) => {
         switch (slide.type) {

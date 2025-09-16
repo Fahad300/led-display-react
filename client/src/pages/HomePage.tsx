@@ -1162,19 +1162,17 @@ const HomePage: React.FC = () => {
                             console.log("📡 Step 4: Syncing to remote displays...");
                             await syncToRemoteDisplays();
 
-                            // Step 5: Force reload the display page
-                            console.log("🔄 Step 5: Reloading display page...");
-                            const displayUrl = window.location.origin + '/display';
+                            // Step 5: Force reload the display page silently
+                            console.log("🔄 Step 5: Silently reloading display page...");
 
-                            // Open display page in new tab
-                            const newWindow = window.open(displayUrl, '_blank');
-
-                            // Close the new window after a short delay to allow it to load
-                            setTimeout(() => {
-                                if (newWindow) {
-                                    newWindow.close();
+                            // Dispatch custom event to reload display page
+                            const reloadEvent = new CustomEvent('forceDisplayReload', {
+                                detail: {
+                                    timestamp: new Date().toISOString(),
+                                    reason: 'force_sync'
                                 }
-                            }, 1000);
+                            });
+                            window.dispatchEvent(reloadEvent);
 
                             addToast("✅ Force sync completed - API updated, database saved, displays synced, page reloaded", "success");
                         } catch (error) {

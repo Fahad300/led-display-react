@@ -196,7 +196,8 @@ export const UnifiedProvider: React.FC<UnifiedProviderProps> = ({ children }) =>
                 showDateStamp: true,
                 hidePagination: false,
                 hideArrows: false,
-                hidePersiviaLogo: false
+                hidePersiviaLogo: false,
+                developmentMode: false
             };
 
             try {

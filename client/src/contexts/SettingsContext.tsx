@@ -65,8 +65,14 @@ export const SettingsProvider: React.FC<SettingsProviderProps> = ({ children }) 
                 setDisplaySettings(prevSettings => {
                     const isDifferent = JSON.stringify(prevSettings) !== JSON.stringify(newSettings);
                     if (isDifferent) {
-                        console.log('🔄 SettingsContext: Loading settings from database:', newSettings);
+                        console.log('🔄 SettingsContext: Loading settings from database:', {
+                            previous: prevSettings,
+                            new: newSettings,
+                            isUserEditing
+                        });
                         return newSettings;
+                    } else {
+                        console.log('🔄 SettingsContext: Settings unchanged, skipping update');
                     }
                     return prevSettings;
                 });
@@ -140,7 +146,10 @@ export const SettingsProvider: React.FC<SettingsProviderProps> = ({ children }) 
             localStorage.setItem('displaySettings', JSON.stringify(displaySettings));
         } finally {
             // Reset editing flag after a delay to allow for user to make multiple changes
-            setTimeout(() => setIsUserEditing(false), 2000);
+            setTimeout(() => {
+                console.log('🔄 SettingsContext: Resetting user editing flag');
+                setIsUserEditing(false);
+            }, 5000); // Increased from 2 seconds to 5 seconds
         }
     }, [displaySettings, saveSettingsToDatabase]);
 
@@ -158,10 +167,16 @@ export const SettingsProvider: React.FC<SettingsProviderProps> = ({ children }) 
     useEffect(() => {
         const interval = setInterval(() => {
             if (!isUserEditing) {
-                console.log('🔄 SettingsContext: Performing periodic sync...');
+                console.log('🔄 SettingsContext: Performing periodic sync...', {
+                    currentSettings: displaySettings,
+                    isUserEditing
+                });
                 syncSettings();
             } else {
-                console.log('⏸️ SettingsContext: Skipping periodic sync - user is editing');
+                console.log('⏸️ SettingsContext: Skipping periodic sync - user is editing', {
+                    isUserEditing,
+                    currentSettings: displaySettings
+                });
             }
         }, 30000); // 30 seconds for faster sync
 

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { VideoSlide as VideoSlideType } from "../../types";
 import { MediaSelector } from "../MediaSelector";
 
@@ -14,6 +14,9 @@ interface VideoSlideProps {
  */
 export const VideoSlide: React.FC<VideoSlideProps> = ({ slide, onUpdate, onVideoEnd }) => {
     const [isMediaSelectorOpen, setIsMediaSelectorOpen] = useState(false);
+    const [isBuffering, setIsBuffering] = useState(false);
+    const bufferingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+    const videoRef = useRef<HTMLVideoElement | null>(null);
 
     const handleVideoSelect = (url: string) => {
         if (onUpdate) {
@@ -26,6 +29,38 @@ export const VideoSlide: React.FC<VideoSlideProps> = ({ slide, onUpdate, onVideo
             });
         }
     };
+
+    // Handle buffering timeout - advance to next slide if video gets stuck
+    useEffect(() => {
+        if (isBuffering && onVideoEnd) {
+            // Set a timeout to advance if video gets stuck buffering
+            bufferingTimeoutRef.current = setTimeout(() => {
+                console.log("🔍 VideoSlide - Video buffering timeout, advancing to next slide");
+                setIsBuffering(false);
+                onVideoEnd();
+            }, 10000); // 10 seconds timeout for buffering
+        } else if (!isBuffering && bufferingTimeoutRef.current) {
+            // Clear timeout if video is no longer buffering
+            clearTimeout(bufferingTimeoutRef.current);
+            bufferingTimeoutRef.current = null;
+        }
+
+        return () => {
+            if (bufferingTimeoutRef.current) {
+                clearTimeout(bufferingTimeoutRef.current);
+                bufferingTimeoutRef.current = null;
+            }
+        };
+    }, [isBuffering, onVideoEnd]);
+
+    // Cleanup on unmount
+    useEffect(() => {
+        return () => {
+            if (bufferingTimeoutRef.current) {
+                clearTimeout(bufferingTimeoutRef.current);
+            }
+        };
+    }, []);
 
     if (!slide.data.videoUrl) {
         return (
@@ -74,28 +109,49 @@ export const VideoSlide: React.FC<VideoSlideProps> = ({ slide, onUpdate, onVideo
         <>
             <div className="relative w-full h-full overflow-hidden">
                 <video
+                    ref={videoRef}
                     src={slide.data.videoUrl}
                     className="w-full h-full object-cover"
                     autoPlay={onVideoEnd ? true : slide.data.autoplay} // Always autoplay in slideshow mode
                     loop={onVideoEnd ? false : slide.data.loop} // Don't loop in slideshow mode
                     muted={onVideoEnd ? true : slide.data.muted} // Always muted in slideshow mode
                     playsInline
+                    preload="metadata"
+                    controls={false}
                     onError={(e) => {
                         console.error("Video playback error:", e);
                     }}
+                    onLoadStart={() => {
+                        console.log("🔍 VideoSlide - Video loading started", { slideId: slide.id, slideName: slide.name });
+                    }}
+                    onLoadedMetadata={() => {
+                        console.log("🔍 VideoSlide - Video metadata loaded", { slideId: slide.id, slideName: slide.name });
+                    }}
+                    onLoadedData={() => {
+                        console.log("🔍 VideoSlide - Video data loaded", { slideId: slide.id, slideName: slide.name });
+                    }}
+                    onCanPlay={() => {
+                        console.log("🔍 VideoSlide - Video can play", { slideId: slide.id, slideName: slide.name });
+                    }}
+                    onCanPlayThrough={() => {
+                        console.log("🔍 VideoSlide - Video can play through", { slideId: slide.id, slideName: slide.name });
+                    }}
+                    onWaiting={() => {
+                        console.log("🔍 VideoSlide - Video waiting/buffering", { slideId: slide.id, slideName: slide.name });
+                        setIsBuffering(true);
+                    }}
+                    onStalled={() => {
+                        console.log("🔍 VideoSlide - Video stalled", { slideId: slide.id, slideName: slide.name });
+                        setIsBuffering(true);
+                    }}
                     onPlay={() => {
                         console.log("🔍 VideoSlide - Video started playing", { slideId: slide.id, slideName: slide.name, hasOnVideoEnd: !!onVideoEnd });
+                        setIsBuffering(false);
                         // Dispatch event to pause autoplay timer
                         const event = new CustomEvent('videoSlideStart', {
                             detail: { slideId: slide.id, slideName: slide.name }
                         });
                         window.dispatchEvent(event);
-                    }}
-                    onLoadStart={() => {
-                        console.log("🔍 VideoSlide - Video loading started", { slideId: slide.id, slideName: slide.name });
-                    }}
-                    onCanPlay={() => {
-                        console.log("🔍 VideoSlide - Video can play", { slideId: slide.id, slideName: slide.name });
                     }}
                     onPause={() => {
                         console.log("🔍 VideoSlide - Video paused");
@@ -122,6 +178,17 @@ export const VideoSlide: React.FC<VideoSlideProps> = ({ slide, onUpdate, onVideo
                         }
                     }}
                 />
+
+                {/* Buffering indicator */}
+                {isBuffering && (
+                    <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50">
+                        <div className="text-white text-center">
+                            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white mx-auto mb-2"></div>
+                            <div className="text-sm">Loading video...</div>
+                        </div>
+                    </div>
+                )}
+
                 {captionElement}
                 {onUpdate && (
                     <button
