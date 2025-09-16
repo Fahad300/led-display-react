@@ -76,20 +76,26 @@ export const VideoSlide: React.FC<VideoSlideProps> = ({ slide, onUpdate, onVideo
                 <video
                     src={slide.data.videoUrl}
                     className="w-full h-full object-cover"
-                    autoPlay={slide.data.autoplay}
-                    loop={slide.data.loop}
-                    muted={slide.data.muted}
+                    autoPlay={onVideoEnd ? true : slide.data.autoplay} // Always autoplay in slideshow mode
+                    loop={onVideoEnd ? false : slide.data.loop} // Don't loop in slideshow mode
+                    muted={onVideoEnd ? true : slide.data.muted} // Always muted in slideshow mode
                     playsInline
                     onError={(e) => {
                         console.error("Video playback error:", e);
                     }}
                     onPlay={() => {
-                        console.log("🔍 VideoSlide - Video started playing");
+                        console.log("🔍 VideoSlide - Video started playing", { slideId: slide.id, slideName: slide.name, hasOnVideoEnd: !!onVideoEnd });
                         // Dispatch event to pause autoplay timer
                         const event = new CustomEvent('videoSlideStart', {
                             detail: { slideId: slide.id, slideName: slide.name }
                         });
                         window.dispatchEvent(event);
+                    }}
+                    onLoadStart={() => {
+                        console.log("🔍 VideoSlide - Video loading started", { slideId: slide.id, slideName: slide.name });
+                    }}
+                    onCanPlay={() => {
+                        console.log("🔍 VideoSlide - Video can play", { slideId: slide.id, slideName: slide.name });
                     }}
                     onPause={() => {
                         console.log("🔍 VideoSlide - Video paused");
@@ -110,7 +116,8 @@ export const VideoSlide: React.FC<VideoSlideProps> = ({ slide, onUpdate, onVideo
                         });
                         window.dispatchEvent(event);
 
-                        if (onVideoEnd && !slide.data.loop) {
+                        // Always call onVideoEnd when video ends (for slideshow mode)
+                        if (onVideoEnd) {
                             onVideoEnd();
                         }
                     }}
