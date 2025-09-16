@@ -6,19 +6,18 @@ import { useSettings } from '../contexts/SettingsContext';
  * Testing overlay component to clearly indicate test data
  * This prevents people from taking photos/videos thinking it's real content
  * 
- * To enable/disable: Set REACT_APP_TESTING_MODE=true in your .env file
+ * To enable/disable: Use the Development Mode toggle in the Home page settings
  */
 export const TestingOverlay: React.FC = () => {
-    // Check if testing mode is enabled via environment variable
-    // Always show in development mode, or when explicitly enabled
-    const isTestingMode = process.env.NODE_ENV === 'development' || process.env.REACT_APP_TESTING_MODE === 'true';
+    // Get development mode setting from SettingsContext
+    const { displaySettings } = useSettings();
+    const isTestingMode = displaySettings.developmentMode;
 
     // Debug mode - only log when explicitly enabled
     const isDebugMode = process.env.REACT_APP_DEBUG_TESTING_OVERLAY === 'true';
 
     // Get slideshow data from unified context
     const { slides } = useUnified();
-    const { displaySettings } = useSettings();
 
     // State for slideshow visual indicator
     const [currentSlideIndex, setCurrentSlideIndex] = useState(0);

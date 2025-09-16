@@ -788,8 +788,11 @@ const AdminPage: React.FC = () => {
         slide.type === activeTabType
     );
 
-    const activeSlides = filteredSlides.filter(slide => slide.active);
-    const inactiveSlides = filteredSlides.filter(slide => !slide.active);
+    // Sort slides by name for consistent ordering within each group
+    const sortedFilteredSlides = [...filteredSlides].sort((a, b) => a.name.localeCompare(b.name));
+
+    const activeSlides = sortedFilteredSlides.filter(slide => slide.active);
+    const inactiveSlides = sortedFilteredSlides.filter(slide => !slide.active);
 
 
 
@@ -891,16 +894,25 @@ const AdminPage: React.FC = () => {
                 updateSlide(updatedSlide);
                 addToast("Slide updated successfully", "success");
             } else {
-                // Add new slide - use setSlides and then trigger immediate save
-                setSlides(prev => [...prev, updatedSlide]);
+                // Add new slide to state
+                const newSlides = [...slides, updatedSlide];
+                setSlides(newSlides);
 
-                // Trigger immediate save for new slides
-                setTimeout(() => {
-                    // Force save by calling saveToDatabase directly
-                    saveToDatabase().catch(error => {
-                        console.error("❌ Failed to save new slide:", error);
-                    });
-                }, 100);
+                console.log("🔄 AdminPage: Adding new slide to state:", {
+                    slideId: updatedSlide.id,
+                    slideName: updatedSlide.name,
+                    totalSlides: newSlides.length
+                });
+
+                // Save to database immediately with the new slides array
+                try {
+                    console.log("🔄 AdminPage: Saving new slide to database...");
+                    await saveToDatabase(newSlides);
+                    console.log("✅ AdminPage: New slide saved to database successfully");
+                } catch (error) {
+                    console.error("❌ AdminPage: Failed to save new slide:", error);
+                    addToast("Failed to save slide to database", "error");
+                }
 
                 addToast("Slide created successfully", "success");
             }

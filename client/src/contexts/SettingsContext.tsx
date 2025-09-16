@@ -7,6 +7,7 @@ interface DisplaySettings {
     hidePagination: boolean;
     hideArrows: boolean;
     hidePersiviaLogo: boolean;
+    developmentMode: boolean;
 }
 
 interface SettingsContextType {
@@ -24,7 +25,8 @@ const DEFAULT_SETTINGS: DisplaySettings = {
     showDateStamp: true,
     hidePagination: false,
     hideArrows: false,
-    hidePersiviaLogo: false
+    hidePersiviaLogo: false,
+    developmentMode: false
 };
 
 interface SettingsProviderProps {

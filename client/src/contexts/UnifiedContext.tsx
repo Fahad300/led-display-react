@@ -50,7 +50,7 @@ interface UnifiedContextType {
     };
 
     // Actions
-    saveToDatabase: () => Promise<void>;
+    saveToDatabase: (slidesToSave?: Slide[]) => Promise<void>;
     syncFromDatabase: () => Promise<void>;
     refreshApiData: () => Promise<void>;
     syncToRemoteDisplays: () => Promise<void>;
@@ -64,6 +64,8 @@ const UnifiedContext = createContext<UnifiedContextType | undefined>(undefined);
 // Function to create default slides
 const createDefaultSlides = (): Slide[] => {
     const defaultSlides: Slide[] = [];
+
+    console.log("🔧 Creating default slides from configs:", DEFAULT_SLIDE_CONFIGS);
 
     DEFAULT_SLIDE_CONFIGS.forEach(config => {
         switch (config.type) {
@@ -120,6 +122,7 @@ const createDefaultSlides = (): Slide[] => {
                 break;
 
             case 'event':
+                console.log("🔧 Processing event config:", config);
                 const eventSlide: EventSlide = {
                     id: config.id,
                     name: config.name,
@@ -137,8 +140,15 @@ const createDefaultSlides = (): Slide[] => {
                     }
                 };
                 defaultSlides.push(eventSlide);
+                console.log("🔧 Created event slide:", eventSlide);
                 break;
         }
+    });
+
+    console.log("🔧 Created default slides:", {
+        totalSlides: defaultSlides.length,
+        eventSlides: defaultSlides.filter(s => s.type === SLIDE_TYPES.EVENT).length,
+        slideDetails: defaultSlides.map(s => ({ id: s.id, name: s.name, type: s.type, active: s.active }))
     });
 
     return defaultSlides;
@@ -175,8 +185,11 @@ export const UnifiedProvider: React.FC<UnifiedProviderProps> = ({ children }) =>
     }, []);
 
     // Save to database with proper error handling
-    const saveToDatabase = useCallback(async () => {
+    const saveToDatabase = useCallback(async (slidesToSave?: Slide[]) => {
         try {
+            // Use provided slides or current state
+            const slidesToUse = slidesToSave || slides;
+
             // Load current settings from localStorage to avoid overwriting user settings
             let currentSettings = {
                 swiperEffect: "slide",
@@ -200,7 +213,7 @@ export const UnifiedProvider: React.FC<UnifiedProviderProps> = ({ children }) =>
             }
 
             const slideshowData: SlideshowData = {
-                slides,
+                slides: slidesToUse,
                 displaySettings: currentSettings, // Use actual settings from localStorage
                 lastUpdated: new Date().toISOString(),
                 version: "1.0.0"
@@ -209,7 +222,7 @@ export const UnifiedProvider: React.FC<UnifiedProviderProps> = ({ children }) =>
             await sessionService.saveSlideshowData(slideshowData);
 
             // Update the last saved state to prevent unnecessary saves
-            lastSavedStateRef.current = JSON.stringify({ slides });
+            lastSavedStateRef.current = JSON.stringify({ slides: slidesToUse });
             console.log("✅ UnifiedContext: Data saved to database successfully with settings:", currentSettings);
         } catch (error) {
             console.error("❌ Error saving data to database:", error);
@@ -548,10 +561,49 @@ export const UnifiedProvider: React.FC<UnifiedProviderProps> = ({ children }) =>
                         displaySettings: slideshowData.displaySettings
                     });
 
-                    // Smart merge: Use database data if available, fallback to defaults
-                    const finalSlides = slideshowData.slides && slideshowData.slides.length > 0
+                    // Smart merge: Use database data if available, but ensure we have event slides
+                    let finalSlides = slideshowData.slides && slideshowData.slides.length > 0
                         ? slideshowData.slides
                         : createDefaultSlides();
+
+                    // Check if we have event slides in the final slides array
+                    const hasEventSlides = finalSlides.some(s => s.type === SLIDE_TYPES.EVENT);
+                    console.log("🔍 Final slides has event slides:", hasEventSlides);
+
+                    // If we don't have event slides, add them (avoiding duplicates)
+                    if (!hasEventSlides) {
+                        console.log("🔧 Adding missing event slides to final slides");
+                        const defaultSlides = createDefaultSlides();
+                        const eventSlides = defaultSlides.filter(s => s.type === SLIDE_TYPES.EVENT);
+                        finalSlides = [...finalSlides, ...eventSlides];
+                        console.log("🔧 Added event slides:", eventSlides.map(s => ({ id: s.id, name: s.name, type: s.type })));
+                    } else {
+                        // Check for duplicate event slides and remove them
+                        const eventSlideIds = new Set<string>();
+                        const eventSlideNames = new Set<string>();
+                        const uniqueSlides = finalSlides.filter(slide => {
+                            if (slide.type === SLIDE_TYPES.EVENT) {
+                                // Check for duplicate by ID
+                                if (eventSlideIds.has(slide.id)) {
+                                    console.log("🔧 Removing duplicate event slide by ID:", slide.id, slide.name);
+                                    return false;
+                                }
+                                // Check for duplicate by name (in case IDs are different but names are same)
+                                if (eventSlideNames.has(slide.name)) {
+                                    console.log("🔧 Removing duplicate event slide by name:", slide.id, slide.name);
+                                    return false;
+                                }
+                                eventSlideIds.add(slide.id);
+                                eventSlideNames.add(slide.name);
+                            }
+                            return true;
+                        });
+
+                        if (uniqueSlides.length !== finalSlides.length) {
+                            console.log("🔧 Removed duplicate event slides, final count:", uniqueSlides.length);
+                            finalSlides = uniqueSlides;
+                        }
+                    }
 
                     console.log("🔄 UnifiedContext: Setting slides from database:", {
                         finalSlidesCount: finalSlides.length,

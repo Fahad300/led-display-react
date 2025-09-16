@@ -108,7 +108,7 @@ const SlidePreview: React.FC<{ slide: Slide }> = ({ slide }) => {
             case SLIDE_TYPES.IMAGE:
                 const imageSlide = slide as ImageSlideType;
                 return (
-                    <div className="w-full h-24 relative rounded-lg overflow-hidden bg-persivia-light-gray">
+                    <div className="w-16 h-12 relative rounded overflow-hidden bg-persivia-light-gray flex-shrink-0">
                         {imageSlide.data.imageUrl ? (
                             <img
                                 src={imageSlide.data.imageUrl}
@@ -117,7 +117,7 @@ const SlidePreview: React.FC<{ slide: Slide }> = ({ slide }) => {
                             />
                         ) : (
                             <div className="flex items-center justify-center h-full">
-                                <span className="text-persivia-gray">No image</span>
+                                <span className="text-xs text-persivia-gray">No image</span>
                             </div>
                         )}
                     </div>
@@ -125,7 +125,7 @@ const SlidePreview: React.FC<{ slide: Slide }> = ({ slide }) => {
             case SLIDE_TYPES.VIDEO:
                 const videoSlide = slide as VideoSlideType;
                 return (
-                    <div className="w-full h-24 relative rounded-lg overflow-hidden bg-persivia-light-gray">
+                    <div className="w-16 h-12 relative rounded overflow-hidden bg-persivia-light-gray flex-shrink-0">
                         {videoSlide.data.videoUrl ? (
                             <>
                                 {/* Video thumbnail - using the video element to capture a frame */}
@@ -142,8 +142,8 @@ const SlidePreview: React.FC<{ slide: Slide }> = ({ slide }) => {
                                 />
                                 {/* Play icon overlay */}
                                 <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-30">
-                                    <div className="w-8 h-8 bg-white bg-opacity-90 rounded-full flex items-center justify-center">
-                                        <svg className="w-4 h-4 text-gray-800 ml-0.5" fill="currentColor" viewBox="0 0 24 24">
+                                    <div className="w-4 h-4 bg-white bg-opacity-90 rounded-full flex items-center justify-center">
+                                        <svg className="w-2 h-2 text-gray-800 ml-0.5" fill="currentColor" viewBox="0 0 24 24">
                                             <path d="M8 5v14l11-7z" />
                                         </svg>
                                     </div>
@@ -151,7 +151,7 @@ const SlidePreview: React.FC<{ slide: Slide }> = ({ slide }) => {
                             </>
                         ) : (
                             <div className="flex items-center justify-center h-full">
-                                <span className="text-persivia-gray">No video</span>
+                                <span className="text-xs text-persivia-gray">No video</span>
                             </div>
                         )}
                     </div>
@@ -159,7 +159,7 @@ const SlidePreview: React.FC<{ slide: Slide }> = ({ slide }) => {
             case SLIDE_TYPES.NEWS:
                 const newsSlide = slide as NewsSlide;
                 return (
-                    <div className="w-full h-24 relative rounded-lg overflow-hidden bg-persivia-light-gray">
+                    <div className="w-16 h-12 relative rounded overflow-hidden bg-persivia-light-gray flex-shrink-0">
                         {newsSlide.data.backgroundImage ? (
                             <img
                                 src={newsSlide.data.backgroundImage}
@@ -168,7 +168,7 @@ const SlidePreview: React.FC<{ slide: Slide }> = ({ slide }) => {
                             />
                         ) : (
                             <div className="flex items-center justify-center h-full">
-                                <span className="text-persivia-gray">No image</span>
+                                <span className="text-xs text-persivia-gray">No image</span>
                             </div>
                         )}
                     </div>
@@ -176,13 +176,20 @@ const SlidePreview: React.FC<{ slide: Slide }> = ({ slide }) => {
             case SLIDE_TYPES.TEXT:
                 return null; // No preview for text slides
             default:
-                return ("");
+                return null; // No preview for other slide types
         }
     };
 
+    const preview = renderPreview();
+
+    // Only show preview container if there's a preview to show
+    if (!preview) {
+        return null;
+    }
+
     return (
-        <div className="mt-2">
-            {renderPreview()}
+        <div className="mt-2 flex justify-end">
+            {preview}
         </div>
     );
 };
@@ -256,7 +263,14 @@ const SortableSlideCard: React.FC<{
                 {/* Content */}
                 <div className="flex-1">
                     <div className="flex items-center justify-between mb-2">
-                        <h3 className="font-semibold text-persivia-blue">{getDisplayName()}</h3>
+                        <div className="flex items-center gap-2">
+                            <h3 className="font-semibold text-persivia-blue">{getDisplayName()}</h3>
+                            {slide.type === SLIDE_TYPES.EVENT && !(slide as EventSlideType).data.hasEvents && (
+                                <span className="text-xs bg-red-100 text-red-600 px-2 py-1 rounded-full">
+                                    0 Event
+                                </span>
+                            )}
+                        </div>
                         {slide.type === SLIDE_TYPES.EVENT ? (
                             <button
                                 type="button"
@@ -270,13 +284,17 @@ const SortableSlideCard: React.FC<{
                                     onToggleActive(slide.id);
                                 }}
                                 disabled={!(slide as EventSlideType).data.hasEvents}
-                                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${slide.active ? "bg-persivia-teal" :
-                                    (slide as EventSlideType).data.hasEvents ? "bg-slate-200" : "bg-slate-200 cursor-not-allowed opacity-50"
-                                    }`}
-                                title={!(slide as EventSlideType).data.hasEvents ? "No events today - cannot activate this slide" : ""}
+                                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${slide.active
+                                    ? "bg-persivia-teal"
+                                    : "bg-slate-200"
+                                    } ${!(slide as EventSlideType).data.hasEvents ? "opacity-50 cursor-not-allowed" : ""}`}
+                                title={(slide as EventSlideType).data.hasEvents ? "Toggle event slide" : "No events today - slide disabled"}
                             >
                                 <span
-                                    className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${slide.active ? "translate-x-5" : "translate-x-1"}`}
+                                    className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${slide.active
+                                        ? "translate-x-5"
+                                        : "translate-x-1"
+                                        }`}
                                 />
                             </button>
                         ) : (
@@ -353,7 +371,7 @@ const SlideManagementColumn: React.FC<{
     };
 
     return (
-        <div className="w-[450px] min-w-[400px] max-w-[500px] h-[calc(100vh-68px)] bg-persivia-white shadow-lg flex flex-col p-6 border-r border-persivia-light-gray pb-30">
+        <div className="w-[450px] min-w-[400px] max-w-[500px] h-[calc(100vh-68px)] bg-persivia-white shadow-lg flex flex-col p-6 border-r border-persivia-light-gray pb-30 pr-0">
             <h2 className="text-2xl font-bold text-center mb-6 text-persivia-blue">Slide Management</h2>
             <DndContext
                 sensors={sensors}
@@ -365,15 +383,30 @@ const SlideManagementColumn: React.FC<{
                     strategy={verticalListSortingStrategy}
                 >
                     <div className="flex-1 overflow-y-auto space-y-4 pr-2 pb-[2rem]">
-                        {slides.map((slide, index) => (
-                            <SortableSlideCard
-                                key={slide.id}
-                                slide={slide}
-                                index={index}
-                                onToggleActive={onToggleActive}
-                                employees={employees}
-                            />
-                        ))}
+                        {slides.length === 0 ? (
+                            <div className="text-center text-gray-500 py-8">
+                                <p>No slides available</p>
+                                <p className="text-sm">Check console for debug info</p>
+                            </div>
+                        ) : (
+                            slides.map((slide, index) => {
+                                console.log(`🏠 Rendering slide ${index}:`, {
+                                    id: slide.id,
+                                    name: slide.name,
+                                    type: slide.type,
+                                    active: slide.active
+                                });
+                                return (
+                                    <SortableSlideCard
+                                        key={slide.id}
+                                        slide={slide}
+                                        index={index}
+                                        onToggleActive={onToggleActive}
+                                        employees={employees}
+                                    />
+                                );
+                            })
+                        )}
                     </div>
                 </SortableContext>
             </DndContext>
@@ -409,12 +442,22 @@ const HomePage: React.FC = () => {
         updateSlide,
         employees,
         saveToDatabase,
-        syncToRemoteDisplays,
+        syncFromDatabase,
         refreshApiData,
+        syncToRemoteDisplays,
         isEditing,
         setIsEditing,
         isDisplayPage
     } = useUnified();
+
+    // Debug logging for slides
+    useEffect(() => {
+        console.log("🏠 HomePage - Current slides:", {
+            totalSlides: slides.length,
+            eventSlides: slides.filter(s => s.type === SLIDE_TYPES.EVENT).length,
+            allSlides: slides.map(s => ({ id: s.id, name: s.name, type: s.type, active: s.active }))
+        });
+    }, [slides]);
     const { displaySettings, updateDisplaySettings } = useSettings();
     const { addToast } = useToast();
     const [isFullscreen, setIsFullscreen] = useState(false);
@@ -462,16 +505,40 @@ const HomePage: React.FC = () => {
 
     // Process slides for event handling
     const processedSlides = useMemo(() => {
+        console.log("🎯 HomePage - Processing slides for events:", {
+            totalSlides: slides.length,
+            eventSlides: slides.filter(s => s.type === SLIDE_TYPES.EVENT).length,
+            employeesCount: employees.length,
+            eventSlidesDetails: slides.filter(s => s.type === SLIDE_TYPES.EVENT).map(s => ({
+                id: s.id,
+                name: s.name,
+                active: s.active,
+                eventType: (s as EventSlideType).data.eventType
+            }))
+        });
+
         return slides.map(slide => {
             if (slide.type === SLIDE_TYPES.EVENT) {
-                // Birthday event slide
-                if (slide.id === "birthday-event-slide") {
+                const eventSlide = slide as EventSlideType;
+
+                // Check if this is a birthday event slide
+                if (eventSlide.data.eventType === "birthday" || slide.name.toLowerCase().includes('birthday')) {
                     const birthdayEmployees = employees.filter(employee => isBirthdayToday(employee));
                     const hasBirthdays = birthdayEmployees.length > 0;
+
+                    console.log("🎂 HomePage - Processing birthday slide:", {
+                        slideId: slide.id,
+                        slideName: slide.name,
+                        birthdayEmployees: birthdayEmployees.length,
+                        hasBirthdays,
+                        slideActive: slide.active,
+                        employeeNames: birthdayEmployees.map(e => e.name)
+                    });
+
                     return {
                         ...slide,
                         duration: hasBirthdays && slide.active ? 10 : 0,
-                        active: slide.active, // Respect the manual toggle state
+                        active: hasBirthdays ? slide.active : false, // Auto-disable if no events
                         data: {
                             ...slide.data,
                             employees: birthdayEmployees,
@@ -480,14 +547,25 @@ const HomePage: React.FC = () => {
                         }
                     };
                 }
-                // Anniversary event slide
-                if (slide.id === "anniversary-event-slide") {
+
+                // Check if this is an anniversary event slide
+                if (eventSlide.data.eventType === "anniversary" || slide.name.toLowerCase().includes('anniversary')) {
                     const anniversaryEmployees = employees.filter(employee => isAnniversaryToday(employee));
                     const hasAnniversaries = anniversaryEmployees.length > 0;
+
+                    console.log("🎉 HomePage - Processing anniversary slide:", {
+                        slideId: slide.id,
+                        slideName: slide.name,
+                        anniversaryEmployees: anniversaryEmployees.length,
+                        hasAnniversaries,
+                        slideActive: slide.active,
+                        employeeNames: anniversaryEmployees.map(e => e.name)
+                    });
+
                     return {
                         ...slide,
                         duration: hasAnniversaries && slide.active ? 10 : 0,
-                        active: slide.active, // Respect the manual toggle state
+                        active: hasAnniversaries ? slide.active : false, // Auto-disable if no events
                         data: {
                             ...slide.data,
                             employees: anniversaryEmployees,
@@ -496,6 +574,9 @@ const HomePage: React.FC = () => {
                         }
                     };
                 }
+
+                // Return the original event slide if it doesn't match birthday or anniversary
+                return slide;
             }
             return slide;
         });
@@ -741,6 +822,27 @@ const HomePage: React.FC = () => {
         } catch (error) {
             console.error("❌ HomePage - Error updating logo visibility setting:", error);
             addToast("❌ Failed to update logo visibility setting", "error");
+        }
+    };
+
+    const handleDevelopmentModeToggle = async () => {
+        const newValue = !displaySettings.developmentMode;
+        console.log('⚙️ HomePage - Development mode toggle started:', {
+            newValue: newValue,
+            currentValue: displaySettings.developmentMode,
+            timestamp: new Date().toISOString()
+        });
+
+        try {
+            await updateDisplaySettings({ developmentMode: newValue });
+            console.log('✅ HomePage - Development mode toggle successful:', {
+                newValue: newValue,
+                timestamp: new Date().toISOString()
+            });
+            addToast("✅ Development mode setting updated successfully", "success");
+        } catch (error) {
+            console.error("❌ HomePage - Error updating development mode setting:", error);
+            addToast("❌ Failed to update development mode setting", "error");
         }
     };
 
@@ -1012,63 +1114,86 @@ const HomePage: React.FC = () => {
                                 <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${displaySettings.hidePersiviaLogo ? "translate-x-5" : "translate-x-1"}`} />
                             </button>
                         </div>
+
+                        {/* Development Mode Toggle */}
+                        <div className="flex items-center justify-between">
+                            <div className="flex flex-col">
+                                <label htmlFor="developmentMode" className="text-sm font-medium">
+                                    Development Mode
+                                </label>
+                                <span className="text-xs text-gray-500">Show testing overlay in display page</span>
+                            </div>
+                            <button
+                                id="developmentMode"
+                                type="button"
+                                role="switch"
+                                aria-checked={displaySettings.developmentMode}
+                                onClick={handleDevelopmentModeToggle}
+                                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${displaySettings.developmentMode ? "bg-persivia-teal" : "bg-slate-200"}`}
+                            >
+                                <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${displaySettings.developmentMode ? "translate-x-5" : "translate-x-1"}`} />
+                            </button>
+                        </div>
                     </div>
                 </div>
 
 
-                {/* Save and Sync Button */}
+                {/* Force Sync Button */}
                 <button
+                    type="button"
                     onClick={async () => {
+                        console.log("🔄 Force Sync button clicked!");
                         try {
-                            // First save to database
+                            console.log("🔄 HomePage: Force syncing - updating API data, unified objects, saving to database, syncing displays, and reloading...");
+
+                            // Step 1: Update API data (refresh from external APIs)
+                            console.log("📡 Step 1: Refreshing API data...");
+                            await refreshApiData();
+
+                            // Step 2: Update unified objects (sync from database)
+                            console.log("🔄 Step 2: Syncing unified objects from database...");
+                            await syncFromDatabase();
+
+                            // Step 3: Save current state to database
+                            console.log("💾 Step 3: Saving to database...");
                             await saveToDatabase();
-                            // Then sync to remote displays
+
+                            // Step 4: Sync to remote displays
+                            console.log("📡 Step 4: Syncing to remote displays...");
                             await syncToRemoteDisplays();
 
-                            // Trigger physical reload of display page
-                            console.log("🔄 HomePage: Triggering display page reload...");
+                            // Step 5: Force reload the display page
+                            console.log("🔄 Step 5: Reloading display page...");
+                            const displayUrl = window.location.origin + '/display';
 
-                            // Dispatch a custom event to trigger display page reload
-                            const reloadEvent = new CustomEvent('forceDisplayReload', {
-                                detail: {
-                                    source: 'homepage-save-sync',
-                                    timestamp: new Date().toISOString()
+                            // Open display page in new tab
+                            const newWindow = window.open(displayUrl, '_blank');
+
+                            // Close the new window after a short delay to allow it to load
+                            setTimeout(() => {
+                                if (newWindow) {
+                                    newWindow.close();
                                 }
-                            });
-                            window.dispatchEvent(reloadEvent);
+                            }, 1000);
 
-                            addToast("✅ Changes saved, synced, and display reloaded", "success");
+                            addToast("✅ Force sync completed - API updated, database saved, displays synced, page reloaded", "success");
                         } catch (error) {
-                            console.error("Error saving/syncing:", error);
-                            addToast("❌ Failed to save/sync changes", "error");
+                            console.error("❌ Error during force sync:", error);
+                            addToast("❌ Failed to force sync", "error");
                         }
                     }}
-                    className="w-full font-medium py-2 px-4 rounded-lg transition-colors mt-2 flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white"
+                    className="w-full font-medium py-2 px-4 rounded-lg transition-colors mt-2 flex items-center justify-center gap-2 bg-purple-600 hover:bg-purple-700 text-white"
                 >
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                     </svg>
-                    Save & Sync Displays
+                    Force Sync
                 </button>
 
-                {/* API Data Refresh Button */}
-                <button
-                    onClick={async () => {
-                        try {
-                            await refreshApiData();
-                            addToast("✅ API data refreshed successfully", "success");
-                        } catch (error) {
-                            console.error("Error refreshing API data:", error);
-                            addToast("❌ Failed to refresh API data", "error");
-                        }
-                    }}
-                    className="w-full font-medium py-2 px-4 rounded-lg transition-colors mt-2 flex items-center justify-center gap-2 bg-green-600 hover:bg-green-700 text-white"
-                >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                    </svg>
-                    Refresh API Data
-                </button>
+                {/* Force Sync Description */}
+                <div className="text-xs text-gray-600 mt-2">
+                    <p>Updates API data • Syncs unified objects • Saves to database • Syncs displays • Reloads page</p>
+                </div>
 
                 {/* Stop Editing Button - Only show when editing */}
                 {isEditing && (
@@ -1090,15 +1215,12 @@ const HomePage: React.FC = () => {
 
                 {/* Auto-save info */}
                 <div className="text-xs text-gray-500 text-center mt-2">
-                    {isEditing ? (
+                    {isEditing && (
                         <div className="text-red-600 font-semibold">
                             ✏️ EDITING MODE - Auto-save disabled • Use Save & Sync to save and sync • Use Stop Editing to resume auto-save
                         </div>
-                    ) : (
-                        <div>
-                            Auto-save: 2 seconds after changes • Database-backed persistence • API data refreshes every 8 hours • Use buttons above for immediate updates
-                        </div>
-                    )}
+                    )
+                    }
                 </div>
 
                 {/* Version info */}

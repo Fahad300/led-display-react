@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef, useCallback } from "react";
+import React, { useEffect } from "react";
 import { SLIDE_TYPES } from "../types";
 import { ImageSlide } from "../components/slides/ImageSlide";
 import { VideoSlide } from "../components/slides/VideoSlide";
@@ -17,153 +17,60 @@ import { useUnified } from '../contexts/UnifiedContext';
 import { useSettings } from '../contexts/SettingsContext';
 
 /**
- * DisplayPage: A simple route for fullscreen slide display.
- * Uses the centralized SwiperSlideshow component for consistency with HomePage.
+ * DisplayPage: Simple display page with two core functions:
+ * 1. Get the latest settings
+ * 2. Get the latest unified object
  */
 const DisplayPage: React.FC = () => {
-    // Load unified data from context
-    const { slides, isLoading, syncFromDatabase, isDisplayPage } = useUnified();
-    const { displaySettings } = useSettings();
-    const [isSyncing, setIsSyncing] = useState(false);
-
-    // Refs to track previous values for change detection
-    const prevSlidesRef = useRef<string>("");
-    const prevIsLoadingRef = useRef<boolean>(false);
-
-    // Force update key for SwiperSlideshow
-    const [forceUpdateKey, setForceUpdateKey] = useState(0);
+    // Get latest settings and unified data
+    const { slides, isLoading, syncFromDatabase } = useUnified();
+    const { displaySettings, syncSettings } = useSettings();
 
     // Filter active slides
     const activeSlides = slides.filter(slide => slide.active);
 
-    // Force update function to trigger slideshow re-render
-    const forceSlideshowUpdate = useCallback(() => {
-        setForceUpdateKey(prev => prev + 1);
-        console.log("🔄 DisplayPage: Forcing slideshow update");
-    }, []);
-
-    // Direct sync function that immediately updates the slideshow
-    const directSync = useCallback(async () => {
-        if (isSyncing) return; // Prevent multiple simultaneous syncs
-
-        setIsSyncing(true);
-        try {
-            console.log("🔄 DisplayPage: Performing direct sync...");
-            await syncFromDatabase();
-
-            // Force slideshow update after sync
-            setTimeout(() => {
-                forceSlideshowUpdate();
-            }, 100); // Small delay to ensure data is processed
-        } catch (error) {
-            console.error("❌ DisplayPage: Direct sync failed:", error);
-        } finally {
-            setIsSyncing(false);
-        }
-    }, [isSyncing, syncFromDatabase, forceSlideshowUpdate]);
-
-    // Debug log for display page detection (only once)
+    // Get latest data on mount
     useEffect(() => {
-        console.log("🖥️ DisplayPage: isDisplayPage =", isDisplayPage);
-    }, [isDisplayPage]); // Include isDisplayPage in dependencies
-
-    // Listen for settings changes and sync immediately
-    useEffect(() => {
-        const handleSettingsChange = () => {
-            console.log("🔄 DisplayPage: Settings changed, syncing...");
-            directSync();
-        };
-
-        const handleStorageChange = (e: StorageEvent) => {
-            if (e.key === 'displaySettings' && e.newValue) {
-                console.log("🔄 DisplayPage: Settings changed in localStorage, syncing...");
-                directSync();
-            }
-        };
-
-        const handleSlidesChange = (e: CustomEvent) => {
-            console.log("🔄 DisplayPage: Slides changed event received, forcing update...");
-            forceSlideshowUpdate();
-        };
-
-        // Listen for custom settings change events
-        window.addEventListener('settingsChanged', handleSettingsChange);
-        // Listen for localStorage changes (cross-tab communication)
-        window.addEventListener('storage', handleStorageChange);
-        // Listen for slides change events
-        window.addEventListener('slidesChanged', handleSlidesChange as EventListener);
-
-        return () => {
-            window.removeEventListener('settingsChanged', handleSettingsChange);
-            window.removeEventListener('storage', handleStorageChange);
-            window.removeEventListener('slidesChanged', handleSlidesChange as EventListener);
-        };
-    }, [directSync, forceSlideshowUpdate]);
-
-    // Force sync on mount to ensure we have the latest data
-    useEffect(() => {
-        const forceSync = async () => {
-            console.log("🔄 DisplayPage: Force syncing on mount...");
+        const getLatestData = async () => {
+            console.log("🖥️ DisplayPage: Getting latest settings and unified data...");
             try {
+                // Get latest settings
+                await syncSettings();
+                // Get latest unified object
                 await syncFromDatabase();
+                console.log("✅ DisplayPage: Latest data loaded successfully");
             } catch (error) {
-                console.error("❌ DisplayPage: Force sync failed:", error);
+                console.error("❌ DisplayPage: Failed to load latest data:", error);
             }
         };
 
-        // Small delay to ensure context is fully initialized
-        const timeoutId = setTimeout(forceSync, 100);
-        return () => clearTimeout(timeoutId);
-    }, [syncFromDatabase]);
+        getLatestData();
+    }, [syncSettings, syncFromDatabase]);
 
-    // Debug logging - only when unified data actually changes
+    // Force Swiper refresh when slides data changes
     useEffect(() => {
-        const currentSlidesString = JSON.stringify(slides.map(slide => ({
-            id: slide.id,
-            name: slide.name,
-            type: slide.type,
-            active: slide.active,
-            duration: slide.duration
-        })));
+        console.log("🔄 DisplayPage: Slides data changed, Swiper will auto-refresh", {
+            totalSlides: slides.length,
+            activeSlides: activeSlides.length,
+            slideIds: activeSlides.map(s => s.id)
+        });
+    }, [slides, activeSlides]);
 
-        // Only log if slides data has changed
-        if (currentSlidesString !== prevSlidesRef.current) {
-            console.log("🖥️ DisplayPage: Unified slides data changed:", {
-                isLoading,
-                slidesCount: slides.length,
-                activeSlidesCount: activeSlides.length,
-                slidesSummary: slides.map(slide => ({
-                    id: slide.id,
-                    name: slide.name,
-                    type: slide.type,
-                    active: slide.active,
-                    duration: slide.duration
-                })),
-                activeSlidesDetails: activeSlides.map(slide => ({
-                    id: slide.id,
-                    name: slide.name,
-                    type: slide.type,
-                    active: slide.active,
-                    duration: slide.duration
-                }))
-            });
-            prevSlidesRef.current = currentSlidesString;
-        }
-
-        // Only log if loading state has changed
-        if (isLoading !== prevIsLoadingRef.current) {
-            console.log("🖥️ DisplayPage: Loading state changed:", { isLoading });
-            prevIsLoadingRef.current = isLoading;
-        }
-    }, [slides, isLoading, activeSlides]); // Include activeSlides in dependencies
-
-    // Force slideshow update when slides data changes
+    // Periodic refresh for remote display (every 30 seconds)
     useEffect(() => {
-        if (slides.length > 0) {
-            console.log("🔄 DisplayPage: Slides data changed, forcing slideshow update");
-            forceSlideshowUpdate();
-        }
-    }, [slides, forceSlideshowUpdate]);
+        const refreshInterval = setInterval(async () => {
+            console.log("🔄 DisplayPage: Periodic refresh for remote display...");
+            try {
+                await syncSettings();
+                await syncFromDatabase();
+                console.log("✅ DisplayPage: Periodic refresh completed");
+            } catch (error) {
+                console.error("❌ DisplayPage: Periodic refresh failed:", error);
+            }
+        }, 30000); // 30 seconds
+
+        return () => clearInterval(refreshInterval);
+    }, [syncSettings, syncFromDatabase]);
 
     // Render slide content
     const renderSlideContent = (slide: any, onVideoEnd?: () => void) => {
@@ -206,45 +113,6 @@ const DisplayPage: React.FC = () => {
         };
 
         forceFullscreen();
-    }, []);
-
-    // Listen for data changes from intelligent polling system
-    useEffect(() => {
-        const handleDataChange = (e: CustomEvent) => {
-            console.log("🔄 DisplayPage: Data change event received from polling system");
-            const { data, source } = e.detail;
-            if (source === 'polling' && data) {
-                // Force slideshow update when data changes
-                setTimeout(() => {
-                    forceSlideshowUpdate();
-                }, 100);
-            }
-        };
-
-        window.addEventListener('dataChanged', handleDataChange as EventListener);
-        return () => {
-            window.removeEventListener('dataChanged', handleDataChange as EventListener);
-        };
-    }, [forceSlideshowUpdate]);
-
-    // Listen for force reload events from HomePage
-    useEffect(() => {
-        const handleForceReload = (e: CustomEvent) => {
-            console.log("🔄 DisplayPage: Force reload event received:", e.detail);
-            const { source } = e.detail;
-
-            if (source === 'homepage-save-sync') {
-                console.log("🔄 DisplayPage: Performing physical reload due to HomePage save & sync...");
-
-                // Add a small delay to ensure the save operation completes
-                setTimeout(() => {
-                    window.location.reload();
-                }, 500);
-            }
-        };
-
-        window.addEventListener('forceDisplayReload', handleForceReload as EventListener);
-        return () => window.removeEventListener('forceDisplayReload', handleForceReload as EventListener);
     }, []);
 
     if (isLoading) {
@@ -302,15 +170,6 @@ const DisplayPage: React.FC = () => {
                     </div>
                 )}
 
-                {/* Sync Indicator - Only show when syncing */}
-                {isSyncing && (
-                    <div className="absolute top-4 left-4 z-40 bg-blue-600 text-white px-3 py-1 rounded-lg shadow-lg">
-                        <div className="flex items-center gap-2">
-                            <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                            <span className="text-sm">Syncing...</span>
-                        </div>
-                    </div>
-                )}
 
                 {/* Logo Overlay - Positioned last to ensure it's on top */}
                 <SlideLogoOverlay
@@ -335,9 +194,9 @@ const DisplayPage: React.FC = () => {
                 }
             }}
         >
-            {/* SwiperSlideshow Component - Same as HomePage */}
+            {/* SwiperSlideshow Component - Auto-refresh when data changes */}
             <SwiperSlideshow
-                key={`slideshow-${forceUpdateKey}-${activeSlides.length}`}
+                key={`slideshow-${activeSlides.length}-${slides.length}-${JSON.stringify(activeSlides.map(s => s.id))}`}
                 slides={activeSlides}
                 renderSlideContent={renderSlideContent}
                 hidePagination={displaySettings.hidePagination}
@@ -353,15 +212,6 @@ const DisplayPage: React.FC = () => {
                 </div>
             )}
 
-            {/* Sync Indicator - Only show when syncing */}
-            {isSyncing && (
-                <div className="absolute top-4 right-4 z-40 bg-blue-600 text-white px-3 py-1 rounded-lg shadow-lg">
-                    <div className="flex items-center gap-2">
-                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                        <span className="text-sm">Syncing...</span>
-                    </div>
-                </div>
-            )}
 
             {/* Testing Overlay */}
             <TestingOverlay />
