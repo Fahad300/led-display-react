@@ -67,9 +67,9 @@ export interface ImageSlide extends BaseSlide {
 export interface VideoSlideData {
     videoUrl: string;
     caption?: string;
-    autoplay: boolean;
-    muted: boolean;
-    loop: boolean;
+    autoplay?: boolean; // Default: true
+    muted?: boolean; // Default: true
+    loop?: boolean; // Default: false
 }
 
 /**

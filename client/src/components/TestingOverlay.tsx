@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useUnified } from '../contexts/UnifiedContext';
 import { useSettings } from '../contexts/SettingsContext';
+import { SLIDE_TYPES } from '../types';
 
 /**
  * Testing overlay component to clearly indicate test data
@@ -30,9 +31,27 @@ export const TestingOverlay: React.FC = () => {
         return slides.filter(slide => slide.active);
     }, [slides]);
 
+    // Function to get slide type name
+    const getSlideTypeName = (slideType: string): string => {
+        const typeMap: { [key: string]: string } = {
+            [SLIDE_TYPES.IMAGE]: 'Image',
+            [SLIDE_TYPES.VIDEO]: 'Video',
+            [SLIDE_TYPES.NEWS]: 'News',
+            [SLIDE_TYPES.EVENT]: 'Event',
+            [SLIDE_TYPES.CURRENT_ESCALATIONS]: 'Current Escalations',
+            [SLIDE_TYPES.TEAM_COMPARISON]: 'Team Comparison',
+            [SLIDE_TYPES.GRAPH]: 'Graph',
+            [SLIDE_TYPES.DOCUMENT]: 'Document',
+            [SLIDE_TYPES.TEXT]: 'Text'
+        };
+        return typeMap[slideType] || 'Unknown';
+    };
+
     // Memoize the current slide to prevent unnecessary re-renders
     const currentSlide = useMemo(() => {
-        return activeSlides[currentSlideIndex] || null;
+        // Ensure currentSlideIndex is within bounds of activeSlides
+        const validIndex = Math.min(currentSlideIndex, activeSlides.length - 1);
+        return activeSlides[validIndex] || null;
     }, [activeSlides, currentSlideIndex]);
 
     // Start countdown timer
@@ -54,6 +73,13 @@ export const TestingOverlay: React.FC = () => {
             });
         }, 1000);
     };
+
+    // Reset currentSlideIndex when active slides change
+    useEffect(() => {
+        if (activeSlides.length > 0 && currentSlideIndex >= activeSlides.length) {
+            setCurrentSlideIndex(0);
+        }
+    }, [activeSlides.length, currentSlideIndex]);
 
     // Monitor slideshow state and countdown
     useEffect(() => {
@@ -89,11 +115,14 @@ export const TestingOverlay: React.FC = () => {
                     console.log('TestingOverlay: Slide change event', {
                         slideIndex: event.detail.slideIndex,
                         remainingTime: event.detail.remainingTime,
-                        slideName: event.detail.slideName
+                        slideName: event.detail.slideName,
+                        activeSlidesCount: activeSlides.length
                     });
                 }
 
-                setCurrentSlideIndex(event.detail.slideIndex);
+                // Ensure the slide index is within bounds of active slides
+                const newIndex = Math.min(event.detail.slideIndex, activeSlides.length - 1);
+                setCurrentSlideIndex(Math.max(0, newIndex));
 
                 // If we have remaining time from the event, use it
                 if (event.detail.remainingTime) {
@@ -107,7 +136,7 @@ export const TestingOverlay: React.FC = () => {
         return () => {
             window.removeEventListener('slideshowSlideChange', handleSlideChange as EventListener);
         };
-    }, [isDebugMode]);
+    }, [isDebugMode, activeSlides.length]);
 
     // Don't render if testing mode is explicitly disabled
     if (!isTestingMode) {
@@ -132,6 +161,12 @@ export const TestingOverlay: React.FC = () => {
                             <span className="max-w-xs truncate" title={currentSlide?.name || 'Unknown'}>
                                 {currentSlide?.name || 'Unknown'}
                             </span>
+                        </div>
+
+                        {/* Slide Type */}
+                        <div className="flex items-center space-x-2">
+                            <span className="text-cyan-400 font-bold">🏷️</span>
+                            <span>{getSlideTypeName(currentSlide?.type || '')}</span>
                         </div>
 
                         {/* Duration */}

@@ -156,6 +156,47 @@ router.get("/:id", async (req, res) => {
     }
 });
 
+// Special endpoint for PDF viewing (prevents download popups)
+router.get("/:id/view", async (req, res) => {
+    try {
+        const fileId = req.params.id;
+        logger.info(`PDF view request: ${fileId}`);
+
+        const fileData = await FileService.getFileBuffer(fileId);
+
+        if (!fileData) {
+            logger.warn(`File not found: ${fileId}`);
+            return res.status(404).json({ error: "File not found" });
+        }
+
+        // Only allow PDF files for this endpoint
+        if (fileData.mimeType !== "application/pdf") {
+            return res.status(400).json({ error: "This endpoint only serves PDF files" });
+        }
+
+        logger.info(`PDF view served successfully: ${fileData.filename} (${fileData.buffer.length} bytes)`);
+
+        // Set headers specifically for PDF viewing to prevent downloads
+        res.setHeader("Content-Type", "application/pdf");
+        res.setHeader("Content-Disposition", "inline");
+        res.setHeader("Cache-Control", "public, max-age=31536000");
+        res.setHeader("Access-Control-Allow-Origin", "*");
+        res.setHeader("X-Content-Type-Options", "nosniff");
+        res.setHeader("X-Frame-Options", "SAMEORIGIN");
+
+        // Send file buffer
+        res.send(fileData.buffer);
+
+    } catch (error) {
+        logger.error("Error serving PDF view:", error);
+        if (error instanceof Error) {
+            logger.error(`Error details: ${error.message}`);
+            logger.error(`Stack trace: ${error.stack}`);
+        }
+        res.status(500).json({ error: "Failed to serve PDF view" });
+    }
+});
+
 // Get file info
 router.get("/:id/info", isAuthenticated, async (req, res) => {
     try {

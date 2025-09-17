@@ -416,13 +416,19 @@ const EditModal: React.FC<EditModalProps> = ({ isOpen, onClose, slide, onSave })
 
     if (!isOpen || !editedSlide) return null;
 
+    // Check if this is a text slide to determine modal size
+    const isTextSlide = editedSlide.type === SLIDE_TYPES.TEXT;
+
     return (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
             <motion.div
                 initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.95 }}
-                className="bg-white rounded-xl shadow-xl w-full max-w-2xl p-6 max-h-[90vh] overflow-y-auto relative"
+                className={`bg-white rounded-xl shadow-xl w-full p-6 overflow-y-auto relative ${isTextSlide
+                    ? 'max-w-6xl max-h-[95vh]'
+                    : 'max-w-2xl max-h-[90vh]'
+                    }`}
             >
                 {/* Loading overlay */}
                 {(loading || isUploading) && (
@@ -638,6 +644,7 @@ const EditModal: React.FC<EditModalProps> = ({ isOpen, onClose, slide, onSave })
                                     />
                                 </div>
                             )}
+
                         </div>
                     )}
 
@@ -821,10 +828,7 @@ const AdminPage: React.FC = () => {
                         duration: 0,
                         data: {
                             videoUrl: "",
-                            caption: "",
-                            autoplay: true,
-                            muted: true,
-                            loop: true
+                            caption: ""
                         },
                         dataSource: "manual" as const,
                     } as VideoSlide;
@@ -1337,7 +1341,7 @@ const TextSlideFields: React.FC<SlideFieldsProps<TextSlide>> = ({ slide, onUpdat
                         data: { ...slide.data, content }
                     })}
                     placeholder="Enter your rich text content here..."
-                    className="mb-4"
+                    className="mb-4 w-full"
                 />
             </div>
         </div>

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useRef, useEffect, useState, useCallback } from "react";
 import { VideoSlide as VideoSlideType } from "../../types";
 import { MediaSelector } from "../MediaSelector";
 
@@ -8,59 +8,184 @@ interface VideoSlideProps {
     onVideoEnd?: () => void;
 }
 
-/**
- * VideoSlide Component
- * Displays a video with optional caption and controls
- */
 export const VideoSlide: React.FC<VideoSlideProps> = ({ slide, onUpdate, onVideoEnd }) => {
+    const videoRef = useRef<HTMLVideoElement>(null);
+    const fallbackTimeoutRef = useRef<NodeJS.Timeout | null>(null);
     const [isMediaSelectorOpen, setIsMediaSelectorOpen] = useState(false);
-    const [isBuffering, setIsBuffering] = useState(false);
-    const bufferingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-    const videoRef = useRef<HTMLVideoElement | null>(null);
+    const [isLoading, setIsLoading] = useState(false);
+    const [hasError, setHasError] = useState(false);
 
+    // Enhanced play attempt with better error handling
+    const attemptPlay = useCallback(async () => {
+        if (!videoRef.current || hasError) return;
+
+        try {
+            // Ensure video is ready to play
+            if (videoRef.current.readyState < 3) {
+                console.log("Video not ready yet, waiting...");
+                return;
+            }
+
+            console.log("Attempting to play video for slide:", slide.name);
+            await videoRef.current.play();
+            console.log("Video started playing successfully");
+        } catch (error) {
+            console.warn("Video play failed:", error);
+            // Try to play muted as fallback
+            if (videoRef.current && !videoRef.current.muted) {
+                console.log("Trying to play muted video as fallback");
+                videoRef.current.muted = true;
+                try {
+                    await videoRef.current.play();
+                    console.log("Muted video started playing successfully");
+                } catch (mutedError) {
+                    console.error("Even muted video failed to play:", mutedError);
+                    setHasError(true);
+                }
+            }
+        }
+    }, [hasError, slide.name]);
+
+    // Video event handlers
+    const handleLoadStart = useCallback(() => {
+        console.log("Video load started for slide:", slide.name);
+        setIsLoading(true);
+        setHasError(false);
+    }, [slide.name]);
+
+    const handleLoadedMetadata = useCallback(() => {
+        console.log("Video metadata loaded for slide:", slide.name);
+    }, [slide.name]);
+
+    const handleLoadedData = useCallback(() => {
+        console.log("Video data loaded for slide:", slide.name);
+        setIsLoading(false);
+    }, [slide.name]);
+
+    const handleCanPlay = useCallback(() => {
+        console.log("Video can play for slide:", slide.name);
+        setIsLoading(false);
+
+        // Attempt to play when video is ready (for slideshow mode)
+        if (onVideoEnd) {
+            // Small delay to ensure video is fully ready
+            setTimeout(() => attemptPlay(), 200);
+        }
+    }, [onVideoEnd, attemptPlay, slide.name]);
+
+    const handleCanPlayThrough = useCallback(() => {
+        console.log("Video can play through for slide:", slide.name);
+        setIsLoading(false);
+
+        // Set fallback timeout only when video can play through smoothly
+        if (onVideoEnd && !fallbackTimeoutRef.current) {
+            const fallbackDuration = (slide.duration || 30) * 1000 + 5000; // Add 5 seconds buffer
+            fallbackTimeoutRef.current = setTimeout(() => {
+                console.warn('Video fallback timeout triggered for slide:', slide.name);
+                if (onVideoEnd) {
+                    onVideoEnd();
+                }
+            }, fallbackDuration);
+        }
+
+        // Try to play if not already playing
+        if (onVideoEnd && videoRef.current && videoRef.current.paused) {
+            attemptPlay();
+        }
+    }, [onVideoEnd, attemptPlay, slide.duration, slide.name]);
+
+    const handlePlaying = useCallback(() => {
+        console.log("Video started playing for slide:", slide.name);
+        setIsLoading(false);
+        setHasError(false);
+    }, [slide.name]);
+
+    const handleWaiting = useCallback(() => {
+        console.log("Video waiting/buffering for slide:", slide.name);
+        setIsLoading(true);
+    }, [slide.name]);
+
+    const handleSeeking = useCallback(() => {
+        console.log("Video seeking for slide:", slide.name);
+        setIsLoading(true);
+    }, [slide.name]);
+
+    const handleSeeked = useCallback(() => {
+        console.log("Video seeked for slide:", slide.name);
+        setIsLoading(false);
+    }, [slide.name]);
+
+    const handleEnded = useCallback(() => {
+        // Clear the fallback timeout since video ended naturally
+        if (fallbackTimeoutRef.current) {
+            clearTimeout(fallbackTimeoutRef.current);
+            fallbackTimeoutRef.current = null;
+        }
+
+        if (onVideoEnd) {
+            // Small delay to ensure video has fully ended
+            setTimeout(() => {
+                onVideoEnd();
+            }, 50);
+        }
+    }, [onVideoEnd]);
+
+    const handleError = useCallback(() => {
+        // Clear fallback timeout on error
+        if (fallbackTimeoutRef.current) {
+            clearTimeout(fallbackTimeoutRef.current);
+            fallbackTimeoutRef.current = null;
+        }
+
+        setHasError(true);
+        setIsLoading(false);
+
+        // If in slideshow mode, advance to next slide after a delay on error
+        if (onVideoEnd) {
+            setTimeout(() => {
+                onVideoEnd();
+            }, 3000); // Wait 3 seconds before advancing
+        }
+    }, [onVideoEnd]);
+
+    // Handle video selection from media selector
     const handleVideoSelect = (url: string) => {
         if (onUpdate) {
             onUpdate({
                 ...slide,
-                data: {
-                    ...slide.data,
-                    videoUrl: url
-                }
+                data: { ...slide.data, videoUrl: url }
             });
         }
+        setIsMediaSelectorOpen(false);
     };
 
-    // Handle buffering timeout - advance to next slide if video gets stuck
+    // Initialize video when URL changes
     useEffect(() => {
-        if (isBuffering && onVideoEnd) {
-            // Set a timeout to advance if video gets stuck buffering
-            bufferingTimeoutRef.current = setTimeout(() => {
-                console.log("🔍 VideoSlide - Video buffering timeout, advancing to next slide");
-                setIsBuffering(false);
-                onVideoEnd();
-            }, 10000); // 10 seconds timeout for buffering
-        } else if (!isBuffering && bufferingTimeoutRef.current) {
-            // Clear timeout if video is no longer buffering
-            clearTimeout(bufferingTimeoutRef.current);
-            bufferingTimeoutRef.current = null;
-        }
+        if (videoRef.current && slide.data.videoUrl) {
+            console.log("Initializing video for slide:", slide.name);
+            setIsLoading(true);
+            setHasError(false);
 
-        return () => {
-            if (bufferingTimeoutRef.current) {
-                clearTimeout(bufferingTimeoutRef.current);
-                bufferingTimeoutRef.current = null;
+            // Clear any existing fallback timeout
+            if (fallbackTimeoutRef.current) {
+                clearTimeout(fallbackTimeoutRef.current);
+                fallbackTimeoutRef.current = null;
             }
-        };
-    }, [isBuffering, onVideoEnd]);
+
+            // Reset video element
+            videoRef.current.load();
+        }
+    }, [slide.data.videoUrl, slide.name]);
 
     // Cleanup on unmount
     useEffect(() => {
         return () => {
-            if (bufferingTimeoutRef.current) {
-                clearTimeout(bufferingTimeoutRef.current);
+            if (fallbackTimeoutRef.current) {
+                clearTimeout(fallbackTimeoutRef.current);
             }
         };
     }, []);
+
 
     if (!slide.data.videoUrl) {
         return (
@@ -83,113 +208,93 @@ export const VideoSlide: React.FC<VideoSlideProps> = ({ slide, onUpdate, onVideo
         );
     }
 
-    const captionElement = slide.data.caption ? (
-        <div className="absolute bottom-0 left-0 right-0 bg-black bg-opacity-50 text-white p-4">
-            {onUpdate ? (
-                <input
-                    type="text"
-                    value={slide.data.caption}
-                    onChange={(e) => onUpdate({
-                        ...slide,
-                        data: {
-                            ...slide.data,
-                            caption: e.target.value
-                        }
-                    })}
-                    className="w-full bg-transparent border-none focus:ring-0 text-white placeholder-gray-300"
-                    placeholder="Enter caption..."
-                />
-            ) : (
-                <span>{slide.data.caption}</span>
-            )}
-        </div>
-    ) : null;
-
     return (
         <>
             <div className="relative w-full h-full overflow-hidden">
                 <video
                     ref={videoRef}
+                    data-slide-id={slide.id}
                     src={slide.data.videoUrl}
                     className="w-full h-full object-cover"
-                    autoPlay={onVideoEnd ? true : slide.data.autoplay} // Always autoplay in slideshow mode
-                    loop={onVideoEnd ? false : slide.data.loop} // Don't loop in slideshow mode
-                    muted={onVideoEnd ? true : slide.data.muted} // Always muted in slideshow mode
+                    autoPlay={onVideoEnd ? true : (slide.data.autoplay ?? true)}
+                    loop={onVideoEnd ? false : (slide.data.loop ?? false)}
+                    muted={onVideoEnd ? true : (slide.data.muted ?? true)}
                     playsInline
-                    preload="metadata"
+                    preload="auto"
                     controls={false}
-                    onError={(e) => {
-                        console.error("Video playback error:", e);
-                    }}
-                    onLoadStart={() => {
-                        console.log("🔍 VideoSlide - Video loading started", { slideId: slide.id, slideName: slide.name });
-                    }}
-                    onLoadedMetadata={() => {
-                        console.log("🔍 VideoSlide - Video metadata loaded", { slideId: slide.id, slideName: slide.name });
-                    }}
-                    onLoadedData={() => {
-                        console.log("🔍 VideoSlide - Video data loaded", { slideId: slide.id, slideName: slide.name });
-                    }}
-                    onCanPlay={() => {
-                        console.log("🔍 VideoSlide - Video can play", { slideId: slide.id, slideName: slide.name });
-                    }}
-                    onCanPlayThrough={() => {
-                        console.log("🔍 VideoSlide - Video can play through", { slideId: slide.id, slideName: slide.name });
-                    }}
-                    onWaiting={() => {
-                        console.log("🔍 VideoSlide - Video waiting/buffering", { slideId: slide.id, slideName: slide.name });
-                        setIsBuffering(true);
-                    }}
-                    onStalled={() => {
-                        console.log("🔍 VideoSlide - Video stalled", { slideId: slide.id, slideName: slide.name });
-                        setIsBuffering(true);
-                    }}
-                    onPlay={() => {
-                        console.log("🔍 VideoSlide - Video started playing", { slideId: slide.id, slideName: slide.name, hasOnVideoEnd: !!onVideoEnd });
-                        setIsBuffering(false);
-                        // Dispatch event to pause autoplay timer
-                        const event = new CustomEvent('videoSlideStart', {
-                            detail: { slideId: slide.id, slideName: slide.name }
-                        });
-                        window.dispatchEvent(event);
-                    }}
-                    onPause={() => {
-                        console.log("🔍 VideoSlide - Video paused");
-                        // Dispatch event to resume autoplay timer
-                        const event = new CustomEvent('videoSlidePause', {
-                            detail: { slideId: slide.id, slideName: slide.name }
-                        });
-                        window.dispatchEvent(event);
-                    }}
-                    onAbort={() => {
-                        console.log("🔍 VideoSlide - Video loading was aborted");
-                    }}
-                    onEnded={() => {
-                        console.log("🔍 VideoSlide - Video ended, triggering next slide");
-                        // Dispatch event for video end
-                        const event = new CustomEvent('videoSlideEnd', {
-                            detail: { slideId: slide.id, slideName: slide.name }
-                        });
-                        window.dispatchEvent(event);
-
-                        // Always call onVideoEnd when video ends (for slideshow mode)
-                        if (onVideoEnd) {
-                            onVideoEnd();
-                        }
-                    }}
+                    webkit-playsinline="true"
+                    onError={handleError}
+                    onLoadStart={handleLoadStart}
+                    onLoadedMetadata={handleLoadedMetadata}
+                    onLoadedData={handleLoadedData}
+                    onCanPlay={handleCanPlay}
+                    onCanPlayThrough={handleCanPlayThrough}
+                    onPlaying={handlePlaying}
+                    onWaiting={handleWaiting}
+                    onSeeking={handleSeeking}
+                    onSeeked={handleSeeked}
+                    onEnded={handleEnded}
                 />
 
-                {/* Buffering indicator */}
-                {isBuffering && (
+                {/* Loading indicator */}
+                {isLoading && (
                     <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50">
                         <div className="text-white text-center">
-                            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white mx-auto mb-2"></div>
-                            <div className="text-sm">Loading video...</div>
+                            <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-white mx-auto mb-4"></div>
+                            <p className="text-lg">Loading video...</p>
                         </div>
                     </div>
                 )}
 
-                {captionElement}
+                {/* Error indicator */}
+                {hasError && (
+                    <div className="absolute inset-0 flex items-center justify-center bg-red-900 bg-opacity-75">
+                        <div className="text-white text-center">
+                            <svg className="h-16 w-16 text-red-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                            </svg>
+                            <h3 className="text-xl font-bold mb-2">Video Error</h3>
+                            <p className="text-sm mb-4">Failed to load video</p>
+                            <button
+                                onClick={() => {
+                                    setHasError(false);
+                                    if (videoRef.current) {
+                                        videoRef.current.load();
+                                    }
+                                }}
+                                className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
+                            >
+                                Retry
+                            </button>
+                        </div>
+                    </div>
+                )}
+
+
+                {/* Caption */}
+                {slide.data.caption && (
+                    <div className="absolute bottom-0 left-0 right-0 bg-black bg-opacity-50 text-white p-4">
+                        {onUpdate ? (
+                            <input
+                                type="text"
+                                value={slide.data.caption}
+                                onChange={(e) => onUpdate({
+                                    ...slide,
+                                    data: {
+                                        ...slide.data,
+                                        caption: e.target.value
+                                    }
+                                })}
+                                className="w-full bg-transparent border-none focus:ring-0 text-white placeholder-gray-300"
+                                placeholder="Enter caption..."
+                            />
+                        ) : (
+                            <span>{slide.data.caption}</span>
+                        )}
+                    </div>
+                )}
+
+                {/* Edit button */}
                 {onUpdate && (
                     <button
                         type="button"
@@ -203,6 +308,7 @@ export const VideoSlide: React.FC<VideoSlideProps> = ({ slide, onUpdate, onVideo
                 )}
             </div>
 
+            {/* Media Selector */}
             {onUpdate && (
                 <MediaSelector
                     isOpen={isMediaSelectorOpen}
@@ -214,4 +320,4 @@ export const VideoSlide: React.FC<VideoSlideProps> = ({ slide, onUpdate, onVideo
             )}
         </>
     );
-}; 
+};

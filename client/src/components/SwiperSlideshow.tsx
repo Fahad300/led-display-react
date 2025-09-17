@@ -1,5 +1,5 @@
 import React, { useRef, useEffect, useCallback, useMemo, useState } from "react";
-import { Slide } from "../types";
+import { Slide, SLIDE_TYPES } from "../types";
 import { Swiper, SwiperSlide } from 'swiper/react';
 import { EffectFade, Navigation, Pagination, Autoplay } from "swiper/modules";
 import type { Swiper as SwiperType } from "swiper";
@@ -116,7 +116,7 @@ const SwiperSlideshow: React.FC<{
                     realIndex: swiperRef.current.realIndex,
                     slideName: slide.name,
                     duration,
-                    isVideoSlide: slide.type === 'video-slide'
+                    isVideoSlide: slide.type === SLIDE_TYPES.VIDEO
                 });
             }
 
@@ -124,7 +124,7 @@ const SwiperSlideshow: React.FC<{
             startCountdownTimer(duration);
 
             // For video slides, don't set autoplay timeout - let video end event handle it
-            if (slide.type !== 'video-slide') {
+            if (slide.type !== SLIDE_TYPES.VIDEO) {
                 // Set timeout to move to next slide (only if not a video playing)
                 autoplayTimeoutRef.current = setTimeout(() => {
                     if (swiperRef.current && activeSlides.length > 1 && !isVideoPlaying) {
@@ -138,6 +138,7 @@ const SwiperSlideshow: React.FC<{
                 if (isDebugMode) {
                     console.log('SwiperSlideshow: Video slide detected, waiting for video end event');
                 }
+                setIsVideoPlaying(true); // Set video playing state
             }
         }
     }, [activeSlides, clearAllTimers, startCountdownTimer, isVideoPlaying, isDebugMode]);
@@ -177,7 +178,7 @@ const SwiperSlideshow: React.FC<{
                 slideName: currentSlide?.name,
                 duration: currentSlide?.duration || 10,
                 remainingTime: currentSlide?.duration || 10,
-                isVideoSlide: currentSlide?.type === 'video-slide'
+                isVideoSlide: currentSlide?.type === SLIDE_TYPES.VIDEO
             }
         });
         window.dispatchEvent(event);
@@ -192,9 +193,23 @@ const SwiperSlideshow: React.FC<{
         clearAllTimers();
 
         if (swiperRef.current && activeSlides.length > 1) {
-            swiperRef.current.slideNext();
+            // Use a small delay to ensure the video has fully ended
+            setTimeout(() => {
+                if (swiperRef.current) {
+                    swiperRef.current.slideNext();
+                }
+            }, 100);
+        } else if (swiperRef.current && activeSlides.length === 1) {
+            // If only one slide (video), restart it after a brief pause
+            setTimeout(() => {
+                const videoElement = document.querySelector(`video[data-slide-id="${activeSlides[0]?.id}"]`) as HTMLVideoElement;
+                if (videoElement) {
+                    videoElement.currentTime = 0;
+                    videoElement.play().catch(err => console.warn('Video replay failed:', err));
+                }
+            }, 1000);
         }
-    }, [activeSlides.length, clearAllTimers, isDebugMode]);
+    }, [activeSlides, clearAllTimers, isDebugMode]);
 
 
     // Enhanced render function that passes video handlers
@@ -222,95 +237,39 @@ const SwiperSlideshow: React.FC<{
         }
     }, [activeSlides.length, startCustomAutoplay, getAutoplayConfig, isDebugMode]);
 
-    // Listen for video events to pause/resume autoplay
-    useEffect(() => {
-        const handleVideoStart = () => {
-            if (isDebugMode) {
-                console.log('SwiperSlideshow: Video started, pausing autoplay timer');
-            }
-            setIsVideoPlaying(true);
-            if (autoplayTimeoutRef.current) {
-                clearTimeout(autoplayTimeoutRef.current);
-                autoplayTimeoutRef.current = null;
-            }
 
-            // Set a fallback timeout to advance if video gets stuck
-            // This ensures videos don't get stuck indefinitely
-            if (swiperRef.current) {
-                const currentSlide = activeSlides[swiperRef.current.realIndex];
-                if (currentSlide && currentSlide.type === 'video-slide') {
-                    const maxVideoDuration = (currentSlide.duration || 30) * 1000 + 5000; // Add 5 seconds buffer
-                    autoplayTimeoutRef.current = setTimeout(() => {
-                        if (isDebugMode) {
-                            console.log('SwiperSlideshow: Video fallback timeout triggered, advancing to next slide');
-                        }
-                        setIsVideoPlaying(false);
-                        clearAllTimers();
-                        if (swiperRef.current && activeSlides.length > 1) {
-                            swiperRef.current.slideNext();
-                        }
-                    }, maxVideoDuration);
-                }
-            }
-        };
-
-        const handleVideoPause = () => {
-            if (isDebugMode) {
-                console.log('SwiperSlideshow: Video paused');
-            }
-            setIsVideoPlaying(false);
-            // Don't restart autoplay for video slides - let them handle their own timing
-            // Only restart for non-video slides if needed
-            if (swiperRef.current) {
-                const currentSlide = activeSlides[swiperRef.current.realIndex];
-                if (currentSlide && currentSlide.type !== 'video-slide') {
-                    startCustomAutoplay(swiperRef.current.realIndex);
-                }
-            }
-        };
-
-        const handleVideoEnd = () => {
-            if (isDebugMode) {
-                console.log('SwiperSlideshow: Video ended, advancing to next slide');
-            }
-            setIsVideoPlaying(false);
-            clearAllTimers();
-
-            // Advance to next slide when video ends
-            if (swiperRef.current && activeSlides.length > 1) {
-                swiperRef.current.slideNext();
-            }
-        };
-
-        window.addEventListener('videoSlideStart', handleVideoStart);
-        window.addEventListener('videoSlidePause', handleVideoPause);
-        window.addEventListener('videoSlideEnd', handleVideoEnd);
-
-        return () => {
-            window.removeEventListener('videoSlideStart', handleVideoStart);
-            window.removeEventListener('videoSlidePause', handleVideoPause);
-            window.removeEventListener('videoSlideEnd', handleVideoEnd);
-        };
-    }, [startCustomAutoplay, isDebugMode]);
-
-    // Periodic check to ensure slideshow doesn't get stuck
+    // Enhanced periodic check to ensure slideshow doesn't get stuck
     useEffect(() => {
         const checkInterval = setInterval(() => {
             if (swiperRef.current && activeSlides.length > 1) {
                 const currentSlide = activeSlides[swiperRef.current.realIndex];
-                if (currentSlide && currentSlide.type === 'video-slide' && !isVideoPlaying) {
-                    // If we're on a video slide but video isn't playing, something might be stuck
-                    if (isDebugMode) {
-                        console.log('SwiperSlideshow: Video slide detected but not playing, checking for stuck state');
+
+                if (currentSlide) {
+                    // For non-video slides, check if autoplay is running
+                    if (currentSlide.type !== SLIDE_TYPES.VIDEO && !isVideoPlaying && !autoplayTimeoutRef.current) {
+                        if (isDebugMode) {
+                            console.log('SwiperSlideshow: Health check - restarting autoplay for stuck non-video slide');
+                        }
+                        startCustomAutoplay(swiperRef.current.realIndex);
                     }
-                    // Try to advance to next slide
-                    swiperRef.current.slideNext();
+
+                    // For video slides, check if video is actually playing
+                    if (currentSlide.type === SLIDE_TYPES.VIDEO && isVideoPlaying) {
+                        const videoElement = document.querySelector(`video[data-slide-id="${currentSlide.id}"]`) as HTMLVideoElement;
+                        if (videoElement && (videoElement.paused || videoElement.ended)) {
+                            if (isDebugMode) {
+                                console.log('SwiperSlideshow: Health check - video appears stuck, advancing slide');
+                            }
+                            setIsVideoPlaying(false);
+                            swiperRef.current.slideNext();
+                        }
+                    }
                 }
             }
-        }, 10000); // Check every 10 seconds
+        }, 8000); // Check every 8 seconds
 
         return () => clearInterval(checkInterval);
-    }, [activeSlides, isVideoPlaying, isDebugMode]);
+    }, [activeSlides, isVideoPlaying, isDebugMode, startCustomAutoplay]);
 
     // Update Swiper settings when props change
     useEffect(() => {

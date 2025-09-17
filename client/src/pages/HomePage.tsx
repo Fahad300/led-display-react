@@ -700,7 +700,9 @@ const HomePage: React.FC = () => {
             case SLIDE_TYPES.IMAGE:
                 return <ImageSlide slide={slide as ImageSlideType} />;
             case SLIDE_TYPES.VIDEO:
-                return <VideoSlide slide={slide as VideoSlideType} onVideoEnd={onVideoEnd} />;
+                return (
+                    <VideoSlide slide={slide as VideoSlideType} onVideoEnd={onVideoEnd} />
+                );
             case SLIDE_TYPES.NEWS:
                 return <NewsSlideComponent slide={slide as NewsSlide} />;
             case SLIDE_TYPES.EVENT:
