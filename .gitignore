@@ -53,3 +53,4 @@ server/build
 server/dist
 client/env.example
 server/env.example
+server/uploads
