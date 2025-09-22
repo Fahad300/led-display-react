@@ -6,6 +6,20 @@ import { faBriefcase, faUsers } from "@fortawesome/free-solid-svg-icons";
 import { Employee, EventSlide } from "../../types";
 
 /**
+ * Get employee image with gender-based fallback
+ */
+const getEmployeeImage = (employee: Employee): string => {
+    // Return actual picture if available
+    if (employee.picture && employee.picture.trim()) {
+        return employee.picture;
+    }
+
+    // Use gender-based default image (handle different cases: "Female", "female", "Male", "male")
+    const gender = employee.gender?.toLowerCase();
+    return gender === "female" ? "/images/female-default.jpg" : "/images/male-default.jpg";
+};
+
+/**
  * Custom hook to get window dimensions
  */
 const useWindowSize = () => {
@@ -99,7 +113,7 @@ const MultipleEmployeesGrid: React.FC<{ employees: Employee[]; eventType?: "birt
                     >
                         <div className="relative mb-3">
                             <img
-                                src={employee.picture || (employee.gender === "female" ? "/images/female-default.jpg" : "/images/male-default.jpg")}
+                                src={getEmployeeImage(employee)}
                                 alt={employee.name}
                                 className="rounded-full object-cover border-4 border-emerald-400 shadow-lg"
                                 style={{
@@ -202,7 +216,7 @@ const SingleEmployeeDisplay: React.FC<{ employee: Employee; eventType?: "birthda
                 whileHover={{ scale: 1.15 }}
             >
                 <img
-                    src={employee.picture || (employee.gender === "female" ? "/images/female-default.jpg" : "/images/male-default.jpg")}
+                    src={getEmployeeImage(employee)}
                     alt={employee.name}
                     className="w-full h-full object-cover"
                     tabIndex={0}

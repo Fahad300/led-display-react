@@ -122,11 +122,11 @@ router.post("/upload", isAuthenticated, upload.single("file"), handleMulterError
     }
 });
 
-// Serve file from database
+// Serve file from file system
 router.get("/:id", async (req, res) => {
     try {
         const fileId = req.params.id;
-        logger.info(`File serving request: ${fileId}`);
+        logger.info(`File serving request from file system: ${fileId}`);
 
         const fileData = await FileService.getFileBuffer(fileId);
 
@@ -135,7 +135,7 @@ router.get("/:id", async (req, res) => {
             return res.status(404).json({ error: "File not found" });
         }
 
-        logger.info(`File served successfully: ${fileData.filename} (${fileData.buffer.length} bytes), MIME: ${fileData.mimeType}`);
+        logger.info(`File served successfully from file system: ${fileData.filename} (${fileData.buffer.length} bytes), MIME: ${fileData.mimeType}`);
 
         // Set appropriate headers
         res.setHeader("Content-Type", fileData.mimeType);
@@ -147,14 +147,15 @@ router.get("/:id", async (req, res) => {
         res.send(fileData.buffer);
 
     } catch (error) {
-        logger.error("Error serving file:", error);
+        logger.error("Error serving file from file system:", error);
         if (error instanceof Error) {
             logger.error(`Error details: ${error.message}`);
             logger.error(`Stack trace: ${error.stack}`);
         }
-        res.status(500).json({ error: "Failed to serve file" });
+        res.status(500).json({ error: "Failed to serve file from file system" });
     }
 });
+
 
 // Special endpoint for PDF viewing (prevents download popups)
 router.get("/:id/view", async (req, res) => {

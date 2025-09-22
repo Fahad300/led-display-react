@@ -13,6 +13,7 @@ interface MediaFile {
     size: number;
     description?: string;
     url: string;
+    filePath?: string; // File system path
     uploadedBy: {
         id: string;
         username: string;
@@ -209,6 +210,16 @@ const MediaPage: React.FC = () => {
         });
     };
 
+    const handleCopyUrl = async (url: string, fileName: string) => {
+        try {
+            await navigator.clipboard.writeText(url);
+            addToast(`URL copied to clipboard for ${fileName}`, "success");
+        } catch (error) {
+            console.error("Failed to copy URL:", error);
+            addToast("Failed to copy URL", "error");
+        }
+    };
+
     const formatFileSize = (bytes: number): string => {
         if (bytes === 0) return "0 Bytes";
         const k = 1024;
@@ -220,7 +231,13 @@ const MediaPage: React.FC = () => {
     return (
         <div className="container mx-auto px-4 py-8 pb-20">
             <div className="flex justify-between items-center mb-8">
-                <h1 className="text-3xl font-bold text-gray-900">Media Management</h1>
+                <div>
+                    <h1 className="text-3xl font-bold text-gray-900">Media Management</h1>
+                    <p className="text-sm text-gray-600 mt-1">
+                        📁 File System Storage • {files.length} files •
+                        {formatFileSize(files.reduce((total, file) => total + file.size, 0))} total
+                    </p>
+                </div>
                 <div className="flex items-center space-x-4">
                     <button
                         onClick={handlePurgeAll}
@@ -239,6 +256,26 @@ const MediaPage: React.FC = () => {
                             "Purge All"
                         )}
                     </button>
+                </div>
+            </div>
+
+            {/* File System Status */}
+            <div className="mb-6 bg-green-50 border border-green-200 rounded-lg p-4">
+                <div className="flex items-center">
+                    <div className="flex-shrink-0">
+                        <svg className="h-5 w-5 text-green-400" fill="currentColor" viewBox="0 0 20 20">
+                            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                        </svg>
+                    </div>
+                    <div className="ml-3">
+                        <h3 className="text-sm font-medium text-green-800">
+                            File System Storage Active
+                        </h3>
+                        <div className="mt-1 text-sm text-green-700">
+                            <p>Files are stored in: <code className="bg-green-100 px-1 rounded">server/uploads/</code></p>
+                            <p>All files are served directly from the file system for optimal performance.</p>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -340,10 +377,18 @@ const MediaPage: React.FC = () => {
                                             </div>
                                         )}
                                     </div>
-                                    <div>
+                                    <div className="flex-1">
                                         <p className="text-sm font-medium text-gray-900">{file.originalName}</p>
                                         <p className="text-sm text-gray-500">
                                             {formatFileSize(file.size)} • {new Date(file.createdAt).toLocaleDateString()} • Uploaded by {file.uploadedBy.username}
+                                        </p>
+                                        {file.filePath && (
+                                            <p className="text-xs text-gray-400 mt-1 font-mono">
+                                                📁 {file.filePath.split('\\').pop() || file.filePath.split('/').pop()}
+                                            </p>
+                                        )}
+                                        <p className="text-xs text-blue-600 mt-1">
+                                            🔗 {file.url}
                                         </p>
                                     </div>
                                 </div>
@@ -352,6 +397,7 @@ const MediaPage: React.FC = () => {
                                         onClick={() => handleMediaPreview(file)}
                                         className="p-2 text-gray-400 hover:text-gray-500"
                                         aria-label={`Preview ${file.originalName}`}
+                                        title="Preview"
                                     >
                                         <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
@@ -359,9 +405,20 @@ const MediaPage: React.FC = () => {
                                         </svg>
                                     </button>
                                     <button
+                                        onClick={() => handleCopyUrl(file.url, file.originalName)}
+                                        className="p-2 text-gray-400 hover:text-blue-500"
+                                        aria-label={`Copy URL for ${file.originalName}`}
+                                        title="Copy URL"
+                                    >
+                                        <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                                        </svg>
+                                    </button>
+                                    <button
                                         onClick={() => handleDeleteFile(file.id, file.originalName)}
                                         className="p-2 text-gray-400 hover:text-red-500"
                                         aria-label={`Delete ${file.originalName}`}
+                                        title="Delete"
                                     >
                                         <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />

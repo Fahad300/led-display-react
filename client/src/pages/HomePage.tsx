@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useUnified } from '../contexts/UnifiedContext';
 import { useSettings } from '../contexts/SettingsContext';
 import { Slide, SLIDE_TYPES, ImageSlide as ImageSlideType, VideoSlide as VideoSlideType, NewsSlide, EventSlide as EventSlideType, TeamComparisonSlide as TeamComparisonSlideType, GraphSlide as GraphSlideType, DocumentSlide as DocumentSlideType, TextSlide as TextSlideType, Employee } from '../types';
@@ -265,9 +265,12 @@ const SortableSlideCard: React.FC<{
                     <div className="flex items-center justify-between mb-2">
                         <div className="flex items-center gap-2">
                             <h3 className="font-semibold text-persivia-blue">{getDisplayName()}</h3>
-                            {slide.type === SLIDE_TYPES.EVENT && !(slide as EventSlideType).data.hasEvents && (
-                                <span className="text-xs bg-red-100 text-red-600 px-2 py-1 rounded-full">
-                                    0 Event
+                            {slide.type === SLIDE_TYPES.EVENT && (
+                                <span className={`text-xs px-2 py-1 rounded-full ${(slide as EventSlideType).data.hasEvents
+                                    ? 'bg-green-100 text-green-600'
+                                    : 'bg-red-100 text-red-600'
+                                    }`}>
+                                    {(slide as EventSlideType).data.eventCount || 0} Event{((slide as EventSlideType).data.eventCount || 0) !== 1 ? 's' : ''}
                                 </span>
                             )}
                         </div>
@@ -288,7 +291,9 @@ const SortableSlideCard: React.FC<{
                                     ? "bg-persivia-teal"
                                     : "bg-slate-200"
                                     } ${!(slide as EventSlideType).data.hasEvents ? "opacity-50 cursor-not-allowed" : ""}`}
-                                title={(slide as EventSlideType).data.hasEvents ? "Toggle event slide" : "No events today - slide disabled"}
+                                title={(slide as EventSlideType).data.hasEvents
+                                    ? `Toggle ${(slide as EventSlideType).data.eventType} slide (${(slide as EventSlideType).data.eventCount} event${((slide as EventSlideType).data.eventCount || 0) !== 1 ? 's' : ''})`
+                                    : `No ${(slide as EventSlideType).data.eventType}s today - slide disabled`}
                             >
                                 <span
                                     className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${slide.active
@@ -447,7 +452,8 @@ const HomePage: React.FC = () => {
         syncToRemoteDisplays,
         isEditing,
         setIsEditing,
-        isDisplayPage
+        isDisplayPage,
+        forceMigrateVideoUrls
     } = useUnified();
 
     // Debug logging for slides
@@ -458,6 +464,15 @@ const HomePage: React.FC = () => {
             allSlides: slides.map(s => ({ id: s.id, name: s.name, type: s.type, active: s.active }))
         });
     }, [slides]);
+
+    // Debug logging for employees
+    useEffect(() => {
+        console.log("👥 HomePage - Current employees:", {
+            totalEmployees: employees.length,
+            anniversaryCount: employees.filter(e => e.isAnniversary).length,
+            birthdayCount: employees.filter(e => e.isBirthday).length
+        });
+    }, [employees]);
     const { displaySettings, updateDisplaySettings } = useSettings();
     const { addToast } = useToast();
     const [isFullscreen, setIsFullscreen] = useState(false);
@@ -494,101 +509,14 @@ const HomePage: React.FC = () => {
     // Auto-save is now handled by UnifiedContext only
     // No duplicate auto-save logic needed here
 
-    // Helper functions for date checks - use API flags instead of recalculating
-    const isBirthdayToday = (employee: Employee): boolean => {
-        return employee.isBirthday === true;
-    };
-
-    const isAnniversaryToday = (employee: Employee): boolean => {
-        return employee.isAnniversary === true;
-    };
-
-    // Process slides for event handling
-    const processedSlides = useMemo(() => {
-        console.log("🎯 HomePage - Processing slides for events:", {
-            totalSlides: slides.length,
-            eventSlides: slides.filter(s => s.type === SLIDE_TYPES.EVENT).length,
-            employeesCount: employees.length,
-            eventSlidesDetails: slides.filter(s => s.type === SLIDE_TYPES.EVENT).map(s => ({
-                id: s.id,
-                name: s.name,
-                active: s.active,
-                eventType: (s as EventSlideType).data.eventType
-            }))
-        });
-
-        return slides.map(slide => {
-            if (slide.type === SLIDE_TYPES.EVENT) {
-                const eventSlide = slide as EventSlideType;
-
-                // Check if this is a birthday event slide
-                if (eventSlide.data.eventType === "birthday" || slide.name.toLowerCase().includes('birthday')) {
-                    const birthdayEmployees = employees.filter(employee => isBirthdayToday(employee));
-                    const hasBirthdays = birthdayEmployees.length > 0;
-
-                    console.log("🎂 HomePage - Processing birthday slide:", {
-                        slideId: slide.id,
-                        slideName: slide.name,
-                        birthdayEmployees: birthdayEmployees.length,
-                        hasBirthdays,
-                        slideActive: slide.active,
-                        employeeNames: birthdayEmployees.map(e => e.name)
-                    });
-
-                    return {
-                        ...slide,
-                        duration: hasBirthdays && slide.active ? 10 : 0,
-                        active: hasBirthdays ? slide.active : false, // Auto-disable if no events
-                        data: {
-                            ...slide.data,
-                            employees: birthdayEmployees,
-                            eventType: "birthday" as "birthday",
-                            hasEvents: hasBirthdays
-                        }
-                    };
-                }
-
-                // Check if this is an anniversary event slide
-                if (eventSlide.data.eventType === "anniversary" || slide.name.toLowerCase().includes('anniversary')) {
-                    const anniversaryEmployees = employees.filter(employee => isAnniversaryToday(employee));
-                    const hasAnniversaries = anniversaryEmployees.length > 0;
-
-                    console.log("🎉 HomePage - Processing anniversary slide:", {
-                        slideId: slide.id,
-                        slideName: slide.name,
-                        anniversaryEmployees: anniversaryEmployees.length,
-                        hasAnniversaries,
-                        slideActive: slide.active,
-                        employeeNames: anniversaryEmployees.map(e => e.name)
-                    });
-
-                    return {
-                        ...slide,
-                        duration: hasAnniversaries && slide.active ? 10 : 0,
-                        active: hasAnniversaries ? slide.active : false, // Auto-disable if no events
-                        data: {
-                            ...slide.data,
-                            employees: anniversaryEmployees,
-                            eventType: "anniversary" as "anniversary",
-                            hasEvents: hasAnniversaries
-                        }
-                    };
-                }
-
-                // Return the original event slide if it doesn't match birthday or anniversary
-                return slide;
-            }
-            return slide;
-        });
-    }, [slides, employees]);
-
-    // Event slide states are now managed through the unified slideshow data
+    // Event processing is now handled in UnifiedContext - single source of truth
 
 
     // Handle slide reordering
     const handleReorder = ({ sourceIndex, destinationIndex }: ReorderResult) => {
         if (sourceIndex === destinationIndex) return;
 
+        // Use original slides for reordering to maintain data integrity
         const newSlides = [...slides];
         const [removed] = newSlides.splice(sourceIndex, 1);
         newSlides.splice(destinationIndex, 0, removed);
@@ -943,7 +871,7 @@ const HomePage: React.FC = () => {
                             {activeSlides.length > 0 ? (
                                 <SwiperSlideshow
                                     key={`swiper-${displaySettings.swiperEffect}`}
-                                    slides={processedSlides.filter(slide => slide.active)}
+                                    slides={activeSlides}
                                     renderSlideContent={renderSlideContent}
                                     hidePagination={displaySettings.hidePagination}
                                     hideArrows={displaySettings.hideArrows}
@@ -996,7 +924,7 @@ const HomePage: React.FC = () => {
                         </div>
                         <div className="text-center">
                             <div className="text-2xl font-bold text-persivia-teal">
-                                {slides.filter(slide => slide.active).length}
+                                {activeSlides.length}
                             </div>
                             <div className="text-sm text-gray-600">Active Slides</div>
                         </div>
@@ -1192,7 +1120,7 @@ const HomePage: React.FC = () => {
 
                 {/* Force Sync Description */}
                 <div className="text-xs text-gray-600 mt-2">
-                    <p>Updates API data • Syncs unified objects • Saves to database • Syncs displays • Reloads page</p>
+                    <p>Updates all the displays with the latest data from the API</p>
                 </div>
 
                 {/* Stop Editing Button - Only show when editing */}

@@ -2,15 +2,28 @@ import { AppDataSource } from "../config/database";
 import { File } from "../models/File";
 import { User } from "../models/User";
 import { logger } from "../utils/logger";
+import * as fs from "fs";
+import * as path from "path";
 
 /**
  * Service for handling file operations in the database
  */
 export class FileService {
     private static fileRepository = AppDataSource.getRepository(File);
+    private static uploadsDir = path.join(__dirname, "../../uploads");
 
     /**
-     * Upload a file to the database
+     * Ensure uploads directory exists
+     */
+    private static ensureUploadsDir(): void {
+        if (!fs.existsSync(this.uploadsDir)) {
+            fs.mkdirSync(this.uploadsDir, { recursive: true });
+            logger.info(`Created uploads directory: ${this.uploadsDir}`);
+        }
+    }
+
+    /**
+     * Upload a file to both database and file system
      */
     static async uploadFile(
         buffer: Buffer,
@@ -20,19 +33,26 @@ export class FileService {
         description?: string
     ): Promise<File> {
         try {
-            // Convert buffer to base64
-            const base64Data = buffer.toString('base64');
+            // Ensure uploads directory exists
+            this.ensureUploadsDir();
+
+            // No longer storing in database as Base64
 
             // Generate unique filename
             const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1E9);
-            const filename = uniqueSuffix + "." + originalName.split('.').pop();
+            const extension = originalName.split('.').pop() || '';
+            const filename = `${uniqueSuffix}.${extension}`;
+
+            // Save to file system
+            const filePath = path.join(this.uploadsDir, filename);
+            fs.writeFileSync(filePath, buffer);
 
             // Create file record
             const file = new File();
             file.filename = filename;
             file.originalName = originalName;
             file.mimeType = mimeType;
-            file.data = base64Data;
+            file.filePath = filePath; // File system path
             file.size = buffer.length;
             file.description = description;
             file.uploadedBy = uploadedBy;
@@ -40,12 +60,12 @@ export class FileService {
             // Save to database
             const savedFile = await this.fileRepository.save(file);
 
-            logger.info(`File uploaded to database: ${savedFile.filename} (${savedFile.size} bytes)`);
+            logger.info(`File uploaded successfully: ${savedFile.filename} (${savedFile.size} bytes) - FileSystem: ✓`);
             return savedFile;
 
         } catch (error) {
-            logger.error("Error uploading file to database:", error);
-            throw new Error("Failed to upload file to database");
+            logger.error("Error uploading file:", error);
+            throw new Error("Failed to upload file");
         }
     }
 
@@ -65,7 +85,7 @@ export class FileService {
     }
 
     /**
-     * Get file buffer from database
+     * Get file buffer from file system
      */
     static async getFileBuffer(id: string): Promise<{ buffer: Buffer; mimeType: string; filename: string } | null> {
         try {
@@ -74,8 +94,11 @@ export class FileService {
                 return null;
             }
 
-            // Convert base64 back to buffer
-            const buffer = Buffer.from(file.data, 'base64');
+            // Read file from file system
+            if (!file.filePath) {
+                return null;
+            }
+            const buffer = fs.readFileSync(file.filePath);
 
             return {
                 buffer,
@@ -88,19 +111,34 @@ export class FileService {
         }
     }
 
+
     /**
-     * Delete file from database
+     * Delete file from file system and database
      */
     static async deleteFile(id: string): Promise<boolean> {
         try {
+            // Get file info before deleting
+            const file = await this.getFileById(id);
+
+            // Delete from database
             const result = await this.fileRepository.delete(id);
             if (result.affected && result.affected > 0) {
+                // Delete from file system if path exists
+                if (file?.filePath && fs.existsSync(file.filePath)) {
+                    try {
+                        fs.unlinkSync(file.filePath);
+                        logger.info(`File deleted from file system: ${file.filePath}`);
+                    } catch (fsError) {
+                        logger.warn(`Failed to delete file from file system: ${file.filePath}`, fsError);
+                    }
+                }
+
                 logger.info(`File deleted from database: ${id}`);
                 return true;
             }
             return false;
         } catch (error) {
-            logger.error("Error deleting file from database:", error);
+            logger.error("Error deleting file:", error);
             return false;
         }
     }

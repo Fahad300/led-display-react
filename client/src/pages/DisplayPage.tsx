@@ -1,5 +1,5 @@
-import React, { useEffect } from "react";
-import { SLIDE_TYPES } from "../types";
+import React, { useEffect, useMemo } from "react";
+import { SLIDE_TYPES, Employee } from "../types";
 import { ImageSlide } from "../components/slides/ImageSlide";
 import { VideoSlide } from "../components/slides/VideoSlide";
 import NewsSlideComponent from "../components/NewsSlideComponent";
@@ -23,10 +23,11 @@ import { useSettings } from '../contexts/SettingsContext';
  */
 const DisplayPage: React.FC = () => {
     // Get latest settings and unified data
-    const { slides, isLoading, syncFromDatabase } = useUnified();
+    const { slides, employees, isLoading, syncFromDatabase } = useUnified();
     const { displaySettings, syncSettings } = useSettings();
 
-    // Filter active slides
+    // Event processing is now handled in UnifiedContext
+    // Filter active slides directly from context
     const activeSlides = slides.filter(slide => slide.active);
 
     // Get latest data on mount
@@ -56,21 +57,43 @@ const DisplayPage: React.FC = () => {
         });
     }, [slides, activeSlides]);
 
-    // Periodic refresh for remote display (every 30 seconds)
+    // Gentle periodic refresh for remote display (every 60 seconds, only when no slide is actively playing)
     useEffect(() => {
         const refreshInterval = setInterval(async () => {
-            console.log("🔄 DisplayPage: Periodic refresh for remote display...");
+            // Check if any slide is currently playing by looking for video elements or active timers
+            const hasActiveVideo = document.querySelector('video:not([paused])');
+            const hasSwiperTransition = document.querySelector('.swiper-slide-active .swiper-slide-duplicate-active');
+
+            if (hasActiveVideo || hasSwiperTransition) {
+                console.log("⏸️ DisplayPage: Skipping periodic refresh - slide actively playing");
+                return;
+            }
+
+            console.log("🔄 DisplayPage: Gentle periodic refresh for remote display...");
             try {
+                // Only sync settings, don't force slide data refresh unless there are actual changes
                 await syncSettings();
-                await syncFromDatabase();
-                console.log("✅ DisplayPage: Periodic refresh completed");
+
+                // Check if there are actual data changes before syncing
+                const currentDataHash = JSON.stringify(slides.map(s => ({ id: s.id, active: s.active, name: s.name })));
+                const lastHash = localStorage.getItem('lastDisplayDataHash');
+
+                if (currentDataHash !== lastHash) {
+                    console.log("📊 DisplayPage: Data changes detected, syncing from database");
+                    await syncFromDatabase();
+                    localStorage.setItem('lastDisplayDataHash', currentDataHash);
+                } else {
+                    console.log("✅ DisplayPage: No data changes, skipping database sync");
+                }
+
+                console.log("✅ DisplayPage: Gentle periodic refresh completed");
             } catch (error) {
                 console.error("❌ DisplayPage: Periodic refresh failed:", error);
             }
-        }, 30000); // 30 seconds
+        }, 60000); // Increased to 60 seconds to be less disruptive
 
         return () => clearInterval(refreshInterval);
-    }, [syncSettings, syncFromDatabase]);
+    }, [syncSettings, syncFromDatabase, slides]);
 
     // Listen for force reload event from home page
     useEffect(() => {
@@ -214,9 +237,9 @@ const DisplayPage: React.FC = () => {
                 }
             }}
         >
-            {/* SwiperSlideshow Component - Auto-refresh when data changes */}
+            {/* SwiperSlideshow Component - Stable key to prevent unnecessary reinitializations */}
             <SwiperSlideshow
-                key={`slideshow-${activeSlides.length}-${slides.length}-${JSON.stringify(activeSlides.map(s => s.id))}`}
+                key={`display-slideshow-${activeSlides.map(s => s.id).sort().join('-')}-${displaySettings.swiperEffect}`}
                 slides={activeSlides}
                 renderSlideContent={renderSlideContent}
                 hidePagination={displaySettings.hidePagination}

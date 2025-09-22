@@ -163,11 +163,21 @@ export const SettingsProvider: React.FC<SettingsProviderProps> = ({ children }) 
         loadSettingsFromDatabase();
     }, [loadSettingsFromDatabase]);
 
-    // Set up periodic sync (every 30 seconds for immediate updates)
+    // Set up intelligent periodic sync (every 45 seconds, avoid during slide transitions)
     useEffect(() => {
         const interval = setInterval(() => {
             if (!isUserEditing) {
-                console.log('🔄 SettingsContext: Performing periodic sync...', {
+                // Check if any slides are currently transitioning or videos are playing
+                const hasActiveVideo = document.querySelector('video:not([paused])');
+                const hasSwiperTransition = document.querySelector('.swiper-slide-active');
+                const isSlideTransitioning = document.querySelector('.swiper-slide-active.swiper-slide-next, .swiper-slide-active.swiper-slide-prev');
+
+                if (hasActiveVideo || isSlideTransitioning) {
+                    console.log('⏸️ SettingsContext: Skipping periodic sync - slide activity detected');
+                    return;
+                }
+
+                console.log('🔄 SettingsContext: Performing intelligent periodic sync...', {
                     currentSettings: displaySettings,
                     isUserEditing
                 });
@@ -178,7 +188,7 @@ export const SettingsProvider: React.FC<SettingsProviderProps> = ({ children }) 
                     currentSettings: displaySettings
                 });
             }
-        }, 30000); // 30 seconds for faster sync
+        }, 45000); // 45 seconds for less frequent but smarter sync
 
         return () => clearInterval(interval);
     }, [syncSettings, isUserEditing]);

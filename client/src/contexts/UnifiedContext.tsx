@@ -57,9 +57,43 @@ interface UnifiedContextType {
     forceApiCheck: () => Promise<void>;
     startApiPolling: () => void;
     stopApiPolling: () => void;
+    forceMigrateVideoUrls: () => void;
 }
 
 const UnifiedContext = createContext<UnifiedContextType | undefined>(undefined);
+
+// Helper function to migrate video URLs to serverUrl format
+const migrateVideoUrls = (slides: Slide[]): Slide[] => {
+    return slides.map(slide => {
+        if (slide.type === SLIDE_TYPES.VIDEO && slide.data.videoUrl) {
+            const videoSlide = slide as any;
+            let needsMigration = false;
+            let fileId = '';
+
+            // Check if URL has port 3000 and needs to be changed to port 5000
+            if (videoSlide.data.videoUrl.includes('localhost:3000/api/files/')) {
+                fileId = videoSlide.data.videoUrl.split('/api/files/')[1];
+                needsMigration = true;
+            }
+            // Check if URL is in old database format with server subpath
+            else if (videoSlide.data.videoUrl.includes('/api/files/server/')) {
+                fileId = videoSlide.data.videoUrl.split('/api/files/server/')[1];
+                needsMigration = true;
+            }
+
+            if (needsMigration && fileId) {
+                console.log("🔄 Migrating video URL to serverUrl format:", {
+                    oldUrl: videoSlide.data.videoUrl,
+                    fileId: fileId
+                });
+                // Always hardcode port 5000 to ensure correct server URL
+                const serverUrl = `http://localhost:5000/api/files/${fileId}`;
+                videoSlide.data.videoUrl = serverUrl;
+            }
+        }
+        return slide;
+    });
+};
 
 // Function to create default slides
 const createDefaultSlides = (): Slide[] => {
@@ -184,6 +218,77 @@ export const UnifiedProvider: React.FC<UnifiedProviderProps> = ({ children }) =>
         return window.location.pathname === '/display' || window.location.pathname === '/display/';
     }, []);
 
+    // Helper functions for event detection
+    const isBirthdayToday = useCallback((employee: Employee): boolean => {
+        return employee.isBirthday === true;
+    }, []);
+
+    const isAnniversaryToday = useCallback((employee: Employee): boolean => {
+        return employee.isAnniversary === true;
+    }, []);
+
+    // Update event slides with current employee data - simple and robust
+    useEffect(() => {
+        if (employees.length === 0) return; // Wait for employees to load
+
+        const birthdayEmployees = employees.filter(employee => isBirthdayToday(employee));
+        const anniversaryEmployees = employees.filter(employee => isAnniversaryToday(employee));
+
+        console.log("🔄 UnifiedContext: Updating event slides with current data", {
+            birthdayCount: birthdayEmployees.length,
+            anniversaryCount: anniversaryEmployees.length,
+            birthdayNames: birthdayEmployees.map(e => e.name),
+            anniversaryNames: anniversaryEmployees.map(e => e.name)
+        });
+
+        setSlides(prevSlides => {
+            return prevSlides.map(slide => {
+                if (slide.type === SLIDE_TYPES.EVENT) {
+                    const eventSlide = slide as EventSlide;
+
+                    // Birthday slide
+                    if (eventSlide.data.eventType === "birthday" || slide.name.toLowerCase().includes('birthday')) {
+                        const hasEvents = birthdayEmployees.length > 0;
+
+                        // Auto-disable if no events and currently active
+                        const shouldBeActive = hasEvents ? slide.active : false;
+
+                        return {
+                            ...slide,
+                            active: shouldBeActive,
+                            data: {
+                                ...eventSlide.data,
+                                employees: birthdayEmployees,
+                                hasEvents: hasEvents,
+                                eventCount: birthdayEmployees.length
+                            }
+                        };
+                    }
+
+                    // Anniversary slide
+                    if (eventSlide.data.eventType === "anniversary" || slide.name.toLowerCase().includes('anniversary')) {
+                        const hasEvents = anniversaryEmployees.length > 0;
+
+                        // Auto-disable if no events and currently active
+                        const shouldBeActive = hasEvents ? slide.active : false;
+
+                        return {
+                            ...slide,
+                            active: shouldBeActive,
+                            data: {
+                                ...eventSlide.data,
+                                employees: anniversaryEmployees,
+                                hasEvents: hasEvents,
+                                eventCount: anniversaryEmployees.length
+                            }
+                        };
+                    }
+                }
+                return slide;
+            });
+        });
+    }, [employees, isBirthdayToday, isAnniversaryToday]);
+
     // Save to database with proper error handling
     const saveToDatabase = useCallback(async (slidesToSave?: Slide[]) => {
         try {
@@ -241,6 +346,14 @@ export const UnifiedProvider: React.FC<UnifiedProviderProps> = ({ children }) =>
                 fetchTeamWiseData().catch(() => null)
             ]);
 
+            console.log("📊 Employees data received:", {
+                totalEmployees: employeesData.length,
+                anniversaryEmployees: employeesData.filter(e => e.isAnniversary).length,
+                birthdayEmployees: employeesData.filter(e => e.isBirthday).length,
+                anniversaryNames: employeesData.filter(e => e.isAnniversary).map(e => e.name),
+                birthdayNames: employeesData.filter(e => e.isBirthday).map(e => e.name)
+            });
+
             setEmployees(employeesData);
             setGraphData(graphDataResult);
             console.log("✅ API data refreshed successfully");
@@ -284,18 +397,21 @@ export const UnifiedProvider: React.FC<UnifiedProviderProps> = ({ children }) =>
                             console.log("📥 UnifiedContext: New slides count:", slideshowData.slides.length);
                             console.log("📥 UnifiedContext: New slides active count:", slideshowData.slides.filter(s => s.active).length);
 
+                            // Apply URL migration to loaded slides
+                            const migratedSlides = migrateVideoUrls(slideshowData.slides);
+
                             // Dispatch custom event for slides change
                             setTimeout(() => {
                                 window.dispatchEvent(new CustomEvent('slidesChanged', {
                                     detail: {
-                                        slidesCount: slideshowData.slides.length,
-                                        activeSlidesCount: slideshowData.slides.filter(s => s.active).length,
-                                        slides: slideshowData.slides
+                                        slidesCount: migratedSlides.length,
+                                        activeSlidesCount: migratedSlides.filter(s => s.active).length,
+                                        slides: migratedSlides
                                     }
                                 }));
                             }, 100);
 
-                            return slideshowData.slides;
+                            return migratedSlides;
                         } else {
                             console.log("📥 UnifiedContext: No changes detected, keeping existing slides");
                         }
@@ -541,6 +657,16 @@ export const UnifiedProvider: React.FC<UnifiedProviderProps> = ({ children }) =>
         stopApiPolling();
     }, []);
 
+    // Force migrate video URLs function
+    const forceMigrateVideoUrls = useCallback(() => {
+        console.log("🔄 UnifiedContext: Force migrating video URLs...");
+        setSlides(prevSlides => {
+            const migratedSlides = migrateVideoUrls(prevSlides);
+            console.log("✅ UnifiedContext: Video URL migration completed");
+            return migratedSlides;
+        });
+    }, []);
+
     // Load data on mount - ensure data is loaded before rendering
     useEffect(() => {
         const initializeData = async () => {
@@ -566,6 +692,9 @@ export const UnifiedProvider: React.FC<UnifiedProviderProps> = ({ children }) =>
                     let finalSlides = slideshowData.slides && slideshowData.slides.length > 0
                         ? slideshowData.slides
                         : createDefaultSlides();
+
+                    // Migrate old video URLs to use serverUrl format if they exist
+                    finalSlides = migrateVideoUrls(finalSlides);
 
                     // Check if we have event slides in the final slides array
                     const hasEventSlides = finalSlides.some(s => s.type === SLIDE_TYPES.EVENT);
@@ -693,7 +822,8 @@ export const UnifiedProvider: React.FC<UnifiedProviderProps> = ({ children }) =>
         syncToRemoteDisplays,
         forceApiCheck: handleForceApiCheck,
         startApiPolling: handleStartApiPolling,
-        stopApiPolling: handleStopApiPolling
+        stopApiPolling: handleStopApiPolling,
+        forceMigrateVideoUrls
     };
 
     return (

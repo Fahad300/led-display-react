@@ -129,6 +129,10 @@ export interface EventSlideData {
      * Whether there are actual events today for this slide
      */
     hasEvents?: boolean;
+    /**
+     * Number of events today for this slide
+     */
+    eventCount?: number;
 }
 
 /**

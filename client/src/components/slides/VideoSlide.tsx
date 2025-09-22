@@ -15,6 +15,21 @@ export const VideoSlide: React.FC<VideoSlideProps> = ({ slide, onUpdate, onVideo
     const [isLoading, setIsLoading] = useState(false);
     const [hasError, setHasError] = useState(false);
 
+    // Get video URL - now all URLs use file system serving
+    const getVideoUrl = useCallback(() => {
+        if (!slide.data.videoUrl) return '';
+
+        // Ensure URL uses port 5000 (file system serving)
+        if (slide.data.videoUrl.includes('/api/files/')) {
+            const fileId = slide.data.videoUrl.split('/api/files/')[1];
+            if (fileId) {
+                return `http://localhost:5000/api/files/${fileId}`;
+            }
+        }
+
+        return slide.data.videoUrl;
+    }, [slide.data.videoUrl]);
+
     // Enhanced play attempt with better error handling
     const attemptPlay = useCallback(async () => {
         if (!videoRef.current || hasError) return;
@@ -55,6 +70,15 @@ export const VideoSlide: React.FC<VideoSlideProps> = ({ slide, onUpdate, onVideo
 
     const handleLoadedMetadata = useCallback(() => {
         console.log("Video metadata loaded for slide:", slide.name);
+        if (videoRef.current) {
+            console.log("Video metadata:", {
+                videoWidth: videoRef.current.videoWidth,
+                videoHeight: videoRef.current.videoHeight,
+                duration: videoRef.current.duration,
+                readyState: videoRef.current.readyState,
+                currentSrc: videoRef.current.currentSrc
+            });
+        }
     }, [slide.name]);
 
     const handleLoadedData = useCallback(() => {
@@ -92,10 +116,28 @@ export const VideoSlide: React.FC<VideoSlideProps> = ({ slide, onUpdate, onVideo
         if (onVideoEnd && videoRef.current && videoRef.current.paused) {
             attemptPlay();
         }
-    }, [onVideoEnd, attemptPlay, slide.duration, slide.name]);
+
+        // Resume autoplay timer if this is in a slideshow - video is ready to play smoothly
+        if (onVideoEnd) {
+            const event = new CustomEvent('videoBuffering', {
+                detail: { slideId: slide.id, isBuffering: false, reason: 'canPlayThrough' }
+            });
+            window.dispatchEvent(event);
+        }
+    }, [onVideoEnd, attemptPlay, slide.duration, slide.name, slide.id]);
 
     const handlePlaying = useCallback(() => {
         console.log("Video started playing for slide:", slide.name);
+        if (videoRef.current) {
+            console.log("Video playing state:", {
+                currentTime: videoRef.current.currentTime,
+                paused: videoRef.current.paused,
+                muted: videoRef.current.muted,
+                volume: videoRef.current.volume,
+                videoWidth: videoRef.current.videoWidth,
+                videoHeight: videoRef.current.videoHeight
+            });
+        }
         setIsLoading(false);
         setHasError(false);
     }, [slide.name]);
@@ -103,7 +145,15 @@ export const VideoSlide: React.FC<VideoSlideProps> = ({ slide, onUpdate, onVideo
     const handleWaiting = useCallback(() => {
         console.log("Video waiting/buffering for slide:", slide.name);
         setIsLoading(true);
-    }, [slide.name]);
+
+        // Only dispatch buffering event for slideshow videos, not standalone videos
+        if (onVideoEnd) {
+            const event = new CustomEvent('videoBuffering', {
+                detail: { slideId: slide.id, isBuffering: true, reason: 'waiting' }
+            });
+            window.dispatchEvent(event);
+        }
+    }, [slide.name, slide.id, onVideoEnd]);
 
     const handleSeeking = useCallback(() => {
         console.log("Video seeking for slide:", slide.name);
@@ -113,7 +163,15 @@ export const VideoSlide: React.FC<VideoSlideProps> = ({ slide, onUpdate, onVideo
     const handleSeeked = useCallback(() => {
         console.log("Video seeked for slide:", slide.name);
         setIsLoading(false);
-    }, [slide.name]);
+
+        // Resume autoplay timer if this is in a slideshow and we were actually buffering
+        if (onVideoEnd) {
+            const event = new CustomEvent('videoBuffering', {
+                detail: { slideId: slide.id, isBuffering: false, reason: 'seeked' }
+            });
+            window.dispatchEvent(event);
+        }
+    }, [slide.name, slide.id, onVideoEnd]);
 
     const handleEnded = useCallback(() => {
         // Clear the fallback timeout since video ended naturally
@@ -161,8 +219,9 @@ export const VideoSlide: React.FC<VideoSlideProps> = ({ slide, onUpdate, onVideo
 
     // Initialize video when URL changes
     useEffect(() => {
-        if (videoRef.current && slide.data.videoUrl) {
-            console.log("Initializing video for slide:", slide.name);
+        const videoUrl = getVideoUrl();
+        if (videoRef.current && videoUrl) {
+            console.log("Initializing video for slide:", slide.name, "using URL:", videoUrl);
             setIsLoading(true);
             setHasError(false);
 
@@ -175,7 +234,7 @@ export const VideoSlide: React.FC<VideoSlideProps> = ({ slide, onUpdate, onVideo
             // Reset video element
             videoRef.current.load();
         }
-    }, [slide.data.videoUrl, slide.name]);
+    }, [getVideoUrl, slide.name]);
 
     // Cleanup on unmount
     useEffect(() => {
@@ -210,12 +269,12 @@ export const VideoSlide: React.FC<VideoSlideProps> = ({ slide, onUpdate, onVideo
 
     return (
         <>
-            <div className="relative w-full h-full overflow-hidden">
+            <div className="relative w-full h-full overflow-hidden bg-gray-900">
                 <video
                     ref={videoRef}
                     data-slide-id={slide.id}
-                    src={slide.data.videoUrl}
-                    className="w-full h-full object-cover"
+                    src={getVideoUrl()}
+                    className="w-full h-full object-cover relative z-10"
                     autoPlay={onVideoEnd ? true : (slide.data.autoplay ?? true)}
                     loop={onVideoEnd ? false : (slide.data.loop ?? false)}
                     muted={onVideoEnd ? true : (slide.data.muted ?? true)}
@@ -320,4 +379,4 @@ export const VideoSlide: React.FC<VideoSlideProps> = ({ slide, onUpdate, onVideo
             )}
         </>
     );
-};
+}; 

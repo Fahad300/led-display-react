@@ -16,8 +16,8 @@ export class File {
     @Column()
     mimeType!: string;
 
-    @Column("longtext")
-    data!: string; // Base64 encoded file data
+    @Column()
+    filePath!: string; // File system path for serving
 
     @Column()
     size!: number; // File size in bytes
@@ -36,10 +36,11 @@ export class File {
     updatedAt!: Date;
 
     /**
-     * Get file URL for serving
+     * Get file URL for serving from file system
      */
     getUrl(): string {
-        return getFileUrl(this.id);
+        const backendUrl = process.env.SERVER_URL || "http://localhost:5000";
+        return `${backendUrl}/api/files/${this.id}`;
     }
 
     /**

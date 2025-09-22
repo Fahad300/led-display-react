@@ -86,6 +86,7 @@ const SwiperSlideshow: React.FC<{
         }
     }, []);
 
+
     // Start countdown timer for TestingOverlay
     const startCountdownTimer = useCallback((duration: number) => {
         clearAllTimers();
@@ -270,6 +271,31 @@ const SwiperSlideshow: React.FC<{
 
         return () => clearInterval(checkInterval);
     }, [activeSlides, isVideoPlaying, isDebugMode, startCustomAutoplay]);
+
+    // Handle video buffering events to pause/resume autoplay
+    useEffect(() => {
+        const handleVideoBuffering = (event: CustomEvent) => {
+            const { slideId, isBuffering, reason } = event.detail;
+            const currentSlide = activeSlides[currentSlideIndex];
+
+            if (currentSlide && currentSlide.id === slideId && currentSlide.type === SLIDE_TYPES.VIDEO) {
+                if (isBuffering && reason === 'waiting') {
+                    console.log('SwiperSlideshow: Pausing autoplay due to video buffering');
+                    clearAllTimers();
+                } else if (!isBuffering && (reason === 'canPlayThrough' || reason === 'seeked')) {
+                    console.log('SwiperSlideshow: Video ready - but letting video handle its own timing');
+                    // For videos, don't restart autoplay timer - let video end event handle progression
+                    // Only clear any existing timers to avoid conflicts
+                    clearAllTimers();
+                }
+            }
+        };
+
+        window.addEventListener('videoBuffering', handleVideoBuffering as EventListener);
+        return () => {
+            window.removeEventListener('videoBuffering', handleVideoBuffering as EventListener);
+        };
+    }, [activeSlides, currentSlideIndex, clearAllTimers]);
 
     // Update Swiper settings when props change
     useEffect(() => {
