@@ -19,7 +19,62 @@ export const backendApi = axios.create({
 });
 
 // API Data Polling Configuration
-const API_POLLING_INTERVAL = 60 * 60 * 1000; // 1 hour in milliseconds
+const API_POLLING_INTERVAL = 5 * 60 * 1000; // 5 minutes in milliseconds for 24/7 display
+
+// API Endpoints Configuration - Add new APIs here without code changes
+interface ApiEndpoint {
+    key: string;
+    url: string;
+    description: string;
+    enabled: boolean;
+    transform?: (data: any) => any; // Optional data transformation function
+}
+
+const API_ENDPOINTS: ApiEndpoint[] = [
+    {
+        key: "employees",
+        url: "/api/proxy/celebrations",
+        description: "Employee birthday and anniversary data",
+        enabled: true,
+        transform: (data) => data || [] // Ensure array format
+    },
+    {
+        key: "graphData",
+        url: "/api/graph-data",
+        description: "Team performance and graph data",
+        enabled: true,
+        transform: (data) => data || null // Keep as-is
+    }
+    // Future APIs - just add them here, no code changes needed:
+    // {
+    //     key: "incidents",
+    //     url: "/api/proxy/incidents", 
+    //     description: "Current incidents and escalations",
+    //     enabled: true,
+    //     transform: (data) => data || []
+    // },
+    // {
+    //     key: "metrics",
+    //     url: "/api/proxy/metrics",
+    //     description: "Performance metrics and KPIs", 
+    //     enabled: true,
+    //     transform: (data) => data || null
+    // },
+    // {
+    //     key: "notifications",
+    //     url: "/api/proxy/notifications",
+    //     description: "System notifications and alerts",
+    //     enabled: true,
+    //     transform: (data) => data || []
+    // },
+    // {
+    //     key: "weather",
+    //     url: "/api/proxy/weather",
+    //     description: "Weather information",
+    //     enabled: false, // Can be disabled without affecting other APIs
+    //     transform: (data) => data || null
+    // }
+];
 
 // Polling state management
 let pollingInterval: NodeJS.Timeout | null = null;
@@ -32,9 +87,8 @@ let pollingInProgress = false;
 const dataChangeListeners: Set<(data: any) => void> = new Set();
 const pollingStateListeners: Set<(state: any) => void> = new Set();
 
-// Data storage
-let cachedEmployees: any[] = [];
-let cachedGraphData: any = null;
+// Dynamic data storage - scales with any number of APIs
+let cachedApiData: Record<string, any> = {};
 
 /**
  * Generate a hash for data comparison
@@ -70,29 +124,74 @@ const notifyPollingStateChange = (state: any) => {
 };
 
 /**
- * Fetch employees data from API
+ * Generic function to fetch data from any API endpoint
  */
-export const fetchEmployeesData = async (): Promise<any[]> => {
+const fetchApiData = async (endpoint: ApiEndpoint): Promise<any> => {
     try {
-        const response = await backendApi.get("/api/employees");
-        return response.data || [];
+        console.log(`📡 Fetching data from ${endpoint.description} (${endpoint.url})`);
+        const response = await backendApi.get(endpoint.url);
+        const data = response.data;
+
+        // Apply transformation if provided
+        const transformedData = endpoint.transform ? endpoint.transform(data) : data;
+
+        console.log(`✅ Successfully fetched ${endpoint.key}:`, {
+            hasData: !!transformedData,
+            dataType: Array.isArray(transformedData) ? `array[${transformedData.length}]` : typeof transformedData
+        });
+
+        return transformedData;
     } catch (error) {
-        console.error("Error fetching employees data:", error);
+        console.error(`❌ Error fetching ${endpoint.description}:`, error);
         throw error;
     }
 };
 
 /**
- * Fetch graph data from API
+ * Fetch all enabled API endpoints data
+ */
+const fetchAllApiData = async (): Promise<Record<string, any>> => {
+    const enabledEndpoints = API_ENDPOINTS.filter(endpoint => endpoint.enabled);
+    const results: Record<string, any> = {};
+
+    console.log(`🔄 Fetching data from ${enabledEndpoints.length} API endpoints...`);
+
+    // Fetch all APIs in parallel for better performance
+    const fetchPromises = enabledEndpoints.map(async (endpoint) => {
+        try {
+            const data = await fetchApiData(endpoint);
+            results[endpoint.key] = data;
+        } catch (error) {
+            console.error(`Failed to fetch ${endpoint.key}:`, error);
+            // Keep previous cached data if fetch fails
+            results[endpoint.key] = cachedApiData[endpoint.key] || null;
+        }
+    });
+
+    await Promise.allSettled(fetchPromises);
+    return results;
+};
+
+/**
+ * Legacy function for backward compatibility - employees data
+ */
+export const fetchEmployeesData = async (): Promise<any[]> => {
+    const employeesEndpoint = API_ENDPOINTS.find(ep => ep.key === "employees");
+    if (!employeesEndpoint) {
+        throw new Error("Employees endpoint not configured");
+    }
+    return await fetchApiData(employeesEndpoint);
+};
+
+/**
+ * Legacy function for backward compatibility - graph data
  */
 export const fetchGraphData = async (): Promise<any> => {
-    try {
-        const response = await backendApi.get("/api/graph-data");
-        return response.data || null;
-    } catch (error) {
-        console.error("Error fetching graph data:", error);
-        throw error;
+    const graphEndpoint = API_ENDPOINTS.find(ep => ep.key === "graphData");
+    if (!graphEndpoint) {
+        throw new Error("Graph data endpoint not configured");
     }
+    return await fetchApiData(graphEndpoint);
 };
 
 /**
@@ -107,28 +206,91 @@ const checkForApiUpdates = async (): Promise<void> => {
     lastApiCheck = new Date();
 
     try {
-        // Fetch fresh data from APIs
-        const [employees, graphData] = await Promise.all([
-            fetchEmployeesData(),
-            fetchGraphData()
-        ]);
+        // Fetch fresh data from all enabled APIs in parallel
+        const freshApiData = await fetchAllApiData();
 
         // Generate hash for comparison
-        const currentDataHash = generateDataHash({ employees, graphData });
+        const currentDataHash = generateDataHash(freshApiData);
 
         // Check if data has changed
         if (currentDataHash !== lastDataHash) {
-            console.log("API data has changed, updating cached data");
+            console.log("🔄 API data has changed, updating cached data");
 
-            // Update cached data
-            cachedEmployees = employees;
-            cachedGraphData = graphData;
+            // Extract employees data for backward compatibility
+            const employees = freshApiData.employees || [];
+            const graphData = freshApiData.graphData || null;
+
+            // Log detailed changes for each API endpoint
+            const changeDetails: Record<string, any> = {
+                previousHash: lastDataHash.substring(0, 8) + "...",
+                currentHash: currentDataHash.substring(0, 8) + "...",
+                endpoints: {}
+            };
+
+            // Analyze changes for each endpoint
+            API_ENDPOINTS.filter(ep => ep.enabled).forEach(endpoint => {
+                const previousData = cachedApiData[endpoint.key];
+                const currentData = freshApiData[endpoint.key];
+
+                let endpointChanges: any = {
+                    hasData: !!currentData,
+                    dataType: Array.isArray(currentData) ? `array[${currentData.length}]` : typeof currentData
+                };
+
+                // Special handling for employees data
+                if (endpoint.key === "employees" && Array.isArray(currentData)) {
+                    const prevArray = Array.isArray(previousData) ? previousData : [];
+                    const previousEmployeeCount = prevArray.length;
+                    const previousBirthdayCount = prevArray.filter(e => e.isBirthday).length;
+                    const previousAnniversaryCount = prevArray.filter(e => e.isAnniversary).length;
+                    const currentBirthdayCount = currentData.filter(e => e.isBirthday).length;
+                    const currentAnniversaryCount = currentData.filter(e => e.isAnniversary).length;
+
+                    const isDataCleared = previousEmployeeCount > 0 && currentData.length === 0;
+                    const areBirthdaysCleared = previousBirthdayCount > 0 && currentBirthdayCount === 0;
+                    const areAnniversariesCleared = previousAnniversaryCount > 0 && currentAnniversaryCount === 0;
+
+                    endpointChanges = {
+                        ...endpointChanges,
+                        transition: `${previousEmployeeCount} → ${currentData.length} employees`,
+                        birthdays: `${previousBirthdayCount} → ${currentBirthdayCount}`,
+                        anniversaries: `${previousAnniversaryCount} → ${currentAnniversaryCount}`,
+                        changeType: isDataCleared ? "🧹 ALL_DATA_CLEARED" :
+                            areBirthdaysCleared && areAnniversariesCleared ? "🎉 EVENTS_CLEARED" :
+                                areBirthdaysCleared ? "🎂 BIRTHDAYS_CLEARED" :
+                                    areAnniversariesCleared ? "🏢 ANNIVERSARIES_CLEARED" :
+                                        "📈 DATA_UPDATED"
+                    };
+
+                    // Log specific transitions for debugging
+                    if (isDataCleared) {
+                        console.log("🧹 All employee data has been cleared from the API");
+                    } else if (areBirthdaysCleared || areAnniversariesCleared) {
+                        console.log("🎉 Event data transitions:", {
+                            birthdaysCleared: areBirthdaysCleared,
+                            anniversariesCleared: areAnniversariesCleared,
+                            message: "Birthday/Anniversary data has been cleared - display should update automatically"
+                        });
+                    }
+                }
+
+                changeDetails.endpoints[endpoint.key] = endpointChanges;
+            });
+
+            console.log("📊 API Data Change Details:", changeDetails);
+
+            // IMPORTANT: Always update cached data when hash changes
+            // This ensures stale data is cleared even when new data is empty
+            cachedApiData = { ...freshApiData };
             lastDataHash = currentDataHash;
 
-            // Notify listeners of data change
+            // Notify listeners of data change with backward compatibility
             notifyDataChange({
+                // Backward compatibility - provide old format
                 employees,
                 graphData,
+                // New format - all API data
+                apiData: freshApiData,
                 timestamp: new Date(),
                 source: "api_polling"
             });
@@ -232,7 +394,30 @@ export const stopApiPolling = (): void => {
  */
 export const forceApiCheck = async (): Promise<void> => {
     console.log("Forcing immediate API check");
+    // Clear cached data to force fresh fetch
+    lastDataHash = "";
+    cachedApiData = {}; // Clear all API cache
     await checkForApiUpdates();
+};
+
+/**
+ * Clear all cached data immediately
+ */
+export const clearApiCache = (): void => {
+    console.log("🧹 Clearing all API cache");
+    lastDataHash = "";
+    cachedApiData = {};
+
+    // Notify listeners of the cleared data
+    notifyDataChange({
+        // Backward compatibility
+        employees: [],
+        graphData: null,
+        // New format - empty API data
+        apiData: {},
+        timestamp: new Date(),
+        source: "cache_clear"
+    });
 };
 
 /**
@@ -250,8 +435,11 @@ export const getPollingState = () => ({
  * Get cached data
  */
 export const getCachedData = () => ({
-    employees: cachedEmployees,
-    graphData: cachedGraphData
+    // Backward compatibility
+    employees: cachedApiData.employees || [],
+    graphData: cachedApiData.graphData || null,
+    // New format - all cached API data
+    apiData: cachedApiData
 });
 
 /**

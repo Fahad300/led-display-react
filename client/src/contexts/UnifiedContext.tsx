@@ -13,10 +13,12 @@ import { currentEscalations } from '../data/currentEscalations';
 import {
     addDataChangeListener,
     addPollingStateListener,
+    clearApiCache,
     forceApiCheck,
     startApiPolling,
     stopApiPolling
 } from '../services/api';
+import { dispatchSlidesChange, dispatchApiDataChange, dispatchForceReload } from '../utils/realtimeSync';
 
 interface UnifiedContextType {
     // Slides
@@ -55,9 +57,11 @@ interface UnifiedContextType {
     refreshApiData: () => Promise<void>;
     syncToRemoteDisplays: () => Promise<void>;
     forceApiCheck: () => Promise<void>;
+    clearApiCache: () => void;
     startApiPolling: () => void;
     stopApiPolling: () => void;
     forceMigrateVideoUrls: () => void;
+    hasUnsavedChanges: () => boolean;
 }
 
 const UnifiedContext = createContext<UnifiedContextType | undefined>(undefined);
@@ -327,6 +331,19 @@ export const UnifiedProvider: React.FC<UnifiedProviderProps> = ({ children }) =>
 
             await sessionService.saveSlideshowData(slideshowData);
 
+            // Dispatch real-time sync event to all DisplayPages immediately
+            dispatchSlidesChange(slidesToUse, ['slides-saved-to-database'], 'homepage');
+
+            // Trigger remote display refresh after saving to database
+            try {
+                console.log("🔄 UnifiedContext: Triggering remote display refresh...");
+                await syncToRemoteDisplays();
+                console.log("✅ UnifiedContext: Remote display refresh completed");
+            } catch (refreshError) {
+                console.warn("⚠️ UnifiedContext: Remote display refresh failed:", refreshError);
+                // Don't throw error here as the main save was successful
+            }
+
             // Update the last saved state to prevent unnecessary saves
             lastSavedStateRef.current = JSON.stringify({ slides: slidesToUse });
             console.log("✅ UnifiedContext: Data saved to database successfully with settings:", currentSettings);
@@ -517,7 +534,7 @@ export const UnifiedProvider: React.FC<UnifiedProviderProps> = ({ children }) =>
         };
     }, [slides, saveToDatabase, isEditing, isDisplayPage]);
 
-    // Listen for data changes from polling system
+    // Listen for data changes from polling system AND API changes
     useEffect(() => {
         const handleDataChange = (e: CustomEvent) => {
             console.log("🔄 UnifiedContext: Data change event received from polling system");
@@ -557,9 +574,39 @@ export const UnifiedProvider: React.FC<UnifiedProviderProps> = ({ children }) =>
             }
         };
 
+        // Listen for API data changes (employees, graph data)
+        const handleApiDataChange = (apiData: any) => {
+            console.log("🔄 UnifiedContext: API data change received", {
+                employeesCount: apiData.employees?.length || 0,
+                hasGraphData: !!apiData.graphData
+            });
+
+            // CRITICAL: Update employees immediately when API data changes
+            // This ensures stale birthday/anniversary data is cleared
+            if (apiData.employees !== undefined) {
+                setEmployees(apiData.employees); // Will be [] if API returns empty
+            }
+
+            if (apiData.graphData !== undefined) {
+                setGraphData(apiData.graphData);
+            }
+
+            // Dispatch real-time sync event to all DisplayPages immediately
+            dispatchApiDataChange(
+                apiData.employees || [],
+                apiData.graphData || null,
+                ['api-data-updated'],
+                'api'
+            );
+        };
+
+        // Set up API data listener
+        const removeApiListener = addDataChangeListener(handleApiDataChange);
+
         window.addEventListener('dataChanged', handleDataChange as EventListener);
         return () => {
             window.removeEventListener('dataChanged', handleDataChange as EventListener);
+            removeApiListener();
         };
     }, []);
 
@@ -666,6 +713,18 @@ export const UnifiedProvider: React.FC<UnifiedProviderProps> = ({ children }) =>
             return migratedSlides;
         });
     }, []);
+
+    // Check if there are unsaved changes
+    const hasUnsavedChanges = useCallback(() => {
+        const currentState = JSON.stringify({ slides });
+        const hasChanges = currentState !== lastSavedStateRef.current;
+        console.log("🔍 UnifiedContext: Checking for unsaved changes:", {
+            hasChanges,
+            currentStateHash: currentState.substring(0, 50) + "...",
+            lastSavedHash: lastSavedStateRef.current.substring(0, 50) + "..."
+        });
+        return hasChanges;
+    }, [slides]);
 
     // Load data on mount - ensure data is loaded before rendering
     useEffect(() => {
@@ -821,9 +880,11 @@ export const UnifiedProvider: React.FC<UnifiedProviderProps> = ({ children }) =>
         refreshApiData,
         syncToRemoteDisplays,
         forceApiCheck: handleForceApiCheck,
+        clearApiCache,
         startApiPolling: handleStartApiPolling,
         stopApiPolling: handleStopApiPolling,
-        forceMigrateVideoUrls
+        forceMigrateVideoUrls,
+        hasUnsavedChanges
     };
 
     return (

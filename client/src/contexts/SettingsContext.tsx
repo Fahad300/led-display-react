@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
 import { sessionService } from '../services/sessionService';
+import { dispatchSettingsChange } from '../utils/realtimeSync';
 
 interface DisplaySettings {
     swiperEffect: string;
@@ -91,9 +92,12 @@ export const SettingsProvider: React.FC<SettingsProviderProps> = ({ children }) 
     // Save settings to database and sync to all devices
     const saveSettingsToDatabase = useCallback(async (settings: DisplaySettings) => {
         try {
-            // Save settings as part of slideshow data
+            // Load current slideshow data to preserve existing slides
+            const currentData = await sessionService.loadSlideshowData();
+
+            // Save settings while preserving existing slides data
             const slideshowData = {
-                slides: [], // Empty slides array for settings-only save
+                slides: currentData?.slides || [], // Preserve existing slides or use empty array if none
                 displaySettings: settings,
                 lastUpdated: new Date().toISOString(),
                 version: "1.0.0"
@@ -108,7 +112,7 @@ export const SettingsProvider: React.FC<SettingsProviderProps> = ({ children }) 
             localStorage.setItem('displaySettings', JSON.stringify(settings));
             setLastSynced(new Date());
 
-            console.log('✅ Settings saved and synced to all devices');
+            console.log('✅ Settings saved and synced to all devices (preserving slides data)');
         } catch (error) {
             console.error('❌ Failed to save settings:', error);
             throw error;
@@ -138,6 +142,9 @@ export const SettingsProvider: React.FC<SettingsProviderProps> = ({ children }) 
             });
             window.dispatchEvent(event);
 
+            // Dispatch real-time sync event to all DisplayPages immediately
+            dispatchSettingsChange(updatedSettings, ['settings-updated'], 'homepage');
+
             console.log('✅ Settings updated and event dispatched');
         } catch (error) {
             console.error('Failed to sync settings:', error);
@@ -163,20 +170,10 @@ export const SettingsProvider: React.FC<SettingsProviderProps> = ({ children }) 
         loadSettingsFromDatabase();
     }, [loadSettingsFromDatabase]);
 
-    // Set up intelligent periodic sync (every 45 seconds, avoid during slide transitions)
+    // Set up intelligent periodic sync (every 45 seconds)
     useEffect(() => {
         const interval = setInterval(() => {
             if (!isUserEditing) {
-                // Check if any slides are currently transitioning or videos are playing
-                const hasActiveVideo = document.querySelector('video:not([paused])');
-                const hasSwiperTransition = document.querySelector('.swiper-slide-active');
-                const isSlideTransitioning = document.querySelector('.swiper-slide-active.swiper-slide-next, .swiper-slide-active.swiper-slide-prev');
-
-                if (hasActiveVideo || isSlideTransitioning) {
-                    console.log('⏸️ SettingsContext: Skipping periodic sync - slide activity detected');
-                    return;
-                }
-
                 console.log('🔄 SettingsContext: Performing intelligent periodic sync...', {
                     currentSettings: displaySettings,
                     isUserEditing

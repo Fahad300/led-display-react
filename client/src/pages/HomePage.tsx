@@ -1,6 +1,7 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useUnified } from '../contexts/UnifiedContext';
 import { useSettings } from '../contexts/SettingsContext';
+import { dispatchSlidesChange, dispatchForceReload } from '../utils/realtimeSync';
 import { Slide, SLIDE_TYPES, ImageSlide as ImageSlideType, VideoSlide as VideoSlideType, NewsSlide, EventSlide as EventSlideType, TeamComparisonSlide as TeamComparisonSlideType, GraphSlide as GraphSlideType, DocumentSlide as DocumentSlideType, TextSlide as TextSlideType, Employee } from '../types';
 import { EventSlideComponent, ImageSlide, CurrentEscalationsSlideComponent, TeamComparisonSlideComponent, GraphSlide, DocumentSlide, TextSlide } from "../components/slides";
 import {
@@ -447,13 +448,15 @@ const HomePage: React.FC = () => {
         updateSlide,
         employees,
         saveToDatabase,
-        syncFromDatabase,
         refreshApiData,
         syncToRemoteDisplays,
         isEditing,
         setIsEditing,
         isDisplayPage,
-        forceMigrateVideoUrls
+        apiPollingState,
+        hasUnsavedChanges,
+        forceApiCheck,
+        clearApiCache
     } = useUnified();
 
     // Debug logging for slides
@@ -473,13 +476,58 @@ const HomePage: React.FC = () => {
             birthdayCount: employees.filter(e => e.isBirthday).length
         });
     }, [employees]);
-    const { displaySettings, updateDisplaySettings } = useSettings();
+    const { displaySettings, updateDisplaySettings, lastSynced } = useSettings();
     const { addToast } = useToast();
     const [isFullscreen, setIsFullscreen] = useState(false);
     const slidesContainerRef = useRef<HTMLDivElement>(null);
 
     // Get active slides directly from context - no local state needed
     const activeSlides = slides.filter(slide => slide.active);
+
+    // Determine if sync is needed
+    const needsSync = useMemo(() => {
+        // Check if there are API changes that need syncing
+        const hasApiChanges = apiPollingState.hasApiChanges;
+
+        // Check if settings need syncing (if lastSynced is null or very old)
+        const settingsNeedSync = !lastSynced ||
+            (Date.now() - lastSynced.getTime()) > 300000; // 5 minutes
+
+        // Check if there are unsaved slide changes
+        const hasSlideChanges = hasUnsavedChanges();
+
+        // Check if we're currently in editing mode (which might have unsaved changes)
+        const isInEditingMode = isEditing;
+
+        const syncNeeded = hasApiChanges || settingsNeedSync || hasSlideChanges || isInEditingMode;
+
+        console.log("🔍 HomePage: Sync detection:", {
+            hasApiChanges,
+            settingsNeedSync,
+            hasSlideChanges,
+            isInEditingMode,
+            syncNeeded
+        });
+
+        return syncNeeded;
+    }, [apiPollingState.hasApiChanges, lastSynced, hasUnsavedChanges, isEditing]);
+
+    // Get sync status message
+    const getSyncStatusMessage = () => {
+        if (apiPollingState.hasApiChanges) {
+            return "API data changes detected - sync available";
+        }
+        if (hasUnsavedChanges()) {
+            return "Slide changes detected - sync available";
+        }
+        if (!lastSynced || (Date.now() - lastSynced.getTime()) > 300000) {
+            return "Settings sync needed";
+        }
+        if (isEditing) {
+            return "Unsaved changes detected";
+        }
+        return "Everything is up to date";
+    };
 
     // Debug log for page detection
     useEffect(() => {
@@ -522,6 +570,24 @@ const HomePage: React.FC = () => {
         newSlides.splice(destinationIndex, 0, removed);
 
         reorderSlides(newSlides);
+
+        // Dispatch real-time sync event to notify DisplayPage immediately
+        dispatchSlidesChange(newSlides, [`slide-reordered-from-${sourceIndex}-to-${destinationIndex}`], 'homepage');
+
+        // Trigger display page refresh when slides are reordered
+        console.log("🔄 HomePage: Triggering display page refresh for slide reorder...");
+        const reloadEvent = new CustomEvent('forceDisplayReload', {
+            detail: {
+                timestamp: new Date().toISOString(),
+                reason: 'slide_reorder',
+                sourceIndex: sourceIndex,
+                destinationIndex: destinationIndex,
+                movedSlideId: removed.id,
+                movedSlideName: removed.name
+            }
+        });
+        window.dispatchEvent(reloadEvent);
+        console.log("✅ HomePage: Display page refresh triggered for slide reorder");
     };
 
     // Handle slide activation toggle
@@ -573,8 +639,25 @@ const HomePage: React.FC = () => {
 
             updateSlide(updatedSlide);
 
+            // Dispatch real-time sync event to notify DisplayPage immediately
+            dispatchSlidesChange(slides.map(s => s.id === slideId ? updatedSlide : s), [`slide-${slideId}-toggled-${newActiveState ? 'active' : 'inactive'}`], 'homepage');
+
             // Update local state to reflect the change immediately
             // Context handles the update automatically
+
+            // Trigger display page refresh when slide active status changes
+            console.log("🔄 HomePage: Triggering display page refresh for slide toggle...");
+            const reloadEvent = new CustomEvent('forceDisplayReload', {
+                detail: {
+                    timestamp: new Date().toISOString(),
+                    reason: 'slide_toggle_homepage',
+                    slideId: updatedSlide.id,
+                    slideName: updatedSlide.name,
+                    active: updatedSlide.active
+                }
+            });
+            window.dispatchEvent(reloadEvent);
+            console.log("✅ HomePage: Display page refresh triggered for slide toggle");
 
             // Event slide states are now managed through the unified context
         }
@@ -1068,7 +1151,7 @@ const HomePage: React.FC = () => {
                 </div>
 
 
-                {/* Force Sync Button */}
+                {/* Intelligent Force Sync Button */}
                 <button
                     type="button"
                     onClick={async () => {
@@ -1076,24 +1159,28 @@ const HomePage: React.FC = () => {
                         try {
                             console.log("🔄 HomePage: Force syncing - updating API data, unified objects, saving to database, syncing displays, and reloading...");
 
-                            // Step 1: Update API data (refresh from external APIs)
-                            console.log("📡 Step 1: Refreshing API data...");
+                            // Step 1: Clear any stale cached data first
+                            console.log("🧹 Step 1: Clearing API cache...");
+                            clearApiCache();
+
+                            // Step 2: Update API data (refresh from external APIs)
+                            console.log("📡 Step 2: Refreshing API data...");
                             await refreshApiData();
 
-                            // Step 2: Update unified objects (sync from database)
-                            console.log("🔄 Step 2: Syncing unified objects from database...");
-                            await syncFromDatabase();
+                            // Step 3: Force API check to ensure fresh data
+                            console.log("🔄 Step 3: Force API check...");
+                            await forceApiCheck();
 
-                            // Step 3: Save current state to database
-                            console.log("💾 Step 3: Saving to database...");
+                            // Step 4: Save current state to database (preserve current settings)
+                            console.log("💾 Step 4: Saving current state to database...");
                             await saveToDatabase();
 
-                            // Step 4: Sync to remote displays
-                            console.log("📡 Step 4: Syncing to remote displays...");
+                            // Step 5: Sync to remote displays
+                            console.log("📡 Step 5: Syncing to remote displays...");
                             await syncToRemoteDisplays();
 
-                            // Step 5: Force reload the display page silently
-                            console.log("🔄 Step 5: Silently reloading display page...");
+                            // Step 6: Force reload the display page silently
+                            console.log("🔄 Step 6: Silently reloading display page...");
 
                             // Dispatch custom event to reload display page
                             const reloadEvent = new CustomEvent('forceDisplayReload', {
@@ -1104,23 +1191,32 @@ const HomePage: React.FC = () => {
                             });
                             window.dispatchEvent(reloadEvent);
 
-                            addToast("✅ Force sync completed - API updated, database saved, displays synced, page reloaded", "success");
+                            addToast("✅ Force sync completed - API updated, settings preserved, displays synced, page reloaded", "success");
                         } catch (error) {
                             console.error("❌ Error during force sync:", error);
                             addToast("❌ Failed to force sync", "error");
                         }
                     }}
-                    className="w-full font-medium py-2 px-4 rounded-lg transition-colors mt-2 flex items-center justify-center gap-2 bg-purple-600 hover:bg-purple-700 text-white"
+                    disabled={!needsSync}
+                    className={`w-full font-medium py-2 px-4 rounded-lg transition-all duration-200 mt-2 flex items-center justify-center gap-2 ${needsSync
+                        ? "bg-green-600 hover:bg-green-700 text-white cursor-pointer shadow-md hover:shadow-lg"
+                        : "bg-gray-300 text-gray-500 cursor-not-allowed"
+                        }`}
                 >
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                     </svg>
-                    Force Sync
+                    {needsSync ? "Sync Now" : "All Synced"}
                 </button>
 
-                {/* Force Sync Description */}
-                <div className="text-xs text-gray-600 mt-2">
-                    <p>Updates all the displays with the latest data from the API</p>
+                {/* Intelligent Sync Status */}
+                <div className={`text-xs mt-2 px-2 py-1 rounded ${needsSync ? "text-green-700 bg-green-50" : "text-gray-600"}`}>
+                    <p className="font-medium">{getSyncStatusMessage()}</p>
+                    {needsSync && (
+                        <p className="text-xs mt-1">
+                            Click to update all displays with latest data
+                        </p>
+                    )}
                 </div>
 
                 {/* Stop Editing Button - Only show when editing */}

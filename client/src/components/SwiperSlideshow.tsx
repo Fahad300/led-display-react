@@ -330,6 +330,21 @@ const SwiperSlideshow: React.FC<{
         }
     }, [effect, hideArrows, hidePagination, isDebugMode]);
 
+    // Force Swiper update when slides change
+    useEffect(() => {
+        if (swiperRef.current && isDebugMode) {
+            console.log('SwiperSlideshow: Slides changed, forcing Swiper update', {
+                activeSlidesCount: activeSlides.length,
+                slideIds: activeSlides.map(s => s.id)
+            });
+        }
+
+        // Force Swiper to re-render when slides change
+        if (swiperRef.current) {
+            swiperRef.current.update();
+        }
+    }, [activeSlides, isDebugMode]);
+
     // Cleanup on unmount
     useEffect(() => {
         return () => {
@@ -368,7 +383,7 @@ const SwiperSlideshow: React.FC<{
     return (
         <div className="relative w-full h-full">
             <Swiper
-                key={`swiper-${effect}-${hideArrows}-${hidePagination}-${activeSlides.length}`}
+                key={`swiper-${effect}-${hideArrows}-${hidePagination}-${activeSlides.map(s => s.id).join(',')}-${activeSlides.length}`}
                 modules={modules}
                 effect={effect}
                 {...getEffectConfig()}

@@ -15,6 +15,7 @@ import DigitalClock from "../components/DigitalClock";
 import SwiperSlideshow from "../components/SwiperSlideshow";
 import { useUnified } from '../contexts/UnifiedContext';
 import { useSettings } from '../contexts/SettingsContext';
+import realtimeSync, { SyncEvent } from '../utils/realtimeSync';
 
 /**
  * DisplayPage: Simple display page with two core functions:
@@ -40,6 +41,7 @@ const DisplayPage: React.FC = () => {
                 // Get latest unified object
                 await syncFromDatabase();
                 console.log("✅ DisplayPage: Latest data loaded successfully");
+                console.log("🖥️ DisplayPage: Current displaySettings:", displaySettings);
             } catch (error) {
                 console.error("❌ DisplayPage: Failed to load latest data:", error);
             }
@@ -48,6 +50,11 @@ const DisplayPage: React.FC = () => {
         getLatestData();
     }, [syncSettings, syncFromDatabase]);
 
+    // Debug: Log displaySettings changes
+    useEffect(() => {
+        console.log("🖥️ DisplayPage: displaySettings changed:", displaySettings);
+    }, [displaySettings]);
+
     // Force Swiper refresh when slides data changes
     useEffect(() => {
         console.log("🔄 DisplayPage: Slides data changed, Swiper will auto-refresh", {
@@ -55,65 +62,171 @@ const DisplayPage: React.FC = () => {
             activeSlides: activeSlides.length,
             slideIds: activeSlides.map(s => s.id)
         });
-    }, [slides, activeSlides]);
 
-    // Gentle periodic refresh for remote display (every 60 seconds, only when no slide is actively playing)
-    useEffect(() => {
-        const refreshInterval = setInterval(async () => {
-            // Check if any slide is currently playing by looking for video elements or active timers
-            const hasActiveVideo = document.querySelector('video:not([paused])');
-            const hasSwiperTransition = document.querySelector('.swiper-slide-active .swiper-slide-duplicate-active');
-
-            if (hasActiveVideo || hasSwiperTransition) {
-                console.log("⏸️ DisplayPage: Skipping periodic refresh - slide actively playing");
-                return;
-            }
-
-            console.log("🔄 DisplayPage: Gentle periodic refresh for remote display...");
-            try {
-                // Only sync settings, don't force slide data refresh unless there are actual changes
-                await syncSettings();
-
-                // Check if there are actual data changes before syncing
-                const currentDataHash = JSON.stringify(slides.map(s => ({ id: s.id, active: s.active, name: s.name })));
-                const lastHash = localStorage.getItem('lastDisplayDataHash');
-
-                if (currentDataHash !== lastHash) {
-                    console.log("📊 DisplayPage: Data changes detected, syncing from database");
+        // If we have very few active slides compared to total slides, force a refresh
+        // This handles cases where the database might have stale data
+        if (slides.length > 0 && activeSlides.length < slides.length * 0.5) {
+            console.log("⚠️ DisplayPage: Detected potential data mismatch, forcing refresh...");
+            setTimeout(async () => {
+                try {
+                    console.log("🔄 DisplayPage: Forcing data refresh due to low active slide count...");
                     await syncFromDatabase();
-                    localStorage.setItem('lastDisplayDataHash', currentDataHash);
-                } else {
-                    console.log("✅ DisplayPage: No data changes, skipping database sync");
+                    console.log("✅ DisplayPage: Forced refresh completed");
+                } catch (error) {
+                    console.error("❌ DisplayPage: Forced refresh failed:", error);
                 }
+            }, 1000);
+        }
+    }, [slides, activeSlides, syncFromDatabase]);
 
-                console.log("✅ DisplayPage: Gentle periodic refresh completed");
-            } catch (error) {
-                console.error("❌ DisplayPage: Periodic refresh failed:", error);
-            }
-        }, 60000); // Increased to 60 seconds to be less disruptive
-
-        return () => clearInterval(refreshInterval);
-    }, [syncSettings, syncFromDatabase, slides]);
-
-    // Listen for force reload event from home page
+    // Real-time sync - listen for immediate updates from HomePage
     useEffect(() => {
-        const handleForceReload = (event: Event) => {
+        console.log("🔄 DisplayPage: Setting up real-time sync listeners...");
+
+        // Listen for slides changes from HomePage
+        const unsubscribeSlides = realtimeSync.addEventListener('slides', async (event: SyncEvent) => {
+            console.log("🔄 DisplayPage: Slides data changed, Swiper will auto-refresh", {
+                totalSlides: event.data.totalCount,
+                activeSlides: event.data.activeCount,
+                slideIds: event.data.slides.map((s: any) => s.id),
+                changes: event.data.changes,
+                source: event.source
+            });
+
+            try {
+                // Sync from database to get the latest data
+                await syncFromDatabase();
+                console.log("✅ DisplayPage: Successfully synced slides from database");
+            } catch (error) {
+                console.error("❌ DisplayPage: Failed to sync slides:", error);
+            }
+        });
+
+        // Listen for settings changes from HomePage
+        const unsubscribeSettings = realtimeSync.addEventListener('settings', async (event: SyncEvent) => {
+            console.log("🔄 DisplayPage: Settings changed, updating display", {
+                changes: event.data.changes,
+                newSettings: event.data.displaySettings,
+                source: event.source
+            });
+
+            try {
+                // Sync settings from database
+                await syncSettings();
+                console.log("✅ DisplayPage: Successfully synced settings from database");
+            } catch (error) {
+                console.error("❌ DisplayPage: Failed to sync settings:", error);
+            }
+        });
+
+        // Listen for API data changes
+        const unsubscribeApiData = realtimeSync.addEventListener('api-data', async (event: SyncEvent) => {
+            console.log("🔄 DisplayPage: API data changed, updating display", {
+                employeesCount: event.data.employees?.length || 0,
+                hasGraphData: !!event.data.graphData,
+                changes: event.data.changes,
+                source: event.source
+            });
+
+            try {
+                // Sync from database to get the latest API data
+                await syncFromDatabase();
+                console.log("✅ DisplayPage: Successfully synced API data from database");
+            } catch (error) {
+                console.error("❌ DisplayPage: Failed to sync API data:", error);
+            }
+        });
+
+        // Listen for force reload events
+        const unsubscribeForceReload = realtimeSync.addEventListener('force-reload', async (event: SyncEvent) => {
+            console.log("🔄 DisplayPage: Force reload requested", {
+                reason: event.data.reason,
+                source: event.source
+            });
+
+            try {
+                // Sync both settings and data
+                await Promise.all([syncSettings(), syncFromDatabase()]);
+                console.log("✅ DisplayPage: Force reload completed successfully");
+            } catch (error) {
+                console.error("❌ DisplayPage: Force reload failed:", error);
+            }
+        });
+
+        // Fallback: Periodic sync every 5 minutes as backup (much less frequent)
+        const fallbackInterval = setInterval(async () => {
+            console.log("🔄 DisplayPage: Fallback sync (every 5 minutes)...");
+            try {
+                await Promise.all([syncSettings(), syncFromDatabase()]);
+                console.log("✅ DisplayPage: Fallback sync completed");
+            } catch (error) {
+                console.error("❌ DisplayPage: Fallback sync failed:", error);
+            }
+        }, 300000); // 5 minutes
+
+        console.log("✅ DisplayPage: Real-time sync listeners established");
+
+        // Cleanup function
+        return () => {
+            console.log("🧹 DisplayPage: Cleaning up real-time sync listeners");
+            unsubscribeSlides();
+            unsubscribeSettings();
+            unsubscribeApiData();
+            unsubscribeForceReload();
+            clearInterval(fallbackInterval);
+        };
+    }, [syncSettings, syncFromDatabase]);
+
+    // Listen for settings changes and force reload events from home page
+    useEffect(() => {
+        const handleSettingsChanged = async (event: Event) => {
+            const customEvent = event as CustomEvent;
+            console.log("⚙️ DisplayPage: Settings changed event received", customEvent.detail);
+
+            // Since DisplayPage might be in a different tab, we need to sync from database
+            // to get the latest settings AND slides data that were just saved together
+            try {
+                console.log("🔄 DisplayPage: Syncing settings and slides from database...");
+                await syncSettings();
+                await syncFromDatabase(); // Also sync slides data since they're saved together
+                console.log("✅ DisplayPage: Settings and slides synced successfully");
+
+                // Log the current state after sync
+                console.log("📊 DisplayPage: Current state after sync:", {
+                    totalSlides: slides.length,
+                    activeSlides: slides.filter(s => s.active).length,
+                    slideIds: slides.filter(s => s.active).map(s => s.id)
+                });
+            } catch (error) {
+                console.error("❌ DisplayPage: Failed to sync settings and slides:", error);
+            }
+        };
+
+        const handleForceReload = async (event: Event) => {
             const customEvent = event as CustomEvent;
             console.log("🔄 DisplayPage: Force reload event received", customEvent.detail);
             try {
-                // Reload the page silently
-                window.location.reload();
+                // Refresh data instead of full page reload
+                console.log("🔄 DisplayPage: Refreshing data from database...");
+                await syncSettings();
+                await syncFromDatabase();
+                console.log("✅ DisplayPage: Data refreshed successfully without page reload");
             } catch (error) {
-                console.error("❌ DisplayPage: Failed to reload:", error);
+                console.error("❌ DisplayPage: Failed to refresh data:", error);
+                // Fallback to page reload if data refresh fails
+                console.log("🔄 DisplayPage: Falling back to page reload...");
+                window.location.reload();
             }
         };
 
+        window.addEventListener('settingsChanged', handleSettingsChanged);
         window.addEventListener('forceDisplayReload', handleForceReload);
 
         return () => {
+            window.removeEventListener('settingsChanged', handleSettingsChanged);
             window.removeEventListener('forceDisplayReload', handleForceReload);
         };
-    }, []);
+    }, [syncSettings, syncFromDatabase]);
 
     // Render slide content
     const renderSlideContent = (slide: any, onVideoEnd?: () => void) => {

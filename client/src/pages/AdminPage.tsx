@@ -896,6 +896,20 @@ const AdminPage: React.FC = () => {
             if (existingSlide) {
                 // Update existing slide
                 updateSlide(updatedSlide);
+
+                // Trigger display page refresh to show the updated slide
+                console.log("🔄 AdminPage: Triggering display page refresh for updated slide...");
+                const reloadEvent = new CustomEvent('forceDisplayReload', {
+                    detail: {
+                        timestamp: new Date().toISOString(),
+                        reason: 'slide_updated',
+                        slideId: updatedSlide.id,
+                        slideName: updatedSlide.name
+                    }
+                });
+                window.dispatchEvent(reloadEvent);
+                console.log("✅ AdminPage: Display page refresh triggered for updated slide");
+
                 addToast("Slide updated successfully", "success");
             } else {
                 // Add new slide to state
@@ -913,6 +927,19 @@ const AdminPage: React.FC = () => {
                     console.log("🔄 AdminPage: Saving new slide to database...");
                     await saveToDatabase(newSlides);
                     console.log("✅ AdminPage: New slide saved to database successfully");
+
+                    // Trigger display page refresh to show the new slide
+                    console.log("🔄 AdminPage: Triggering display page refresh...");
+                    const reloadEvent = new CustomEvent('forceDisplayReload', {
+                        detail: {
+                            timestamp: new Date().toISOString(),
+                            reason: 'new_slide_added',
+                            slideId: updatedSlide.id,
+                            slideName: updatedSlide.name
+                        }
+                    });
+                    window.dispatchEvent(reloadEvent);
+                    console.log("✅ AdminPage: Display page refresh triggered");
                 } catch (error) {
                     console.error("❌ AdminPage: Failed to save new slide:", error);
                     addToast("Failed to save slide to database", "error");
@@ -935,12 +962,54 @@ const AdminPage: React.FC = () => {
         if (slide) {
             try {
                 updateSlide({ ...slide, active });
+
+                // Trigger display page refresh when slide active status changes
+                console.log("🔄 AdminPage: Triggering display page refresh for slide toggle...");
+                const reloadEvent = new CustomEvent('forceDisplayReload', {
+                    detail: {
+                        timestamp: new Date().toISOString(),
+                        reason: 'slide_toggle',
+                        slideId: slide.id,
+                        slideName: slide.name,
+                        active: active
+                    }
+                });
+                window.dispatchEvent(reloadEvent);
+                console.log("✅ AdminPage: Display page refresh triggered for slide toggle");
+
                 addToast(`Slide ${active ? "activated" : "deactivated"} successfully`, "success");
             } catch (error) {
                 addToast(error instanceof Error ? error.message : "Failed to update slide status", "error");
             }
         }
     }, [slides, updateSlide, addToast]);
+
+    const handleDeleteSlide = useCallback(async (id: string) => {
+        const slide = slides.find((s) => s.id === id);
+        if (slide) {
+            try {
+                setSlides(prev => prev.filter(slide => slide.id !== id));
+                setDeleteConfirmId(null);
+
+                // Trigger display page refresh when slide is deleted
+                console.log("🔄 AdminPage: Triggering display page refresh for slide deletion...");
+                const reloadEvent = new CustomEvent('forceDisplayReload', {
+                    detail: {
+                        timestamp: new Date().toISOString(),
+                        reason: 'slide_deleted',
+                        slideId: slide.id,
+                        slideName: slide.name
+                    }
+                });
+                window.dispatchEvent(reloadEvent);
+                console.log("✅ AdminPage: Display page refresh triggered for slide deletion");
+
+                addToast("Slide deleted successfully", "success");
+            } catch (error) {
+                addToast(error instanceof Error ? error.message : "Failed to delete slide", "error");
+            }
+        }
+    }, [slides, setSlides, setDeleteConfirmId, addToast]);
 
     // Show loading state while slides are being loaded
     if (isLoading) {
@@ -1016,10 +1085,7 @@ const AdminPage: React.FC = () => {
                                         setSelectedSlide(slide);
                                         setIsModalOpen(true);
                                     }}
-                                    onDelete={(id) => {
-                                        setSlides(prev => prev.filter(slide => slide.id !== id));
-                                        setDeleteConfirmId(null);
-                                    }}
+                                    onDelete={handleDeleteSlide}
                                     onToggleActive={handleToggleActive}
                                 />
                             ))}
@@ -1053,10 +1119,7 @@ const AdminPage: React.FC = () => {
                                     setSelectedSlide(slide);
                                     setIsModalOpen(true);
                                 }}
-                                onDelete={(id) => {
-                                    setSlides(prev => prev.filter(slide => slide.id !== id));
-                                    setDeleteConfirmId(null);
-                                }}
+                                onDelete={handleDeleteSlide}
                                 onToggleActive={handleToggleActive}
                             />
                         ))}
