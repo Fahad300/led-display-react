@@ -1,6 +1,7 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { NewsSlide as NewsSlideType } from "../../types";
 import { MediaSelector } from "../MediaSelector";
+import { getOptimizedFileUrl } from "../../utils/localFileServer";
 
 interface NewsSlideProps {
     slide: NewsSlideType;
@@ -14,6 +15,54 @@ interface NewsSlideProps {
 export const NewsSlide: React.FC<NewsSlideProps> = ({ slide, onUpdate }) => {
     const [isMediaSelectorOpen, setIsMediaSelectorOpen] = useState(false);
     const [isNewsImageSelectorOpen, setIsNewsImageSelectorOpen] = useState(false);
+    const [currentBackgroundUrl, setCurrentBackgroundUrl] = useState<string>('');
+    const [currentNewsImageUrl, setCurrentNewsImageUrl] = useState<string>('');
+
+    /**
+     * Get optimized URLs for background and news images
+     */
+    const getBackgroundUrl = useCallback(async () => {
+        if (!slide.data.backgroundImage) return '';
+        try {
+            const optimizedUrl = await getOptimizedFileUrl(slide.data.backgroundImage);
+            console.log(`🖼️ Using optimized background URL: ${optimizedUrl}`);
+            return optimizedUrl;
+        } catch (error) {
+            console.warn(`⚠️ Failed to get optimized background URL:`, error);
+            return slide.data.backgroundImage;
+        }
+    }, [slide.data.backgroundImage]);
+
+    const getNewsImageUrl = useCallback(async () => {
+        if (!slide.data.newsImage) return '';
+        try {
+            const optimizedUrl = await getOptimizedFileUrl(slide.data.newsImage);
+            console.log(`🖼️ Using optimized news image URL: ${optimizedUrl}`);
+            return optimizedUrl;
+        } catch (error) {
+            console.warn(`⚠️ Failed to get optimized news image URL:`, error);
+            return slide.data.newsImage;
+        }
+    }, [slide.data.newsImage]);
+
+    useEffect(() => {
+        const initializeImages = async () => {
+            try {
+                const [backgroundUrl, newsImageUrl] = await Promise.all([
+                    getBackgroundUrl(),
+                    getNewsImageUrl()
+                ]);
+                setCurrentBackgroundUrl(backgroundUrl);
+                setCurrentNewsImageUrl(newsImageUrl);
+            } catch (error) {
+                console.error('Error initializing news slide images:', error);
+                setCurrentBackgroundUrl(slide.data.backgroundImage);
+                setCurrentNewsImageUrl(slide.data.newsImage || '');
+            }
+        };
+
+        initializeImages();
+    }, [getBackgroundUrl, getNewsImageUrl, slide.data.backgroundImage, slide.data.newsImage]);
 
     const handleBackgroundSelect = (url: string) => {
         onUpdate({
@@ -58,7 +107,7 @@ export const NewsSlide: React.FC<NewsSlideProps> = ({ slide, onUpdate }) => {
         <>
             <div className="relative w-full h-full overflow-hidden">
                 <img
-                    src={slide.data.backgroundImage}
+                    src={currentBackgroundUrl || undefined}
                     alt="Background"
                     className="w-full h-full object-cover"
                     onError={(e) => {
@@ -131,10 +180,10 @@ export const NewsSlide: React.FC<NewsSlideProps> = ({ slide, onUpdate }) => {
                     <div className="text-xs text-red-500">
                         NewsImage debug: {JSON.stringify(slide.data.newsImage)}
                     </div>
-                    {slide.data.newsImage && (
+                    {currentNewsImageUrl && (
                         <div className="mt-6 flex justify-center">
                             <img
-                                src={slide.data.newsImage}
+                                src={currentNewsImageUrl}
                                 alt="News"
                                 className="w-48 h-48 rounded-full object-cover"
                             />

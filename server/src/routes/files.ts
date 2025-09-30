@@ -122,7 +122,31 @@ router.post("/upload", isAuthenticated, upload.single("file"), handleMulterError
     }
 });
 
-// Serve file from file system
+// Get file info (filename, etc.) for optimization
+router.get("/:id/info", async (req, res) => {
+    try {
+        const fileId = req.params.id;
+        const file = await FileService.getFileById(fileId);
+
+        if (!file) {
+            return res.status(404).json({ error: "File not found" });
+        }
+
+        // Return file metadata for URL optimization
+        res.json({
+            id: file.id,
+            filename: file.filename,
+            originalName: file.originalName,
+            mimeType: file.mimeType,
+            size: file.size
+        });
+    } catch (error) {
+        logger.error(`Error getting file info: ${req.params.id}`, error);
+        res.status(500).json({ error: "Internal server error" });
+    }
+});
+
+// Serve file from file system with range request support for video streaming
 router.get("/:id", async (req, res) => {
     try {
         const fileId = req.params.id;
@@ -135,16 +159,62 @@ router.get("/:id", async (req, res) => {
             return res.status(404).json({ error: "File not found" });
         }
 
-        logger.info(`File served successfully from file system: ${fileData.filename} (${fileData.buffer.length} bytes), MIME: ${fileData.mimeType}`);
+        const { buffer, mimeType, filename } = fileData;
+        const fileSize = buffer.length;
 
-        // Set appropriate headers
-        res.setHeader("Content-Type", fileData.mimeType);
-        res.setHeader("Content-Disposition", `inline; filename="${fileData.filename}"`);
-        res.setHeader("Cache-Control", "public, max-age=31536000"); // Cache for 1 year
-        res.setHeader("Access-Control-Allow-Origin", "*"); // Allow CORS for file serving
+        // Handle range requests for video streaming
+        if (mimeType.startsWith('video/') && req.headers.range) {
+            logger.info(`Range request for video: ${filename}, Range: ${req.headers.range}`);
 
-        // Send file buffer
-        res.send(fileData.buffer);
+            // Parse range header
+            const range = req.headers.range;
+            const parts = range.replace(/bytes=/, "").split("-");
+            const start = parseInt(parts[0], 10);
+            const end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1;
+            const chunkSize = (end - start) + 1;
+
+            // Validate range
+            if (start >= fileSize || end >= fileSize) {
+                res.status(416).setHeader("Content-Range", `bytes */${fileSize}`);
+                return res.end();
+            }
+
+            logger.info(`Serving video chunk: ${start}-${end}/${fileSize} (${chunkSize} bytes)`);
+
+            // Set partial content headers
+            res.status(206);
+            res.setHeader("Content-Range", `bytes ${start}-${end}/${fileSize}`);
+            res.setHeader("Accept-Ranges", "bytes");
+            res.setHeader("Content-Length", chunkSize);
+            res.setHeader("Content-Type", mimeType);
+            res.setHeader("Cache-Control", "public, max-age=3600"); // Cache chunks for 1 hour
+            res.setHeader("Access-Control-Allow-Origin", "*");
+
+            // Send the requested chunk
+            const chunk = buffer.slice(start, end + 1);
+            res.end(chunk);
+
+        } else {
+            // Regular file serving (non-video or no range request)
+            logger.info(`File served successfully from file system: ${filename} (${fileSize} bytes), MIME: ${mimeType}`);
+
+            // Set appropriate headers
+            res.setHeader("Content-Type", mimeType);
+            res.setHeader("Content-Disposition", `inline; filename="${filename}"`);
+            res.setHeader("Access-Control-Allow-Origin", "*"); // Allow CORS for file serving
+
+            // For videos, enable range requests
+            if (mimeType.startsWith('video/')) {
+                res.setHeader("Accept-Ranges", "bytes");
+                res.setHeader("Cache-Control", "public, max-age=3600"); // Cache videos for 1 hour
+                res.setHeader("Content-Length", fileSize);
+            } else {
+                res.setHeader("Cache-Control", "public, max-age=31536000"); // Cache non-videos for 1 year
+            }
+
+            // Send file buffer
+            res.send(buffer);
+        }
 
     } catch (error) {
         logger.error("Error serving file from file system:", error);

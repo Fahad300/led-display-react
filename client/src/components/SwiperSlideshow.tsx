@@ -3,6 +3,7 @@ import { Slide, SLIDE_TYPES } from "../types";
 import { Swiper, SwiperSlide } from 'swiper/react';
 import { EffectFade, Navigation, Pagination, Autoplay } from "swiper/modules";
 import type { Swiper as SwiperType } from "swiper";
+import { preloadVideos, extractFileId } from '../utils/localFileServer';
 import "swiper/css";
 import "swiper/css/effect-fade";
 import "swiper/css/navigation";
@@ -31,6 +32,9 @@ const SwiperSlideshow: React.FC<{
 }> = ({ slides, renderSlideContent, onSlideChange, hidePagination = false, hideArrows = false, effect = "slide", isFullscreen = false }) => {
     // Debug mode - only log when explicitly enabled
     const isDebugMode = process.env.REACT_APP_DEBUG_SWIPER_SLIDESHOW === 'true';
+
+    // Video preloading cache
+    const preloadedVideos = useRef<Map<string, HTMLVideoElement>>(new Map());
     const swiperRef = useRef<SwiperType | null>(null);
     const autoplayTimeoutRef = useRef<NodeJS.Timeout | null>(null);
     const countdownIntervalRef = useRef<NodeJS.Timeout | null>(null);
@@ -42,6 +46,33 @@ const SwiperSlideshow: React.FC<{
     const activeSlides = useMemo(() => {
         return slides.filter(slide => slide.active);
     }, [slides]);
+
+    // Preload next video slides for smoother transitions using optimized loader
+    const preloadNextVideos = useCallback(async () => {
+        if (activeSlides.length === 0) return;
+
+        const nextIndex = (currentSlideIndex + 1) % activeSlides.length;
+        const nextNextIndex = (currentSlideIndex + 2) % activeSlides.length;
+
+        const videoUrls: string[] = [];
+
+        [nextIndex, nextNextIndex].forEach(index => {
+            const slide = activeSlides[index];
+            if (slide?.type === SLIDE_TYPES.VIDEO && slide.data.videoUrl) {
+                videoUrls.push(slide.data.videoUrl);
+            }
+        });
+
+        if (videoUrls.length > 0) {
+            try {
+                console.log(`🚀 Preloading ${videoUrls.length} videos for upcoming slides`);
+                await preloadVideos(videoUrls);
+                console.log(`✅ Successfully preloaded ${videoUrls.length} videos`);
+            } catch (error) {
+                console.warn('Failed to preload some videos:', error);
+            }
+        }
+    }, [activeSlides, currentSlideIndex]);
 
     // Get the appropriate effect module
     const getEffectModule = () => {
@@ -165,6 +196,9 @@ const SwiperSlideshow: React.FC<{
                 loopedSlides: swiper.loopedSlides || 0
             });
         }
+
+        // Preload next videos for smoother transitions
+        preloadNextVideos();
 
         // Start custom autoplay for the new slide
         startCustomAutoplay(newIndex);
@@ -352,6 +386,12 @@ const SwiperSlideshow: React.FC<{
             if (swiperRef.current) {
                 swiperRef.current.autoplay?.stop();
             }
+            // Clean up preloaded videos
+            preloadedVideos.current.forEach((video) => {
+                video.src = '';
+                video.load();
+            });
+            preloadedVideos.current.clear();
         };
     }, [clearAllTimers]);
 

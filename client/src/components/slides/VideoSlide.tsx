@@ -1,6 +1,7 @@
 import React, { useRef, useEffect, useState, useCallback } from "react";
 import { VideoSlide as VideoSlideType } from "../../types";
 import { MediaSelector } from "../MediaSelector";
+import { getOptimizedVideoUrl, isVideoCached, extractFileId } from "../../utils/localFileServer";
 
 interface VideoSlideProps {
     slide: VideoSlideType;
@@ -14,21 +15,28 @@ export const VideoSlide: React.FC<VideoSlideProps> = ({ slide, onUpdate, onVideo
     const [isMediaSelectorOpen, setIsMediaSelectorOpen] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
     const [hasError, setHasError] = useState(false);
+    const [loadingProgress, setLoadingProgress] = useState(0);
+    const [isPreloading, setIsPreloading] = useState(false);
+    const [currentVideoUrl, setCurrentVideoUrl] = useState<string>('');
 
-    // Get video URL - now all URLs use file system serving
-    const getVideoUrl = useCallback(() => {
+    // Get optimized video URL with caching and local file serving
+    const getVideoUrl = useCallback(async () => {
         if (!slide.data.videoUrl) return '';
 
-        // Ensure URL uses port 5000 (file system serving)
-        if (slide.data.videoUrl.includes('/api/files/')) {
-            const fileId = slide.data.videoUrl.split('/api/files/')[1];
-            if (fileId) {
-                return `http://localhost:5000/api/files/${fileId}`;
-            }
+        try {
+            // Use the optimized video loader for faster loading
+            const optimizedUrl = await getOptimizedVideoUrl(slide.data.videoUrl);
+            console.log(`🎬 Video URL for ${slide.name}:`, {
+                original: slide.data.videoUrl,
+                optimized: optimizedUrl,
+                cached: isVideoCached(slide.data.videoUrl)
+            });
+            return optimizedUrl;
+        } catch (error) {
+            console.warn('Failed to get optimized video URL, using original:', error);
+            return slide.data.videoUrl;
         }
-
-        return slide.data.videoUrl;
-    }, [slide.data.videoUrl]);
+    }, [slide.data.videoUrl, slide.name]);
 
     // Enhanced play attempt with better error handling
     const attemptPlay = useCallback(async () => {
@@ -142,6 +150,27 @@ export const VideoSlide: React.FC<VideoSlideProps> = ({ slide, onUpdate, onVideo
         setHasError(false);
     }, [slide.name]);
 
+    const handleProgress = useCallback(() => {
+        const video = videoRef.current;
+        if (!video) return;
+
+        // Calculate loading progress based on buffered ranges
+        if (video.buffered.length > 0) {
+            const bufferedEnd = video.buffered.end(video.buffered.length - 1);
+            const duration = video.duration;
+            if (duration > 0) {
+                const progress = Math.round((bufferedEnd / duration) * 100);
+                setLoadingProgress(progress);
+
+                // Consider video ready when we have at least 25% buffered
+                if (progress >= 25 && isLoading) {
+                    console.log(`Video buffered ${progress}% - ready to play:`, slide.name);
+                    setIsLoading(false);
+                }
+            }
+        }
+    }, [slide.name, isLoading]);
+
     const handleWaiting = useCallback(() => {
         console.log("Video waiting/buffering for slide:", slide.name);
         setIsLoading(true);
@@ -217,23 +246,36 @@ export const VideoSlide: React.FC<VideoSlideProps> = ({ slide, onUpdate, onVideo
         setIsMediaSelectorOpen(false);
     };
 
-    // Initialize video when URL changes
+    // Initialize video when URL changes (now async)
     useEffect(() => {
-        const videoUrl = getVideoUrl();
-        if (videoRef.current && videoUrl) {
-            console.log("Initializing video for slide:", slide.name, "using URL:", videoUrl);
-            setIsLoading(true);
-            setHasError(false);
+        const initializeVideo = async () => {
+            if (!videoRef.current) return;
 
-            // Clear any existing fallback timeout
-            if (fallbackTimeoutRef.current) {
-                clearTimeout(fallbackTimeoutRef.current);
-                fallbackTimeoutRef.current = null;
+            try {
+                const videoUrl = await getVideoUrl();
+                if (videoUrl) {
+                    console.log("🎬 Initializing optimized video for slide:", slide.name);
+                    setIsLoading(true);
+                    setHasError(false);
+
+                    // Clear any existing fallback timeout
+                    if (fallbackTimeoutRef.current) {
+                        clearTimeout(fallbackTimeoutRef.current);
+                        fallbackTimeoutRef.current = null;
+                    }
+
+                    // Set the optimized URL in state and load
+                    setCurrentVideoUrl(videoUrl);
+                    videoRef.current.load();
+                }
+            } catch (error) {
+                console.error("Failed to initialize video:", error);
+                setHasError(true);
+                setIsLoading(false);
             }
+        };
 
-            // Reset video element
-            videoRef.current.load();
-        }
+        initializeVideo();
     }, [getVideoUrl, slide.name]);
 
     // Cleanup on unmount
@@ -273,7 +315,7 @@ export const VideoSlide: React.FC<VideoSlideProps> = ({ slide, onUpdate, onVideo
                 <video
                     ref={videoRef}
                     data-slide-id={slide.id}
-                    src={getVideoUrl()}
+                    src={currentVideoUrl || undefined}
                     className="w-full h-full object-cover relative z-10"
                     autoPlay={onVideoEnd ? true : (slide.data.autoplay ?? true)}
                     loop={onVideoEnd ? false : (slide.data.loop ?? false)}
@@ -281,6 +323,7 @@ export const VideoSlide: React.FC<VideoSlideProps> = ({ slide, onUpdate, onVideo
                     playsInline
                     preload="auto"
                     controls={false}
+                    crossOrigin="anonymous"
                     webkit-playsinline="true"
                     onError={handleError}
                     onLoadStart={handleLoadStart}
@@ -293,14 +336,28 @@ export const VideoSlide: React.FC<VideoSlideProps> = ({ slide, onUpdate, onVideo
                     onSeeking={handleSeeking}
                     onSeeked={handleSeeked}
                     onEnded={handleEnded}
+                    onProgress={handleProgress}
                 />
 
-                {/* Loading indicator */}
-                {isLoading && (
+                {/* Loading indicator with progress */}
+                {(isLoading || isPreloading) && (
                     <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50">
                         <div className="text-white text-center">
                             <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-white mx-auto mb-4"></div>
-                            <p className="text-lg">Loading video...</p>
+                            <p className="text-lg mb-2">
+                                {isPreloading ? "Preloading video..." : "Loading video..."}
+                            </p>
+                            {loadingProgress > 0 && (
+                                <div className="w-64 mx-auto">
+                                    <div className="bg-gray-700 rounded-full h-2 mb-2">
+                                        <div
+                                            className="bg-blue-500 h-2 rounded-full transition-all duration-300"
+                                            style={{ width: `${loadingProgress}%` }}
+                                        ></div>
+                                    </div>
+                                    <p className="text-sm text-gray-300">{loadingProgress}% buffered</p>
+                                </div>
+                            )}
                         </div>
                     </div>
                 )}

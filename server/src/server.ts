@@ -67,6 +67,22 @@ app.use(express.json());
 // Initialize passport
 initializePassport();
 
+// Static file serving for uploads (optimized for local development)
+app.use("/static/uploads", express.static(path.join(__dirname, "../uploads"), {
+    // Enable range requests for video streaming
+    acceptRanges: true,
+    // Cache static files for 1 hour
+    maxAge: '1h',
+    // Set proper headers for video files
+    setHeaders: (res, filePath) => {
+        const ext = path.extname(filePath).toLowerCase();
+        if (['.mp4', '.webm', '.avi', '.mov'].includes(ext)) {
+            res.setHeader('Accept-Ranges', 'bytes');
+            res.setHeader('Cache-Control', 'public, max-age=3600');
+        }
+    }
+}));
+
 // Use routes
 app.use("/api/auth", authRoutes);
 app.use("/api/admin", adminRoutes);

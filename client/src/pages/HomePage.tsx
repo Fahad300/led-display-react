@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useUnified } from '../contexts/UnifiedContext';
 import { useSettings } from '../contexts/SettingsContext';
-import { dispatchSlidesChange, dispatchForceReload } from '../utils/realtimeSync';
+import { dispatchSlidesChange } from '../utils/realtimeSync';
 import { Slide, SLIDE_TYPES, ImageSlide as ImageSlideType, VideoSlide as VideoSlideType, NewsSlide, EventSlide as EventSlideType, TeamComparisonSlide as TeamComparisonSlideType, GraphSlide as GraphSlideType, DocumentSlide as DocumentSlideType, TextSlide as TextSlideType, Employee } from '../types';
 import { EventSlideComponent, ImageSlide, CurrentEscalationsSlideComponent, TeamComparisonSlideComponent, GraphSlide, DocumentSlide, TextSlide } from "../components/slides";
 import {

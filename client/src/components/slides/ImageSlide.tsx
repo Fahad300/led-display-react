@@ -1,6 +1,7 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { ImageSlide as ImageSlideType } from "../../types";
 import { MediaSelector } from "../MediaSelector";
+import { getOptimizedFileUrl } from "../../utils/localFileServer";
 
 interface ImageSlideProps {
     slide: ImageSlideType;
@@ -13,7 +14,38 @@ interface ImageSlideProps {
  */
 export const ImageSlide: React.FC<ImageSlideProps> = ({ slide, onUpdate }) => {
     const [isMediaSelectorOpen, setIsMediaSelectorOpen] = useState(false);
+    const [currentImageUrl, setCurrentImageUrl] = useState<string>('');
     const { imageUrl, caption } = slide.data;
+
+    /**
+     * Get optimized image URL using static file serving when available
+     */
+    const getImageUrl = useCallback(async () => {
+        if (!imageUrl) return '';
+
+        try {
+            const optimizedUrl = await getOptimizedFileUrl(imageUrl);
+            console.log(`🖼️ Using optimized image URL: ${optimizedUrl} for file: ${imageUrl}`);
+            return optimizedUrl;
+        } catch (error) {
+            console.warn(`⚠️ Failed to get optimized image URL for ${imageUrl}:`, error);
+            return imageUrl;
+        }
+    }, [imageUrl]);
+
+    useEffect(() => {
+        const initializeImage = async () => {
+            try {
+                const resolvedImageUrl = await getImageUrl();
+                setCurrentImageUrl(resolvedImageUrl);
+            } catch (error) {
+                console.error('Error initializing image:', error);
+                setCurrentImageUrl(imageUrl);
+            }
+        };
+
+        initializeImage();
+    }, [getImageUrl, imageUrl]);
 
     const handleImageSelect = (url: string) => {
         if (onUpdate) {
@@ -74,7 +106,7 @@ export const ImageSlide: React.FC<ImageSlideProps> = ({ slide, onUpdate }) => {
         <>
             <div className="relative w-full h-full overflow-hidden">
                 <img
-                    src={imageUrl}
+                    src={currentImageUrl || undefined}
                     alt={caption || "Slide image"}
                     className="w-full h-full object-cover"
                     onLoad={() => {
