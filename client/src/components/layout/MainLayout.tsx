@@ -81,6 +81,7 @@ const MainLayout: React.FC<MainLayoutProps> = () => {
                             <Link to="/display" className={`px-3 py-1 rounded text-sm font-medium text-white hover:bg-persivia-blue hover:text-persivia-light-teal transition-colors ${isActive('/display') ? 'bg-persivia-blue' : ''}`}>Display</Link>
                             <Link to="/admin" className={`px-3 py-1 rounded text-sm font-medium text-white hover:bg-persivia-blue hover:text-persivia-light-teal transition-colors ${isActive('/admin') ? 'bg-persivia-blue' : ''}`}>Admin</Link>
                             <Link to="/media" className={`px-3 py-1 rounded text-sm font-medium text-white hover:bg-persivia-blue hover:text-persivia-light-teal transition-colors ${isActive('/media') ? 'bg-persivia-blue' : ''}`}>Media</Link>
+                            <Link to="/link" className={`px-3 py-1 rounded text-sm font-medium text-white hover:bg-persivia-blue hover:text-persivia-light-teal transition-colors ${isActive('/link') ? 'bg-persivia-blue' : ''}`}>Link</Link>
                             {/* User Avatar and Dropdown */}
                             <div className="relative" ref={dropdownRef}>
                                 <button

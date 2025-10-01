@@ -1,5 +1,5 @@
 import React, { useRef, useEffect, useCallback, useMemo, useState } from "react";
-import { Slide, SLIDE_TYPES } from "../types";
+import { Slide, SLIDE_TYPES, VideoSlide as VideoSlideType } from "../types";
 import { Swiper, SwiperSlide } from 'swiper/react';
 import { EffectFade, Navigation, Pagination, Autoplay } from "swiper/modules";
 import type { Swiper as SwiperType } from "swiper";
@@ -38,38 +38,60 @@ const SwiperSlideshow: React.FC<{
     const swiperRef = useRef<SwiperType | null>(null);
     const autoplayTimeoutRef = useRef<NodeJS.Timeout | null>(null);
     const countdownIntervalRef = useRef<NodeJS.Timeout | null>(null);
+    const videoReadyCheckRef = useRef<NodeJS.Timeout | null>(null);
     const [currentSlideIndex, setCurrentSlideIndex] = useState(0);
     const [remainingTime, setRemainingTime] = useState(0);
     const [isVideoPlaying, setIsVideoPlaying] = useState(false);
+    const [videoReadyState, setVideoReadyState] = useState<Map<string, boolean>>(new Map());
 
     // Filter out inactive slides
     const activeSlides = useMemo(() => {
         return slides.filter(slide => slide.active);
     }, [slides]);
 
-    // Preload next video slides for smoother transitions using optimized loader
+    /**
+     * Aggressively preload next video slides for smoother transitions
+     * Preloads current, next, and next+1 videos to ensure smooth playback
+     */
     const preloadNextVideos = useCallback(async () => {
         if (activeSlides.length === 0) return;
 
+        const currentIndex = currentSlideIndex;
         const nextIndex = (currentSlideIndex + 1) % activeSlides.length;
         const nextNextIndex = (currentSlideIndex + 2) % activeSlides.length;
 
         const videoUrls: string[] = [];
+        const indicesToPreload = [currentIndex, nextIndex, nextNextIndex];
 
-        [nextIndex, nextNextIndex].forEach(index => {
+        indicesToPreload.forEach(index => {
             const slide = activeSlides[index];
-            if (slide?.type === SLIDE_TYPES.VIDEO && slide.data.videoUrl) {
-                videoUrls.push(slide.data.videoUrl);
+            if (slide?.type === SLIDE_TYPES.VIDEO) {
+                const videoSlide = slide as VideoSlideType;
+                if (videoSlide.data.videoUrl) {
+                    videoUrls.push(videoSlide.data.videoUrl);
+                }
             }
         });
 
         if (videoUrls.length > 0) {
             try {
-                console.log(`🚀 Preloading ${videoUrls.length} videos for upcoming slides`);
+                console.log(`🚀 Preloading ${videoUrls.length} videos (current + next 2 slides)`);
                 await preloadVideos(videoUrls);
                 console.log(`✅ Successfully preloaded ${videoUrls.length} videos`);
+
+                // Mark videos as ready in state
+                indicesToPreload.forEach(index => {
+                    const slide = activeSlides[index];
+                    if (slide?.type === SLIDE_TYPES.VIDEO) {
+                        setVideoReadyState(prev => {
+                            const newState = new Map(prev);
+                            newState.set(slide.id, true);
+                            return newState;
+                        });
+                    }
+                });
             } catch (error) {
-                console.warn('Failed to preload some videos:', error);
+                console.warn('⚠️ Failed to preload some videos:', error);
             }
         }
     }, [activeSlides, currentSlideIndex]);
@@ -105,7 +127,9 @@ const SwiperSlideshow: React.FC<{
         ...(effectModule ? [effectModule] : [])
     ];
 
-    // Clear all timers
+    /**
+     * Clear all timers including video ready check timer
+     */
     const clearAllTimers = useCallback(() => {
         if (autoplayTimeoutRef.current) {
             clearTimeout(autoplayTimeoutRef.current);
@@ -114,6 +138,10 @@ const SwiperSlideshow: React.FC<{
         if (countdownIntervalRef.current) {
             clearInterval(countdownIntervalRef.current);
             countdownIntervalRef.current = null;
+        }
+        if (videoReadyCheckRef.current) {
+            clearTimeout(videoReadyCheckRef.current);
+            videoReadyCheckRef.current = null;
         }
     }, []);
 
@@ -133,7 +161,10 @@ const SwiperSlideshow: React.FC<{
         }, 1000);
     }, [clearAllTimers]);
 
-    // Custom autoplay function that respects individual slide durations
+    /**
+     * Custom autoplay function that respects individual slide durations
+     * For video slides, waits until video is ready before starting playback
+     */
     const startCustomAutoplay = useCallback((slideIndex: number) => {
         // Clear any existing timeout
         clearAllTimers();
@@ -148,16 +179,33 @@ const SwiperSlideshow: React.FC<{
                     realIndex: swiperRef.current.realIndex,
                     slideName: slide.name,
                     duration,
-                    isVideoSlide: slide.type === SLIDE_TYPES.VIDEO
+                    isVideoSlide: slide.type === SLIDE_TYPES.VIDEO,
+                    isVideoReady: videoReadyState.get(slide.id)
                 });
             }
 
             // Start countdown timer for TestingOverlay
             startCountdownTimer(duration);
 
-            // For video slides, don't set autoplay timeout - let video end event handle it
-            if (slide.type !== SLIDE_TYPES.VIDEO) {
-                // Set timeout to move to next slide (only if not a video playing)
+            // For video slides, wait for video ready event before considering autoplay
+            if (slide.type === SLIDE_TYPES.VIDEO) {
+                if (isDebugMode) {
+                    console.log('SwiperSlideshow: Video slide detected, waiting for video to be ready and video end event');
+                }
+                setIsVideoPlaying(true);
+
+                // Set a safety timeout in case video never becomes ready
+                // This prevents the slideshow from getting stuck on a broken video
+                const safetyTimeout = (duration + 10) * 1000; // 10 seconds buffer
+                videoReadyCheckRef.current = setTimeout(() => {
+                    console.warn('⚠️ Video safety timeout triggered for slide:', slide.name);
+                    if (swiperRef.current && activeSlides.length > 1) {
+                        setIsVideoPlaying(false);
+                        swiperRef.current.slideNext();
+                    }
+                }, safetyTimeout);
+            } else {
+                // For non-video slides, set normal autoplay timeout
                 autoplayTimeoutRef.current = setTimeout(() => {
                     if (swiperRef.current && activeSlides.length > 1 && !isVideoPlaying) {
                         if (isDebugMode) {
@@ -166,47 +214,67 @@ const SwiperSlideshow: React.FC<{
                         swiperRef.current.slideNext();
                     }
                 }, duration * 1000); // Convert to milliseconds
-            } else {
-                if (isDebugMode) {
-                    console.log('SwiperSlideshow: Video slide detected, waiting for video end event');
-                }
-                setIsVideoPlaying(true); // Set video playing state
             }
         }
-    }, [activeSlides, clearAllTimers, startCountdownTimer, isVideoPlaying, isDebugMode]);
+    }, [activeSlides, clearAllTimers, startCountdownTimer, isVideoPlaying, isDebugMode, videoReadyState]);
 
     // Get autoplay configuration - disable built-in autoplay, use custom instead
     const getAutoplayConfig = useCallback(() => {
         return false; // Disable built-in autoplay, use custom implementation
     }, []);
 
-    // Handle slide change with realIndex for loop mode compatibility
+    /**
+     * Handle slide change with realIndex for loop mode compatibility
+     * Aggressively preloads next videos and manages video ready state
+     */
     const handleSlideChange = useCallback((swiper: SwiperType) => {
         // Use realIndex for loop mode compatibility
         const newIndex = swiper.realIndex;
         setCurrentSlideIndex(newIndex);
+        const currentSlide = activeSlides[newIndex];
 
         if (isDebugMode) {
-            console.log('SwiperSlideshow: Slide changed', {
+            console.log('🔄 SwiperSlideshow: Slide changed', {
                 activeIndex: swiper.activeIndex,
                 realIndex: swiper.realIndex,
                 totalSlides: activeSlides.length,
-                slideName: activeSlides[newIndex]?.name,
+                slideName: currentSlide?.name,
+                slideType: currentSlide?.type,
+                isVideoReady: currentSlide ? videoReadyState.get(currentSlide.id) : false,
                 isLoop: (swiper.loopedSlides || 0) > 0,
                 loopedSlides: swiper.loopedSlides || 0
             });
         }
 
-        // Preload next videos for smoother transitions
+        // CRITICAL: Aggressively preload next videos BEFORE starting autoplay
+        // This ensures videos are ready when we need them
         preloadNextVideos();
 
-        // Start custom autoplay for the new slide
-        startCustomAutoplay(newIndex);
+        // For video slides, check if video is ready before starting autoplay
+        if (currentSlide?.type === SLIDE_TYPES.VIDEO) {
+            const isVideoReady = videoReadyState.get(currentSlide.id);
+
+            if (isVideoReady) {
+                console.log('✅ Video already ready, starting autoplay immediately');
+                startCustomAutoplay(newIndex);
+            } else {
+                console.log('⏳ Video not ready yet, waiting for ready event before autoplay');
+                // Set a timeout to start autoplay anyway after a delay
+                setTimeout(() => {
+                    if (!videoReadyState.get(currentSlide.id)) {
+                        console.log('⚠️ Video taking too long, starting autoplay anyway');
+                    }
+                    startCustomAutoplay(newIndex);
+                }, 2000); // Wait up to 2 seconds for video to be ready
+            }
+        } else {
+            // Non-video slides can start immediately
+            startCustomAutoplay(newIndex);
+        }
 
         onSlideChange?.(newIndex);
 
         // Dispatch enhanced custom event for TestingOverlay
-        const currentSlide = activeSlides[newIndex];
         const event = new CustomEvent('slideshowSlideChange', {
             detail: {
                 slideIndex: newIndex,
@@ -217,23 +285,30 @@ const SwiperSlideshow: React.FC<{
             }
         });
         window.dispatchEvent(event);
-    }, [onSlideChange, activeSlides, startCustomAutoplay, isDebugMode]);
+    }, [onSlideChange, activeSlides, startCustomAutoplay, isDebugMode, preloadNextVideos, videoReadyState]);
 
-    // Handle video end - advance to next slide immediately
+    /**
+     * Handle video end - advance to next slide immediately
+     * Clears all safety timeouts and ensures smooth transition
+     */
     const handleVideoEnd = useCallback(() => {
         if (isDebugMode) {
-            console.log('SwiperSlideshow: Video ended, advancing to next slide');
+            console.log('✅ SwiperSlideshow: Video ended, advancing to next slide');
         }
         setIsVideoPlaying(false);
         clearAllTimers();
 
         if (swiperRef.current && activeSlides.length > 1) {
-            // Use a small delay to ensure the video has fully ended
+            // Preload next videos before transitioning
+            preloadNextVideos();
+
+            // Use a small delay to ensure the video has fully ended and next slide is ready
             setTimeout(() => {
                 if (swiperRef.current) {
+                    console.log('🔄 SwiperSlideshow: Moving to next slide after video ended');
                     swiperRef.current.slideNext();
                 }
-            }, 100);
+            }, 200);
         } else if (swiperRef.current && activeSlides.length === 1) {
             // If only one slide (video), restart it after a brief pause
             setTimeout(() => {
@@ -241,10 +316,11 @@ const SwiperSlideshow: React.FC<{
                 if (videoElement) {
                     videoElement.currentTime = 0;
                     videoElement.play().catch(err => console.warn('Video replay failed:', err));
+                    setIsVideoPlaying(true);
                 }
             }, 1000);
         }
-    }, [activeSlides, clearAllTimers, isDebugMode]);
+    }, [activeSlides, clearAllTimers, isDebugMode, preloadNextVideos]);
 
 
     // Enhanced render function that passes video handlers
@@ -252,7 +328,10 @@ const SwiperSlideshow: React.FC<{
         return renderSlideContent(slide, handleVideoEnd);
     }, [renderSlideContent, handleVideoEnd]);
 
-    // Initialize autoplay when swiper is ready (ONLY in onSwiper, not useEffect)
+    /**
+     * Initialize autoplay when swiper is ready
+     * Preloads videos and starts autoplay after ensuring first slide is ready
+     */
     const handleSwiperInit = useCallback((swiper: SwiperType) => {
         if (isDebugMode) {
             console.log('SwiperSlideshow: Swiper initialized', {
@@ -264,13 +343,24 @@ const SwiperSlideshow: React.FC<{
         }
         swiperRef.current = swiper;
 
+        // Immediately preload videos for smoother experience
+        preloadNextVideos();
+
         // Start autoplay when swiper is ready (only if multiple slides)
         if (activeSlides.length > 1) {
+            const firstSlide = activeSlides[0];
+
+            // If first slide is a video, wait a bit longer to ensure it's loaded
+            const delay = firstSlide?.type === SLIDE_TYPES.VIDEO ? 1000 : 500;
+
             setTimeout(() => {
                 startCustomAutoplay(0);
-            }, 500); // Small delay to ensure swiper is fully ready
+            }, delay);
+        } else if (activeSlides.length === 1 && activeSlides[0]?.type === SLIDE_TYPES.VIDEO) {
+            // Single video slide - just start the countdown
+            startCountdownTimer(activeSlides[0].duration || 10);
         }
-    }, [activeSlides.length, startCustomAutoplay, getAutoplayConfig, isDebugMode]);
+    }, [activeSlides, startCustomAutoplay, getAutoplayConfig, isDebugMode, preloadNextVideos, startCountdownTimer]);
 
 
     // Enhanced periodic check to ensure slideshow doesn't get stuck
@@ -306,30 +396,56 @@ const SwiperSlideshow: React.FC<{
         return () => clearInterval(checkInterval);
     }, [activeSlides, isVideoPlaying, isDebugMode, startCustomAutoplay]);
 
-    // Handle video buffering events to pause/resume autoplay
+    /**
+     * Handle video buffering and ready events
+     * Manages video state and prevents autoplay interruption
+     */
     useEffect(() => {
         const handleVideoBuffering = (event: CustomEvent) => {
-            const { slideId, isBuffering, reason } = event.detail;
+            const { slideId, isBuffering, reason, isReady } = event.detail;
             const currentSlide = activeSlides[currentSlideIndex];
 
             if (currentSlide && currentSlide.id === slideId && currentSlide.type === SLIDE_TYPES.VIDEO) {
                 if (isBuffering && reason === 'waiting') {
-                    console.log('SwiperSlideshow: Pausing autoplay due to video buffering');
-                    clearAllTimers();
+                    console.log('⏸️ SwiperSlideshow: Video buffering - pausing autoplay');
+                    // Don't clear timers completely, just pause
+                    // The video will resume when buffering completes
                 } else if (!isBuffering && (reason === 'canPlayThrough' || reason === 'seeked')) {
-                    console.log('SwiperSlideshow: Video ready - but letting video handle its own timing');
-                    // For videos, don't restart autoplay timer - let video end event handle progression
-                    // Only clear any existing timers to avoid conflicts
-                    clearAllTimers();
+                    console.log('▶️ SwiperSlideshow: Video ready to play smoothly');
+
+                    // Update video ready state
+                    if (isReady) {
+                        setVideoReadyState(prev => {
+                            const newState = new Map(prev);
+                            newState.set(slideId, true);
+                            return newState;
+                        });
+                    }
                 }
             }
         };
 
+        const handleVideoReady = (event: CustomEvent) => {
+            const { slideId, isReady } = event.detail;
+
+            if (isReady) {
+                console.log('✅ SwiperSlideshow: Video ready event received for slide:', slideId);
+                setVideoReadyState(prev => {
+                    const newState = new Map(prev);
+                    newState.set(slideId, true);
+                    return newState;
+                });
+            }
+        };
+
         window.addEventListener('videoBuffering', handleVideoBuffering as EventListener);
+        window.addEventListener('videoReady', handleVideoReady as EventListener);
+
         return () => {
             window.removeEventListener('videoBuffering', handleVideoBuffering as EventListener);
+            window.removeEventListener('videoReady', handleVideoReady as EventListener);
         };
-    }, [activeSlides, currentSlideIndex, clearAllTimers]);
+    }, [activeSlides, currentSlideIndex]);
 
     // Update Swiper settings when props change
     useEffect(() => {
@@ -364,7 +480,10 @@ const SwiperSlideshow: React.FC<{
         }
     }, [effect, hideArrows, hidePagination, isDebugMode]);
 
-    // Force Swiper update when slides change
+    /**
+     * Force Swiper update when slides change
+     * Also preloads all videos in the slideshow for maximum smoothness
+     */
     useEffect(() => {
         if (swiperRef.current && isDebugMode) {
             console.log('SwiperSlideshow: Slides changed, forcing Swiper update', {
@@ -377,6 +496,37 @@ const SwiperSlideshow: React.FC<{
         if (swiperRef.current) {
             swiperRef.current.update();
         }
+
+        // Preload all videos when slides change (helps with initial load)
+        const preloadAllVideos = async () => {
+            const allVideoUrls = activeSlides
+                .filter(slide => slide.type === SLIDE_TYPES.VIDEO)
+                .map(slide => (slide as VideoSlideType).data.videoUrl)
+                .filter((url): url is string => !!url);
+
+            if (allVideoUrls.length > 0) {
+                try {
+                    console.log(`🚀 Preloading all ${allVideoUrls.length} videos in slideshow`);
+                    await preloadVideos(allVideoUrls);
+                    console.log(`✅ Successfully preloaded all ${allVideoUrls.length} videos`);
+
+                    // Mark all videos as ready
+                    activeSlides.forEach(slide => {
+                        if (slide.type === SLIDE_TYPES.VIDEO) {
+                            setVideoReadyState(prev => {
+                                const newState = new Map(prev);
+                                newState.set(slide.id, true);
+                                return newState;
+                            });
+                        }
+                    });
+                } catch (error) {
+                    console.warn('⚠️ Failed to preload some videos:', error);
+                }
+            }
+        };
+
+        preloadAllVideos();
     }, [activeSlides, isDebugMode]);
 
     // Cleanup on unmount

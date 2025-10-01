@@ -12,12 +12,15 @@ interface VideoSlideProps {
 export const VideoSlide: React.FC<VideoSlideProps> = ({ slide, onUpdate, onVideoEnd }) => {
     const videoRef = useRef<HTMLVideoElement>(null);
     const fallbackTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+    const playAttemptTimeoutRef = useRef<NodeJS.Timeout | null>(null);
     const [isMediaSelectorOpen, setIsMediaSelectorOpen] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
     const [hasError, setHasError] = useState(false);
     const [loadingProgress, setLoadingProgress] = useState(0);
     const [isPreloading, setIsPreloading] = useState(false);
     const [currentVideoUrl, setCurrentVideoUrl] = useState<string>('');
+    const [isVideoReady, setIsVideoReady] = useState(false);
+    const [playAttempts, setPlayAttempts] = useState(0);
 
     // Get optimized video URL with caching and local file serving
     const getVideoUrl = useCallback(async () => {
@@ -38,36 +41,59 @@ export const VideoSlide: React.FC<VideoSlideProps> = ({ slide, onUpdate, onVideo
         }
     }, [slide.data.videoUrl, slide.name]);
 
-    // Enhanced play attempt with better error handling
+    /**
+     * Enhanced play attempt with exponential backoff retry mechanism
+     * Ensures video plays even if initial attempts fail
+     */
     const attemptPlay = useCallback(async () => {
         if (!videoRef.current || hasError) return;
 
-        try {
-            // Ensure video is ready to play
-            if (videoRef.current.readyState < 3) {
-                console.log("Video not ready yet, waiting...");
-                return;
-            }
+        const video = videoRef.current;
+        const maxAttempts = 5;
+        const baseDelay = 200;
 
-            console.log("Attempting to play video for slide:", slide.name);
-            await videoRef.current.play();
-            console.log("Video started playing successfully");
-        } catch (error) {
-            console.warn("Video play failed:", error);
-            // Try to play muted as fallback
-            if (videoRef.current && !videoRef.current.muted) {
-                console.log("Trying to play muted video as fallback");
-                videoRef.current.muted = true;
-                try {
-                    await videoRef.current.play();
-                    console.log("Muted video started playing successfully");
-                } catch (mutedError) {
-                    console.error("Even muted video failed to play:", mutedError);
-                    setHasError(true);
+        // Clear any existing play attempt timeouts
+        if (playAttemptTimeoutRef.current) {
+            clearTimeout(playAttemptTimeoutRef.current);
+            playAttemptTimeoutRef.current = null;
+        }
+
+        for (let attempt = 0; attempt < maxAttempts; attempt++) {
+            try {
+                // Check if video is ready to play
+                if (video.readyState < 2) {
+                    console.log(`Video not ready yet (attempt ${attempt + 1}/${maxAttempts}), waiting...`);
+                    await new Promise(resolve => setTimeout(resolve, baseDelay * Math.pow(2, attempt)));
+                    continue;
+                }
+
+                console.log(`Attempting to play video for slide: ${slide.name} (attempt ${attempt + 1}/${maxAttempts})`);
+                await video.play();
+                console.log("✅ Video started playing successfully");
+                setIsVideoReady(true);
+                setPlayAttempts(0);
+                return;
+            } catch (error) {
+                console.warn(`Video play failed (attempt ${attempt + 1}/${maxAttempts}):`, error);
+                
+                // Try muted as fallback on first failure
+                if (attempt === 0 && !video.muted) {
+                    console.log("Trying to play muted video as fallback");
+                    video.muted = true;
+                }
+
+                // Wait before next attempt
+                if (attempt < maxAttempts - 1) {
+                    await new Promise(resolve => setTimeout(resolve, baseDelay * Math.pow(2, attempt)));
                 }
             }
         }
-    }, [hasError, slide.name]);
+
+        // All attempts failed
+        console.error("❌ All play attempts failed for video:", slide.name);
+        setHasError(true);
+        setPlayAttempts(maxAttempts);
+    }, [hasError, slide.name, playAttempts]);
 
     // Video event handlers
     const handleLoadStart = useCallback(() => {
@@ -97,40 +123,48 @@ export const VideoSlide: React.FC<VideoSlideProps> = ({ slide, onUpdate, onVideo
     const handleCanPlay = useCallback(() => {
         console.log("Video can play for slide:", slide.name);
         setIsLoading(false);
+        setIsVideoReady(true);
 
-        // Attempt to play when video is ready (for slideshow mode)
+        // Notify swiper that video is ready
         if (onVideoEnd) {
-            // Small delay to ensure video is fully ready
-            setTimeout(() => attemptPlay(), 200);
+            const event = new CustomEvent('videoReady', {
+                detail: { slideId: slide.id, isReady: true }
+            });
+            window.dispatchEvent(event);
+
+            // Attempt to play when video is ready (for slideshow mode)
+            playAttemptTimeoutRef.current = setTimeout(() => attemptPlay(), 300);
         }
-    }, [onVideoEnd, attemptPlay, slide.name]);
+    }, [onVideoEnd, attemptPlay, slide.name, slide.id]);
 
     const handleCanPlayThrough = useCallback(() => {
-        console.log("Video can play through for slide:", slide.name);
+        console.log("✅ Video can play through smoothly for slide:", slide.name);
         setIsLoading(false);
+        setIsVideoReady(true);
 
         // Set fallback timeout only when video can play through smoothly
+        // This ensures slideshow progresses even if video.onended doesn't fire
         if (onVideoEnd && !fallbackTimeoutRef.current) {
             const fallbackDuration = (slide.duration || 30) * 1000 + 5000; // Add 5 seconds buffer
             fallbackTimeoutRef.current = setTimeout(() => {
-                console.warn('Video fallback timeout triggered for slide:', slide.name);
+                console.warn('⚠️ Video fallback timeout triggered for slide:', slide.name);
                 if (onVideoEnd) {
                     onVideoEnd();
                 }
             }, fallbackDuration);
         }
 
-        // Try to play if not already playing
-        if (onVideoEnd && videoRef.current && videoRef.current.paused) {
-            attemptPlay();
-        }
-
-        // Resume autoplay timer if this is in a slideshow - video is ready to play smoothly
+        // Notify swiper that video is fully buffered and ready
         if (onVideoEnd) {
             const event = new CustomEvent('videoBuffering', {
-                detail: { slideId: slide.id, isBuffering: false, reason: 'canPlayThrough' }
+                detail: { slideId: slide.id, isBuffering: false, reason: 'canPlayThrough', isReady: true }
             });
             window.dispatchEvent(event);
+        }
+
+        // Try to play if not already playing (with retry mechanism)
+        if (onVideoEnd && videoRef.current && videoRef.current.paused) {
+            attemptPlay();
         }
     }, [onVideoEnd, attemptPlay, slide.duration, slide.name, slide.id]);
 
@@ -246,43 +280,113 @@ export const VideoSlide: React.FC<VideoSlideProps> = ({ slide, onUpdate, onVideo
         setIsMediaSelectorOpen(false);
     };
 
-    // Initialize video when URL changes (now async)
+    /**
+     * Initialize video with preloading and robust error handling
+     * Ensures video is ready before swiper starts autoplay
+     */
     useEffect(() => {
         const initializeVideo = async () => {
             if (!videoRef.current) return;
 
             try {
+                console.log("🎬 Starting video initialization for slide:", slide.name);
+                setIsLoading(true);
+                setHasError(false);
+                setIsVideoReady(false);
+                setPlayAttempts(0);
+
+                // Clear any existing timeouts
+                if (fallbackTimeoutRef.current) {
+                    clearTimeout(fallbackTimeoutRef.current);
+                    fallbackTimeoutRef.current = null;
+                }
+                if (playAttemptTimeoutRef.current) {
+                    clearTimeout(playAttemptTimeoutRef.current);
+                    playAttemptTimeoutRef.current = null;
+                }
+
+                // Get optimized video URL (with caching and preloading)
                 const videoUrl = await getVideoUrl();
                 if (videoUrl) {
-                    console.log("🎬 Initializing optimized video for slide:", slide.name);
-                    setIsLoading(true);
-                    setHasError(false);
-
-                    // Clear any existing fallback timeout
-                    if (fallbackTimeoutRef.current) {
-                        clearTimeout(fallbackTimeoutRef.current);
-                        fallbackTimeoutRef.current = null;
-                    }
-
-                    // Set the optimized URL in state and load
+                    console.log("🎬 Got optimized video URL:", videoUrl);
+                    
+                    // Set the optimized URL in state
                     setCurrentVideoUrl(videoUrl);
-                    videoRef.current.load();
+                    
+                    // Load video metadata first
+                    await new Promise<void>((resolve, reject) => {
+                        const video = videoRef.current;
+                        if (!video) {
+                            reject(new Error("Video element not found"));
+                            return;
+                        }
+
+                        const timeout = setTimeout(() => {
+                            reject(new Error("Video metadata load timeout"));
+                        }, 15000); // 15 second timeout
+
+                        const handleLoadedMetadata = () => {
+                            clearTimeout(timeout);
+                            video.removeEventListener('loadedmetadata', handleLoadedMetadata);
+                            video.removeEventListener('error', handleError);
+                            console.log("✅ Video metadata loaded successfully");
+                            resolve();
+                        };
+
+                        const handleError = () => {
+                            clearTimeout(timeout);
+                            video.removeEventListener('loadedmetadata', handleLoadedMetadata);
+                            video.removeEventListener('error', handleError);
+                            reject(new Error("Video failed to load"));
+                        };
+
+                        video.addEventListener('loadedmetadata', handleLoadedMetadata);
+                        video.addEventListener('error', handleError);
+                        
+                        // Start loading
+                        video.load();
+                    });
+
+                    console.log("✅ Video initialized successfully for slide:", slide.name);
+                } else {
+                    throw new Error("No video URL available");
                 }
             } catch (error) {
-                console.error("Failed to initialize video:", error);
+                console.error("❌ Failed to initialize video:", error);
                 setHasError(true);
                 setIsLoading(false);
+                
+                // Try fallback to original URL if optimization failed
+                if (slide.data.videoUrl && slide.data.videoUrl !== currentVideoUrl) {
+                    console.log("🔄 Trying fallback to original URL:", slide.data.videoUrl);
+                    setCurrentVideoUrl(slide.data.videoUrl);
+                    if (videoRef.current) {
+                        videoRef.current.load();
+                    }
+                }
             }
         };
 
         initializeVideo();
-    }, [getVideoUrl, slide.name]);
+    }, [getVideoUrl, slide.name, slide.data.videoUrl]);
 
-    // Cleanup on unmount
+    /**
+     * Cleanup all timers and resources on unmount
+     */
     useEffect(() => {
         return () => {
             if (fallbackTimeoutRef.current) {
                 clearTimeout(fallbackTimeoutRef.current);
+                fallbackTimeoutRef.current = null;
+            }
+            if (playAttemptTimeoutRef.current) {
+                clearTimeout(playAttemptTimeoutRef.current);
+                playAttemptTimeoutRef.current = null;
+            }
+            // Pause video to prevent background playback
+            if (videoRef.current) {
+                videoRef.current.pause();
+                videoRef.current.src = "";
             }
         };
     }, []);
