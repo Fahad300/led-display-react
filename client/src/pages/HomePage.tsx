@@ -479,10 +479,28 @@ const HomePage: React.FC = () => {
     const { displaySettings, updateDisplaySettings, lastSynced } = useSettings();
     const { addToast } = useToast();
     const [isFullscreen, setIsFullscreen] = useState(false);
+    const [videoReadyState, setVideoReadyState] = useState<Map<string, boolean>>(new Map());
     const slidesContainerRef = useRef<HTMLDivElement>(null);
 
     // Get active slides directly from context - no local state needed
-    const activeSlides = slides.filter(slide => slide.active);
+    // Filter out video slides that aren't ready yet
+    const activeSlides = slides.filter(slide => {
+        if (!slide.active) return false;
+
+        // For video slides, only include if they're preloaded and ready
+        if (slide.type === SLIDE_TYPES.VIDEO) {
+            return videoReadyState.get(slide.id) === true;
+        }
+
+        // Include all other slide types
+        return true;
+    });
+
+    // Create a key that changes when video ready state changes to force re-render
+    const slideshowKey = useMemo(() => {
+        const videoReadyCount = Array.from(videoReadyState.values()).filter(Boolean).length;
+        return `slideshow-${activeSlides.length}-${videoReadyCount}`;
+    }, [activeSlides.length, videoReadyState]);
 
     // Determine if sync is needed
     const needsSync = useMemo(() => {
@@ -711,8 +729,13 @@ const HomePage: React.FC = () => {
             case SLIDE_TYPES.IMAGE:
                 return <ImageSlide slide={slide as ImageSlideType} />;
             case SLIDE_TYPES.VIDEO:
+                // Video slides are only rendered when ready, so no need to check isVideoReady
                 return (
-                    <VideoSlide slide={slide as VideoSlideType} onVideoEnd={onVideoEnd} />
+                    <VideoSlide
+                        slide={slide as VideoSlideType}
+                        onVideoEnd={onVideoEnd}
+                        isVideoReady={true} // Always true since we filter out unready videos
+                    />
                 );
             case SLIDE_TYPES.NEWS:
                 return <NewsSlideComponent slide={slide as NewsSlide} />;
@@ -953,13 +976,15 @@ const HomePage: React.FC = () => {
                         <div className={`absolute inset-[1px] bg-persivia-white rounded-lg overflow-hidden ${isFullscreen ? "rounded-none" : ""}`}>
                             {activeSlides.length > 0 ? (
                                 <SwiperSlideshow
-                                    key={`swiper-${displaySettings.swiperEffect}`}
+                                    key={slideshowKey}
                                     slides={activeSlides}
                                     renderSlideContent={renderSlideContent}
                                     hidePagination={displaySettings.hidePagination}
                                     hideArrows={displaySettings.hideArrows}
                                     effect={displaySettings.swiperEffect}
                                     isFullscreen={isFullscreen}
+                                    videoReadyState={videoReadyState}
+                                    setVideoReadyState={setVideoReadyState}
                                 />
                             ) : (
                                 <div className="w-full h-full flex flex-col items-center justify-center bg-persivia-light-gray">

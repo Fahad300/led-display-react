@@ -12,7 +12,6 @@ import HomePage from './pages/HomePage';
 import AdminPage from './pages/AdminPage';
 import MediaPage from './pages/MediaPage';
 import DisplayPage from "./pages/DisplayPage";
-import LinkRedirect from './pages/LinkRedirect';
 
 const App: React.FC = () => {
   return (
@@ -62,14 +61,6 @@ const App: React.FC = () => {
                     element={
                       <ProtectedRoute>
                         <Register />
-                      </ProtectedRoute>
-                    }
-                  />
-                  <Route
-                    path="/link"
-                    element={
-                      <ProtectedRoute>
-                        <LinkRedirect />
                       </ProtectedRoute>
                     }
                   />

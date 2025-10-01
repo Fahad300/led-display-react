@@ -7,9 +7,10 @@ interface VideoSlideProps {
     slide: VideoSlideType;
     onUpdate?: (slide: VideoSlideType) => void;
     onVideoEnd?: () => void;
+    isVideoReady?: boolean;
 }
 
-export const VideoSlide: React.FC<VideoSlideProps> = ({ slide, onUpdate, onVideoEnd }) => {
+export const VideoSlide: React.FC<VideoSlideProps> = ({ slide, onUpdate, onVideoEnd, isVideoReady = false }) => {
     const videoRef = useRef<HTMLVideoElement>(null);
     const fallbackTimeoutRef = useRef<NodeJS.Timeout | null>(null);
     const playAttemptTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -19,7 +20,6 @@ export const VideoSlide: React.FC<VideoSlideProps> = ({ slide, onUpdate, onVideo
     const [loadingProgress, setLoadingProgress] = useState(0);
     const [isPreloading, setIsPreloading] = useState(false);
     const [currentVideoUrl, setCurrentVideoUrl] = useState<string>('');
-    const [isVideoReady, setIsVideoReady] = useState(false);
     const [playAttempts, setPlayAttempts] = useState(0);
 
     // Get optimized video URL with caching and local file serving
@@ -70,12 +70,12 @@ export const VideoSlide: React.FC<VideoSlideProps> = ({ slide, onUpdate, onVideo
                 console.log(`Attempting to play video for slide: ${slide.name} (attempt ${attempt + 1}/${maxAttempts})`);
                 await video.play();
                 console.log("✅ Video started playing successfully");
-                setIsVideoReady(true);
+                // Video is ready - no need to set local state since it comes from props
                 setPlayAttempts(0);
                 return;
             } catch (error) {
                 console.warn(`Video play failed (attempt ${attempt + 1}/${maxAttempts}):`, error);
-                
+
                 // Try muted as fallback on first failure
                 if (attempt === 0 && !video.muted) {
                     console.log("Trying to play muted video as fallback");
@@ -95,6 +95,22 @@ export const VideoSlide: React.FC<VideoSlideProps> = ({ slide, onUpdate, onVideo
         setPlayAttempts(maxAttempts);
     }, [hasError, slide.name, playAttempts]);
 
+    // Listen for force play events from SwiperSlideshow
+    useEffect(() => {
+        const handleForcePlay = (event: CustomEvent) => {
+            const { slideId } = event.detail;
+            if (slideId === slide.id && videoRef.current && !hasError) {
+                console.log("🎬 Force play event received for slide:", slide.name);
+                attemptPlay();
+            }
+        };
+
+        window.addEventListener('forceVideoPlay', handleForcePlay as EventListener);
+        return () => {
+            window.removeEventListener('forceVideoPlay', handleForcePlay as EventListener);
+        };
+    }, [slide.id, slide.name, attemptPlay, hasError]);
+
     // Video event handlers
     const handleLoadStart = useCallback(() => {
         console.log("Video load started for slide:", slide.name);
@@ -105,15 +121,29 @@ export const VideoSlide: React.FC<VideoSlideProps> = ({ slide, onUpdate, onVideo
     const handleLoadedMetadata = useCallback(() => {
         console.log("Video metadata loaded for slide:", slide.name);
         if (videoRef.current) {
+            const actualDuration = videoRef.current.duration;
             console.log("Video metadata:", {
                 videoWidth: videoRef.current.videoWidth,
                 videoHeight: videoRef.current.videoHeight,
-                duration: videoRef.current.duration,
+                duration: actualDuration,
                 readyState: videoRef.current.readyState,
                 currentSrc: videoRef.current.currentSrc
             });
+
+            // Notify SwiperSlideshow about the actual video duration
+            if (onVideoEnd && actualDuration > 0) {
+                const event = new CustomEvent('videoDuration', {
+                    detail: {
+                        slideId: slide.id,
+                        duration: actualDuration,
+                        slideName: slide.name
+                    }
+                });
+                window.dispatchEvent(event);
+                console.log(`🎬 Notified SwiperSlideshow of video duration: ${actualDuration}s for slide: ${slide.name}`);
+            }
         }
-    }, [slide.name]);
+    }, [slide.name, slide.id, onVideoEnd]);
 
     const handleLoadedData = useCallback(() => {
         console.log("Video data loaded for slide:", slide.name);
@@ -123,16 +153,11 @@ export const VideoSlide: React.FC<VideoSlideProps> = ({ slide, onUpdate, onVideo
     const handleCanPlay = useCallback(() => {
         console.log("Video can play for slide:", slide.name);
         setIsLoading(false);
-        setIsVideoReady(true);
+        // Video is ready - no need to set local state since it comes from props
 
-        // Notify swiper that video is ready
+        // Video ready state is managed by parent component through preloading
+        // Attempt to play when video is ready (for slideshow mode)
         if (onVideoEnd) {
-            const event = new CustomEvent('videoReady', {
-                detail: { slideId: slide.id, isReady: true }
-            });
-            window.dispatchEvent(event);
-
-            // Attempt to play when video is ready (for slideshow mode)
             playAttemptTimeoutRef.current = setTimeout(() => attemptPlay(), 300);
         }
     }, [onVideoEnd, attemptPlay, slide.name, slide.id]);
@@ -140,27 +165,12 @@ export const VideoSlide: React.FC<VideoSlideProps> = ({ slide, onUpdate, onVideo
     const handleCanPlayThrough = useCallback(() => {
         console.log("✅ Video can play through smoothly for slide:", slide.name);
         setIsLoading(false);
-        setIsVideoReady(true);
+        // Video is ready - no need to set local state since it comes from props
 
-        // Set fallback timeout only when video can play through smoothly
-        // This ensures slideshow progresses even if video.onended doesn't fire
-        if (onVideoEnd && !fallbackTimeoutRef.current) {
-            const fallbackDuration = (slide.duration || 30) * 1000 + 5000; // Add 5 seconds buffer
-            fallbackTimeoutRef.current = setTimeout(() => {
-                console.warn('⚠️ Video fallback timeout triggered for slide:', slide.name);
-                if (onVideoEnd) {
-                    onVideoEnd();
-                }
-            }, fallbackDuration);
-        }
+        // NO FALLBACK TIMEOUT - let video.onended handle everything
+        console.log("🎬 Video ready: No fallback timeout set - relying on video.onended event");
 
-        // Notify swiper that video is fully buffered and ready
-        if (onVideoEnd) {
-            const event = new CustomEvent('videoBuffering', {
-                detail: { slideId: slide.id, isBuffering: false, reason: 'canPlayThrough', isReady: true }
-            });
-            window.dispatchEvent(event);
-        }
+        // Video is ready - no need to notify about buffering since we preload
 
         // Try to play if not already playing (with retry mechanism)
         if (onVideoEnd && videoRef.current && videoRef.current.paused) {
@@ -237,19 +247,20 @@ export const VideoSlide: React.FC<VideoSlideProps> = ({ slide, onUpdate, onVideo
     }, [slide.name, slide.id, onVideoEnd]);
 
     const handleEnded = useCallback(() => {
-        // Clear the fallback timeout since video ended naturally
+        console.log("🎬 Video ended naturally for slide:", slide.name);
+
+        // Clear any fallback timeout since video ended naturally
         if (fallbackTimeoutRef.current) {
             clearTimeout(fallbackTimeoutRef.current);
             fallbackTimeoutRef.current = null;
         }
 
         if (onVideoEnd) {
-            // Small delay to ensure video has fully ended
-            setTimeout(() => {
-                onVideoEnd();
-            }, 50);
+            // Immediate transition - no delay needed
+            console.log("🎬 Calling onVideoEnd immediately for slide:", slide.name);
+            onVideoEnd();
         }
-    }, [onVideoEnd]);
+    }, [onVideoEnd, slide.name]);
 
     const handleError = useCallback(() => {
         // Clear fallback timeout on error
@@ -292,7 +303,7 @@ export const VideoSlide: React.FC<VideoSlideProps> = ({ slide, onUpdate, onVideo
                 console.log("🎬 Starting video initialization for slide:", slide.name);
                 setIsLoading(true);
                 setHasError(false);
-                setIsVideoReady(false);
+                // Video ready state is managed by parent component
                 setPlayAttempts(0);
 
                 // Clear any existing timeouts
@@ -309,10 +320,10 @@ export const VideoSlide: React.FC<VideoSlideProps> = ({ slide, onUpdate, onVideo
                 const videoUrl = await getVideoUrl();
                 if (videoUrl) {
                     console.log("🎬 Got optimized video URL:", videoUrl);
-                    
+
                     // Set the optimized URL in state
                     setCurrentVideoUrl(videoUrl);
-                    
+
                     // Load video metadata first
                     await new Promise<void>((resolve, reject) => {
                         const video = videoRef.current;
@@ -342,7 +353,7 @@ export const VideoSlide: React.FC<VideoSlideProps> = ({ slide, onUpdate, onVideo
 
                         video.addEventListener('loadedmetadata', handleLoadedMetadata);
                         video.addEventListener('error', handleError);
-                        
+
                         // Start loading
                         video.load();
                     });
@@ -355,7 +366,7 @@ export const VideoSlide: React.FC<VideoSlideProps> = ({ slide, onUpdate, onVideo
                 console.error("❌ Failed to initialize video:", error);
                 setHasError(true);
                 setIsLoading(false);
-                
+
                 // Try fallback to original URL if optimization failed
                 if (slide.data.videoUrl && slide.data.videoUrl !== currentVideoUrl) {
                     console.log("🔄 Trying fallback to original URL:", slide.data.videoUrl);
@@ -391,6 +402,16 @@ export const VideoSlide: React.FC<VideoSlideProps> = ({ slide, onUpdate, onVideo
         };
     }, []);
 
+    /**
+     * Auto-play video when it becomes ready in slideshow mode
+     * This ensures immediate playback when slide becomes active
+     */
+    useEffect(() => {
+        if (onVideoEnd && isVideoReady && videoRef.current && videoRef.current.paused) {
+            console.log("🎬 Video is ready and in slideshow mode, attempting to play:", slide.name);
+            attemptPlay();
+        }
+    }, [isVideoReady, onVideoEnd, attemptPlay, slide.name]);
 
     if (!slide.data.videoUrl) {
         return (
@@ -412,6 +433,8 @@ export const VideoSlide: React.FC<VideoSlideProps> = ({ slide, onUpdate, onVideo
             </div>
         );
     }
+
+    // Video slides are only rendered when fully preloaded, so no loading state needed
 
     return (
         <>
