@@ -28,7 +28,7 @@ export const CurrentEscalationsSlideComponent: React.FC<{ slide: CurrentEscalati
         'triage': 'bg-red-500/90',
         'support review': 'bg-orange-500/90',
         'in techsupport': 'bg-purple-500/90',
-        'in product qa': 'bg-purple-500/90',
+        'in product qa': 'bg-indigo-500/90',
         'in clientsupport': 'bg-orange-500/90',
         'closed': 'bg-green-500/90',
         'addressed': 'bg-green-500/90'
@@ -130,31 +130,31 @@ export const CurrentEscalationsSlideComponent: React.FC<{ slide: CurrentEscalati
                         </div>
                     </div>
                 ) : (
-                    <table className="min-w-full rounded-lg">
+                    <table className="min-w-full rounded-lg border-separate border-spacing-2 bg-white/5">
                         <thead>
-                            <tr className="bg-persivia-blue/80">
-                                <th className="px-6 py-4 text-xl md:text-2xl font-bold text-white text-center">Category</th>
-                                <th className="px-6 py-4 text-xl md:text-2xl font-bold text-white text-center">Key</th>
-                                <th className="px-6 py-4 text-xl md:text-2xl font-bold text-white text-center">Team</th>
-                                <th className="px-6 py-4 text-xl md:text-2xl font-bold text-white text-center">Client</th>
-                                <th className="px-6 py-4 text-xl md:text-2xl font-bold text-white text-center">Summary</th>
-                                <th className="px-6 py-4 text-xl md:text-2xl font-bold text-white text-center">Status</th>
+                            <tr className="bg-persivia-blue/90 shadow-lg">
+                                <th className="px-6 py-5 text-xl md:text-2xl font-bold text-white text-center border-b-2 border-white/30 rounded-tl-lg">Category</th>
+                                <th className="px-6 py-5 text-xl md:text-2xl font-bold text-white text-center border-b-2 border-white/30">Key</th>
+                                <th className="px-6 py-5 text-xl md:text-2xl font-bold text-white text-center border-b-2 border-white/30">Team</th>
+                                <th className="px-6 py-5 text-xl md:text-2xl font-bold text-white text-center border-b-2 border-white/30">Client</th>
+                                <th className="px-6 py-5 text-xl md:text-2xl font-bold text-white text-center border-b-2 border-white/30">Summary</th>
+                                <th className="px-6 py-5 text-xl md:text-2xl font-bold text-white text-center border-b-2 border-white/30 rounded-tr-lg">Status</th>
                             </tr>
                         </thead>
-                        <tbody>
+                        <tbody className="space-y-2">
                             {escalationsData.map((row, idx) => (
                                 <tr
                                     key={idx}
-                                    className={`${idx % 2 === 0 ? 'bg-white/10' : 'bg-white/5'} hover:bg-white/20 transition-colors`}
+                                    className={`${idx % 2 === 0 ? 'bg-white/15' : 'bg-white/10'} hover:bg-white/25 transition-all duration-200 rounded-lg shadow-md`}
                                 >
-                                    <td className={`px-6 py-4 text-xl text-white text-center font-bold ${getCategoryBackgroundColor(row.ticketCategory)}`}>
+                                    <td className={`px-6 py-5 text-xl text-white text-center font-bold rounded-l-lg ${getCategoryBackgroundColor(row.ticketCategory)}`}>
                                         {row.ticketCategory}
                                     </td>
-                                    <td className="px-6 py-4 text-xl text-white text-center font-mono">{row.key}</td>
-                                    <td className="px-6 py-4 text-xl text-white text-center">{row.teamName}</td>
-                                    <td className="px-6 py-4 text-xl text-white text-center">{row.clientName}</td>
-                                    <td className="px-6 py-4 text-xl text-white text-center">{row.ticketSummary}</td>
-                                    <td className={`px-6 py-4 text-xl text-white text-center font-bold ${getStatusBackgroundColor(row.currentStatus)}`}>
+                                    <td className="px-6 py-5 text-xl text-white text-center font-mono bg-white/5">{row.key}</td>
+                                    <td className="px-6 py-5 text-xl text-white text-center bg-white/5">{row.teamName}</td>
+                                    <td className="px-6 py-5 text-xl text-white text-center bg-white/5">{row.clientName}</td>
+                                    <td className="px-6 py-5 text-xl text-white text-center bg-white/5">{row.ticketSummary}</td>
+                                    <td className={`px-6 py-5 text-xl text-white text-center font-bold rounded-r-lg ${getStatusBackgroundColor(row.currentStatus)}`}>
                                         {row.currentStatus}
                                     </td>
                                 </tr>
