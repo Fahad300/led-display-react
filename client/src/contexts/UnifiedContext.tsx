@@ -9,16 +9,16 @@ import { sessionService } from '../services/sessionService';
 import { fetchEmployeesData } from '../services/eventsService';
 import { fetchTeamWiseData } from '../services/graphService';
 import { DEFAULT_SLIDE_CONFIGS } from '../config/defaultSlides';
-import { currentEscalations } from '../data/currentEscalations';
 import {
     addDataChangeListener,
     addPollingStateListener,
     clearApiCache,
     forceApiCheck,
     startApiPolling,
-    stopApiPolling
+    stopApiPolling,
+    initializeApiPolling
 } from '../services/api';
-import { dispatchSlidesChange, dispatchApiDataChange, dispatchForceReload } from '../utils/realtimeSync';
+import { dispatchSlidesChange, dispatchApiDataChange } from '../utils/realtimeSync';
 
 interface UnifiedContextType {
     // Slides
@@ -33,6 +33,7 @@ interface UnifiedContextType {
     // Data
     employees: Employee[];
     graphData: GraphSlideData | null;
+    escalations: any[];
 
     // Loading states
     isLoading: boolean;
@@ -114,9 +115,9 @@ const createDefaultSlides = (): Slide[] => {
                     type: SLIDE_TYPES.CURRENT_ESCALATIONS,
                     active: config.active,
                     duration: config.duration || 10,
-                    dataSource: 'manual',
+                    dataSource: 'api',
                     data: {
-                        escalations: currentEscalations
+                        escalations: [] // Empty array - data comes from API
                     }
                 };
                 defaultSlides.push(currentEscalationsSlide);
@@ -202,6 +203,7 @@ export const UnifiedProvider: React.FC<UnifiedProviderProps> = ({ children }) =>
     // Display settings now handled by SettingsContext
     const [employees, setEmployees] = useState<Employee[]>([]);
     const [graphData, setGraphData] = useState<GraphSlideData | null>(null);
+    const [escalations, setEscalations] = useState<any[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isEditing, setIsEditing] = useState(false);
 
@@ -233,16 +235,18 @@ export const UnifiedProvider: React.FC<UnifiedProviderProps> = ({ children }) =>
 
     // Update event slides with current employee data - simple and robust
     useEffect(() => {
-        if (employees.length === 0) return; // Wait for employees to load
-
+        // Always update event slides, even when employees array is empty
+        // This ensures stale data is cleared when API returns empty data
         const birthdayEmployees = employees.filter(employee => isBirthdayToday(employee));
         const anniversaryEmployees = employees.filter(employee => isAnniversaryToday(employee));
 
         console.log("🔄 UnifiedContext: Updating event slides with current data", {
+            totalEmployees: employees.length,
             birthdayCount: birthdayEmployees.length,
             anniversaryCount: anniversaryEmployees.length,
             birthdayNames: birthdayEmployees.map(e => e.name),
-            anniversaryNames: anniversaryEmployees.map(e => e.name)
+            anniversaryNames: anniversaryEmployees.map(e => e.name),
+            dataSource: employees.length === 0 ? "API_RETURNED_EMPTY" : "API_HAS_DATA"
         });
 
         setSlides(prevSlides => {
@@ -292,6 +296,18 @@ export const UnifiedProvider: React.FC<UnifiedProviderProps> = ({ children }) =>
             });
         });
     }, [employees, isBirthdayToday, isAnniversaryToday]);
+
+    // Sync to remote displays
+    const syncToRemoteDisplays = useCallback(async () => {
+        try {
+            console.log("🔄 Syncing to remote displays...");
+            await sessionService.triggerRemoteRefresh("all");
+            console.log("✅ Remote displays synced successfully");
+        } catch (error) {
+            console.error("❌ Error syncing to remote displays:", error);
+            throw error;
+        }
+    }, []);
 
     // Save to database with proper error handling
     const saveToDatabase = useCallback(async (slidesToSave?: Slide[]) => {
@@ -351,7 +367,7 @@ export const UnifiedProvider: React.FC<UnifiedProviderProps> = ({ children }) =>
             console.error("❌ Error saving data to database:", error);
             throw error; // Re-throw so calling code can handle it
         }
-    }, [slides]);
+    }, [slides, syncToRemoteDisplays]);
 
 
     // Refresh API data (employees and graph data)
@@ -442,18 +458,6 @@ export const UnifiedProvider: React.FC<UnifiedProviderProps> = ({ children }) =>
             }
         } catch (error) {
             console.error("❌ Error syncing data from database:", error);
-        }
-    }, []);
-
-    // Sync to remote displays
-    const syncToRemoteDisplays = useCallback(async () => {
-        try {
-            console.log("🔄 Syncing to remote displays...");
-            await sessionService.triggerRemoteRefresh("all");
-            console.log("✅ Remote displays synced successfully");
-        } catch (error) {
-            console.error("❌ Error syncing to remote displays:", error);
-            throw error;
         }
     }, []);
 
@@ -578,12 +582,19 @@ export const UnifiedProvider: React.FC<UnifiedProviderProps> = ({ children }) =>
         const handleApiDataChange = (apiData: any) => {
             console.log("🔄 UnifiedContext: API data change received", {
                 employeesCount: apiData.employees?.length || 0,
-                hasGraphData: !!apiData.graphData
+                hasGraphData: !!apiData.graphData,
+                escalationsCount: apiData.escalations?.length || 0,
+                dataChangeType: apiData.employees?.length === 0 ? "CLEARED_DATA" : "NEW_DATA"
             });
 
             // CRITICAL: Update employees immediately when API data changes
             // This ensures stale birthday/anniversary data is cleared
             if (apiData.employees !== undefined) {
+                console.log("🔄 UnifiedContext: Updating employees state", {
+                    previousCount: employees.length,
+                    newCount: apiData.employees.length,
+                    action: apiData.employees.length === 0 ? "CLEARING_STALE_DATA" : "UPDATING_WITH_NEW_DATA"
+                });
                 setEmployees(apiData.employees); // Will be [] if API returns empty
             }
 
@@ -591,10 +602,15 @@ export const UnifiedProvider: React.FC<UnifiedProviderProps> = ({ children }) =>
                 setGraphData(apiData.graphData);
             }
 
+            if (apiData.escalations !== undefined) {
+                setEscalations(apiData.escalations); // Will be [] if API returns empty
+            }
+
             // Dispatch real-time sync event to all DisplayPages immediately
             dispatchApiDataChange(
                 apiData.employees || [],
                 apiData.graphData || null,
+                apiData.escalations || [],
                 ['api-data-updated'],
                 'api'
             );
@@ -608,7 +624,7 @@ export const UnifiedProvider: React.FC<UnifiedProviderProps> = ({ children }) =>
             window.removeEventListener('dataChanged', handleDataChange as EventListener);
             removeApiListener();
         };
-    }, []);
+    }, [employees.length]);
 
     // API Polling integration
     useEffect(() => {
@@ -616,16 +632,19 @@ export const UnifiedProvider: React.FC<UnifiedProviderProps> = ({ children }) =>
         const unsubscribeDataChange = addDataChangeListener((data) => {
             console.log("🔄 UnifiedContext: API data change received:", data);
 
-            // Update employees and graph data when API data changes
+            // Update employees, graph data, and escalations when API data changes
             if (data.employees) {
                 setEmployees(data.employees);
             }
             if (data.graphData) {
                 setGraphData(data.graphData);
             }
+            if (data.escalations) {
+                setEscalations(data.escalations);
+            }
 
             // Trigger a refresh of slides that depend on API data
-            if (data.employees || data.graphData) {
+            if (data.employees || data.graphData || data.escalations) {
                 console.log("🔄 UnifiedContext: Refreshing slides with updated API data");
                 // Force a re-render by updating slides that depend on API data
                 setSlides(prevSlides => {
@@ -660,6 +679,16 @@ export const UnifiedProvider: React.FC<UnifiedProviderProps> = ({ children }) =>
                                 }
                             };
                         }
+                        if (slide.type === SLIDE_TYPES.CURRENT_ESCALATIONS && data.escalations) {
+                            // Update current escalations slides with new escalations data
+                            return {
+                                ...slide,
+                                data: {
+                                    ...slide.data,
+                                    escalations: data.escalations
+                                }
+                            };
+                        }
                         return slide;
                     });
                 });
@@ -680,7 +709,7 @@ export const UnifiedProvider: React.FC<UnifiedProviderProps> = ({ children }) =>
             unsubscribePollingState();
             stopApiPolling();
         };
-    }, []);
+    }, [employees.length]);
 
     // Force API check function
     const handleForceApiCheck = useCallback(async () => {
@@ -833,6 +862,10 @@ export const UnifiedProvider: React.FC<UnifiedProviderProps> = ({ children }) =>
         };
 
         initializeData();
+
+        // Initialize API polling for real-time data updates
+        console.log("🔄 UnifiedContext: Initializing API polling...");
+        initializeApiPolling();
     }, [refreshApiData, isDisplayPage]); // Run only once on mount - intentionally omitting slides and isLoading to prevent infinite loops
 
     // Periodically refresh API data (every 8 hours) - only when not editing and not on display page
@@ -870,6 +903,7 @@ export const UnifiedProvider: React.FC<UnifiedProviderProps> = ({ children }) =>
         // displaySettings and updateDisplaySettings removed - now handled by SettingsContext
         employees,
         graphData,
+        escalations,
         isLoading,
         isEditing,
         setIsEditing,

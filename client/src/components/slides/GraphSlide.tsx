@@ -57,6 +57,12 @@ export const GraphSlide: React.FC<{ slide: GraphSlideType }> = ({ slide }) => {
     const loading = false; // Loading is handled in UnifiedContext
     const error = null; // Error handling is in UnifiedContext
 
+    // Debug logging to understand the data structure
+    React.useEffect(() => {
+        console.log("GraphSlide - graphData:", graphData);
+        console.log("GraphSlide - teamWiseData:", teamWiseData);
+    }, [graphData, teamWiseData]);
+
     // Use live data from context if available, otherwise show loading or empty state
     const chartData = teamWiseData || {
         title: slide.data.title,
@@ -64,18 +70,24 @@ export const GraphSlide: React.FC<{ slide: GraphSlideType }> = ({ slide }) => {
         graphType: slide.data.graphType,
         timeRange: slide.data.timeRange,
         lastUpdated: slide.data.lastUpdated,
-        categories: slide.data.categories,
+        categories: slide.data.categories || [],
         data: [] // Empty data instead of sample data
     };
 
+    // Ensure data and categories are arrays before mapping
+    const safeData = Array.isArray(chartData.data) ? chartData.data : [];
+    const safeCategories = Array.isArray(chartData.categories) ? chartData.categories : [];
+
     // Transform data to match PHP format for horizontal stacked bars
-    const labels = chartData.data.map((team: any) => team.teamName);
+    const labels = safeData.map((team: any) => team.teamName || "N/A");
 
     // Create datasets for each priority/category (horizontal stacked bars)
-    const datasets = chartData.categories.map((category: any) => ({
-        label: category,
-        data: chartData.data.map((team: any) => {
-            const point = team.dataPoints.find((dp: any) => dp.category === category);
+    const datasets = safeCategories.map((category: any) => ({
+        label: category || "Unknown",
+        data: safeData.map((team: any) => {
+            // Ensure team.dataPoints is an array before calling find
+            const dataPoints = Array.isArray(team.dataPoints) ? team.dataPoints : [];
+            const point = dataPoints.find((dp: any) => dp.category === category);
             return point ? point.value : 0;
         }),
         backgroundColor: getPriorityColor(category),
@@ -215,11 +227,11 @@ export const GraphSlide: React.FC<{ slide: GraphSlideType }> = ({ slide }) => {
                 <div className="mt-2 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs md:text-sm">
                     <div className="flex items-center gap-2 text-white/70">
                         <div className="w-2 h-2 bg-green-400 rounded-full"></div>
-                        <span className="font-medium">Last updated: {new Date(chartData.lastUpdated).toLocaleString()}</span>
+                        <span className="font-medium">Last updated: {chartData.lastUpdated ? new Date(chartData.lastUpdated).toLocaleString() : 'N/A'}</span>
                     </div>
                     <div className="flex items-center gap-2 text-white/70">
                         <div className="w-2 h-2 bg-blue-400 rounded-full"></div>
-                        <span className="font-medium">Time range: {chartData.timeRange.charAt(0).toUpperCase() + chartData.timeRange.slice(1)}</span>
+                        <span className="font-medium">Time range: {chartData.timeRange ? chartData.timeRange.charAt(0).toUpperCase() + chartData.timeRange.slice(1) : 'N/A'}</span>
                     </div>
                 </div>
             </div>

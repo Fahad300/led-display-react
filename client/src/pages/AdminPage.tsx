@@ -153,12 +153,27 @@ const EditModal: React.FC<EditModalProps> = ({ isOpen, onClose, slide, onSave })
         const file = e.target.files?.[0];
         if (!file || !editedSlide) return;
 
+        console.log("File selected:", {
+            name: file.name,
+            type: file.type,
+            size: file.size
+        });
+
         const isVideo = file.type.startsWith("video/");
         const isImage = file.type.startsWith("image/");
         const isPdf = file.type === "application/pdf";
         const isExcel = file.type.includes("spreadsheet");
         const isPowerPoint = file.type.includes("presentation");
         const isWord = file.type.includes("word");
+
+        console.log("File type detection:", {
+            isVideo,
+            isImage,
+            isPdf,
+            isExcel,
+            isPowerPoint,
+            isWord
+        });
 
         if (editedSlide.type === SLIDE_TYPES.IMAGE && !isImage) {
             addToast("Please upload an image file", "error");
@@ -320,6 +335,12 @@ const EditModal: React.FC<EditModalProps> = ({ isOpen, onClose, slide, onSave })
                 else if (pendingFile.type.includes("spreadsheet")) fileType = "excel";
                 else if (pendingFile.type.includes("presentation")) fileType = "powerpoint";
                 else if (pendingFile.type.includes("word")) fileType = "word";
+
+                console.log("Setting file type for document slide:", {
+                    fileName: pendingFile.name,
+                    mimeType: pendingFile.type,
+                    detectedFileType: fileType
+                });
                 setEditedSlide({
                     ...editedSlide,
                     data: {
@@ -571,7 +592,23 @@ const EditModal: React.FC<EditModalProps> = ({ isOpen, onClose, slide, onSave })
                                             return <img src={url} alt="Preview" className="max-h-48 rounded shadow" />;
                                         }
                                         if (type === "pdf") {
-                                            return <iframe src={url} title="PDF Preview" className="w-full h-48 rounded shadow border border-gray-200 bg-white" />;
+                                            return (
+                                                <div className="w-full h-48 rounded shadow border border-gray-200 bg-white flex items-center justify-center">
+                                                    <div className="text-center">
+                                                        <svg className="w-12 h-12 text-red-500 mx-auto mb-2" fill="currentColor" viewBox="0 0 20 20">
+                                                            <path fillRule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z" clipRule="evenodd" />
+                                                        </svg>
+                                                        <p className="text-sm text-gray-600">PDF Preview</p>
+                                                        <p className="text-xs text-gray-500">File: {pendingFile?.name || 'Unknown'}</p>
+                                                        <button
+                                                            onClick={() => window.open(url, '_blank')}
+                                                            className="mt-2 px-3 py-1 bg-red-600 text-white text-xs rounded hover:bg-red-700"
+                                                        >
+                                                            Open PDF
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            );
                                         }
                                         if (["excel", "powerpoint", "word"].includes(type || "")) {
                                             return <iframe src={`https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(url)}`} title="Office Preview" className="w-full h-48 rounded shadow border border-gray-200 bg-white" />;

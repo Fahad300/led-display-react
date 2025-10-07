@@ -569,8 +569,20 @@ const HomePage: React.FC = () => {
         }
     };
 
-    // Make test function available globally for browser console testing
+    // API test function
+    const testApiEndpoints = async () => {
+        console.log("🧪 Testing API endpoints...");
+        try {
+            const { testApiEndpoints } = await import('../services/api');
+            await testApiEndpoints();
+        } catch (error) {
+            console.error("❌ API test failed:", error);
+        }
+    };
+
+    // Make test functions available globally for browser console testing
     (window as any).testDataFlow = testDataFlow;
+    (window as any).testApiEndpoints = testApiEndpoints;
 
     // Auto-save is now handled by UnifiedContext only
     // No duplicate auto-save logic needed here

@@ -19,7 +19,7 @@ export const backendApi = axios.create({
 });
 
 // API Data Polling Configuration
-const API_POLLING_INTERVAL = 5 * 60 * 1000; // 5 minutes in milliseconds for 24/7 display
+const API_POLLING_INTERVAL = 30 * 1000; // 30 seconds for testing
 
 // API Endpoints Configuration - Add new APIs here without code changes
 interface ApiEndpoint {
@@ -40,10 +40,17 @@ const API_ENDPOINTS: ApiEndpoint[] = [
     },
     {
         key: "graphData",
-        url: "/api/graph-data",
+        url: "/api/proxy/jira-chart",
         description: "Team performance and graph data",
         enabled: true,
         transform: (data) => data || null // Keep as-is
+    },
+    {
+        key: "escalations",
+        url: "/api/proxy/ongoing-escalations",
+        description: "Current escalations and incidents data",
+        enabled: true,
+        transform: (data) => data || [] // Ensure array format
     }
     // Future APIs - just add them here, no code changes needed:
     // {
@@ -195,6 +202,17 @@ export const fetchGraphData = async (): Promise<any> => {
 };
 
 /**
+ * Legacy function for backward compatibility - escalations data
+ */
+export const fetchEscalationsData = async (): Promise<any[]> => {
+    const escalationsEndpoint = API_ENDPOINTS.find(ep => ep.key === "escalations");
+    if (!escalationsEndpoint) {
+        throw new Error("Escalations endpoint not configured");
+    }
+    return await fetchApiData(escalationsEndpoint);
+};
+
+/**
  * Check for API data updates
  */
 const checkForApiUpdates = async (): Promise<void> => {
@@ -219,6 +237,22 @@ const checkForApiUpdates = async (): Promise<void> => {
             // Extract employees data for backward compatibility
             const employees = freshApiData.employees || [];
             const graphData = freshApiData.graphData || null;
+            const escalations = freshApiData.escalations || [];
+
+            console.log("🔄 API Data Update:", {
+                employees: employees.length,
+                graphData: !!graphData,
+                escalations: escalations.length,
+                escalationsData: escalations
+            });
+
+            // Debug escalations data specifically
+            console.log("🔄 Escalations Debug:", {
+                rawEscalations: freshApiData.escalations,
+                escalationsLength: escalations.length,
+                escalationsType: typeof escalations,
+                isArray: Array.isArray(escalations)
+            });
 
             // Log detailed changes for each API endpoint
             const changeDetails: Record<string, any> = {
@@ -289,6 +323,7 @@ const checkForApiUpdates = async (): Promise<void> => {
                 // Backward compatibility - provide old format
                 employees,
                 graphData,
+                escalations: freshApiData.escalations || [],
                 // New format - all API data
                 apiData: freshApiData,
                 timestamp: new Date(),
@@ -342,6 +377,7 @@ export const startApiPolling = (): void => {
     }
 
     console.log("Starting API data polling every hour");
+    console.log("🔄 API Endpoints configured:", API_ENDPOINTS.filter(ep => ep.enabled).map(ep => ({ key: ep.key, url: ep.url })));
     isPolling = true;
 
     // Initial check
@@ -398,6 +434,24 @@ export const forceApiCheck = async (): Promise<void> => {
     lastDataHash = "";
     cachedApiData = {}; // Clear all API cache
     await checkForApiUpdates();
+};
+
+/**
+ * Test API endpoints manually
+ */
+export const testApiEndpoints = async (): Promise<void> => {
+    console.log("🧪 Testing API endpoints manually...");
+    const enabledEndpoints = API_ENDPOINTS.filter(endpoint => endpoint.enabled);
+
+    for (const endpoint of enabledEndpoints) {
+        try {
+            console.log(`🧪 Testing ${endpoint.key} (${endpoint.url})...`);
+            const response = await backendApi.get(endpoint.url);
+            console.log(`✅ ${endpoint.key} response:`, response.data);
+        } catch (error) {
+            console.error(`❌ ${endpoint.key} error:`, error);
+        }
+    }
 };
 
 /**

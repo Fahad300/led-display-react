@@ -34,6 +34,7 @@ export interface ApiDataChangeEvent extends SyncEvent {
     data: {
         employees: any[];
         graphData: any;
+        escalations: any[];
         changes: string[];
     };
 }
@@ -188,12 +189,13 @@ class RealtimeSyncManager {
     /**
      * Dispatch API data change event
      */
-    public dispatchApiDataChange(employees: any[], graphData: any, changes: string[] = [], source: 'homepage' | 'api' | 'system' = 'api') {
+    public dispatchApiDataChange(employees: any[], graphData: any, escalations: any[] = [], changes: string[] = [], source: 'homepage' | 'api' | 'system' = 'api') {
         const event: ApiDataChangeEvent = {
             type: 'api-data',
             data: {
                 employees,
                 graphData,
+                escalations,
                 changes
             },
             timestamp: new Date().toISOString(),

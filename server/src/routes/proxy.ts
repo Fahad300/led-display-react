@@ -53,6 +53,100 @@ router.get("/celebrations", async (req, res) => {
 });
 
 /**
+ * Current escalations endpoint - proxies to external API
+ */
+router.get("/ongoing-escalations", async (req, res) => {
+    try {
+        const externalApiUrl = process.env.EXTERNAL_API_URL;
+        const externalApiToken = process.env.EXTERNAL_API_TOKEN;
+
+        if (!externalApiToken) {
+            logger.error("EXTERNAL_API_TOKEN not configured");
+            return res.status(500).json({
+                error: "External API token not configured",
+                message: "Please set EXTERNAL_API_TOKEN in environment variables"
+            });
+        }
+
+        const response = await axios.get(`${externalApiUrl}/ongoing-escalations`, {
+            headers: {
+                "Authorization": `Bearer ${externalApiToken}`,
+                "Content-Type": "application/json"
+            },
+            timeout: 30000 // 30 seconds timeout
+        });
+
+        res.json(response.data);
+
+    } catch (error) {
+        logger.error("Error proxying ongoing escalations API call:", error);
+
+        if (axios.isAxiosError(error)) {
+            const status = error.response?.status || 500;
+            const message = error.response?.data?.message || error.message;
+
+            res.status(status).json({
+                error: "External API request failed",
+                message: message,
+                status: status
+            });
+        } else {
+            res.status(500).json({
+                error: "Internal server error",
+                message: "Failed to proxy external API request"
+            });
+        }
+    }
+});
+
+/**
+ * Jira chart data endpoint - proxies to external API
+ */
+router.get("/jira-chart", async (req, res) => {
+    try {
+        const externalApiUrl = process.env.EXTERNAL_API_URL;
+        const externalApiToken = process.env.EXTERNAL_API_TOKEN;
+
+        if (!externalApiToken) {
+            logger.error("EXTERNAL_API_TOKEN not configured");
+            return res.status(500).json({
+                error: "External API token not configured",
+                message: "Please set EXTERNAL_API_TOKEN in environment variables"
+            });
+        }
+
+        const response = await axios.get(`${externalApiUrl}/jira-chart`, {
+            headers: {
+                "Authorization": `Bearer ${externalApiToken}`,
+                "Content-Type": "application/json"
+            },
+            timeout: 30000 // 30 seconds timeout
+        });
+
+        res.json(response.data);
+
+    } catch (error) {
+        logger.error("Error proxying jira chart API call:", error);
+
+        if (axios.isAxiosError(error)) {
+            const status = error.response?.status || 500;
+            const message = error.response?.data?.message || error.message;
+
+            res.status(status).json({
+                error: "External API request failed",
+                message: message,
+                status: status
+            });
+        } else {
+            res.status(500).json({
+                error: "Internal server error",
+                message: "Failed to proxy external API request"
+            });
+        }
+    }
+});
+
+/**
  * Generic proxy endpoint for other external API calls
  */
 router.all("/*", async (req, res) => {

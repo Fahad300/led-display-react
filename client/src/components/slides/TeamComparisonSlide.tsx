@@ -12,8 +12,21 @@ export const TeamComparisonSlideComponent: React.FC<{ slide: TeamComparisonSlide
     const loading = false; // Loading is handled in UnifiedContext
     const error = null; // Error handling is in UnifiedContext
 
+    // Debug logging to understand the data structure
+    React.useEffect(() => {
+        console.log("TeamComparisonSlide - graphData:", graphData);
+        console.log("TeamComparisonSlide - teamWiseData:", teamWiseData);
+        if (teamWiseData && teamWiseData.data) {
+            console.log("TeamComparisonSlide - teamWiseData.data length:", teamWiseData.data.length);
+            console.log("TeamComparisonSlide - first team data:", teamWiseData.data[0]);
+        }
+    }, [graphData, teamWiseData]);
+
     // Format date range for display
-    const formatDateRange = (lastUpdated: string): string => {
+    const formatDateRange = (lastUpdated: string | undefined): string => {
+        if (!lastUpdated) {
+            return 'N/A';
+        }
         const date = new Date(lastUpdated);
         const year = date.getFullYear();
         const endDate = date.toLocaleDateString("en-US", {
@@ -26,22 +39,36 @@ export const TeamComparisonSlideComponent: React.FC<{ slide: TeamComparisonSlide
 
     // Transform graph data to team comparison format
     const transformGraphDataToTeams = () => {
-        if (!teamWiseData || !teamWiseData.data || teamWiseData.data.length === 0) {
+        if (!teamWiseData || !teamWiseData.data || !Array.isArray(teamWiseData.data) || teamWiseData.data.length === 0) {
             return [];
         }
 
-        const allTeams = teamWiseData.data.map((team: any) => {
+        const allTeams = teamWiseData.data.map((team: any, index: number) => {
+            console.log(`Team ${index}:`, team);
+
+            // Ensure dataPoints exists and is an array
+            if (!team.dataPoints || !Array.isArray(team.dataPoints) || team.dataPoints.length === 0) {
+                console.log(`Team ${index} has no dataPoints, skipping`);
+                // Skip teams with no data instead of showing "Unknown Team"
+                return null;
+            }
+
             // Calculate totals for each priority level
-            const cLevelCount = team.dataPoints.find((dp: any) => dp.category.includes('C-Level'))?.value || 0;
-            const p1Count = team.dataPoints.find((dp: any) => dp.category.includes('P1'))?.value || 0;
-            const p2Count = team.dataPoints.find((dp: any) => dp.category.includes('P2'))?.value || 0;
-            const p3Count = team.dataPoints.find((dp: any) => dp.category.includes('P3'))?.value || 0;
-            const p4Count = team.dataPoints.find((dp: any) => dp.category.includes('P4'))?.value || 0;
+            const cLevelCount = team.dataPoints.find((dp: any) => dp.category && dp.category.includes('C-Level'))?.value || 0;
+            const p1Count = team.dataPoints.find((dp: any) => dp.category && dp.category.includes('P1'))?.value || 0;
+            const p2Count = team.dataPoints.find((dp: any) => dp.category && dp.category.includes('P2'))?.value || 0;
+            const p3Count = team.dataPoints.find((dp: any) => dp.category && dp.category.includes('P3'))?.value || 0;
+            const p4Count = team.dataPoints.find((dp: any) => dp.category && dp.category.includes('P4'))?.value || 0;
 
             const totalTickets = cLevelCount + p1Count + p2Count + p3Count + p4Count;
 
+            // Only include teams with actual data
+            if (totalTickets === 0) {
+                return null;
+            }
+
             return {
-                teamName: team.teamName,
+                teamName: team.teamName || 'Unknown Team',
                 totalTickets: totalTickets,
                 cLevelEscalations: cLevelCount,
                 p1Escalations: p1Count,
@@ -49,9 +76,9 @@ export const TeamComparisonSlideComponent: React.FC<{ slide: TeamComparisonSlide
                 p3Escalations: p3Count,
                 p4Escalations: p4Count
             };
-        });
+        }).filter(team => team !== null); // Remove null entries
 
-        // Sort by total tickets (descending) and return top 5
+        // Sort by total tickets (descending) and return top 10
         return allTeams
             .sort((a: any, b: any) => b.totalTickets - a.totalTickets)
             .slice(0, 10);

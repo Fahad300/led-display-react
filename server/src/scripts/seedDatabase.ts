@@ -100,14 +100,9 @@ const seedSessions = async (): Promise<void> => {
             type: "current-esc-slide",
             active: true,
             duration: 10,
-            dataSource: "manual", // Using mock data instead of API
+            dataSource: "api", // Using API data
             data: {
-                escalations: [
-                    { ticketCategory: "Code Blue", teamName: "Test team", clientName: "Test client", ticketSummary: "Data extraction failed due to timeout", averageResponseTime: "Prompt Response", ticketStatus: "Resolved", currentStatus: "Resolved" },
-                    { ticketCategory: "Code Red", teamName: "Test team", clientName: "Test client", ticketSummary: "Data extraction failed due to timeout", averageResponseTime: "Prompt Response", ticketStatus: "Open", currentStatus: "Open" },
-                    { ticketCategory: "Code Yellow", teamName: "Test team", clientName: "Test client", ticketSummary: "Data extraction failed due to timeout", averageResponseTime: "Prompt Response", ticketStatus: "Resolved", currentStatus: "Resolved" },
-                    { ticketCategory: "Code Green", teamName: "Test team", clientName: "Test client", ticketSummary: "Data extraction failed due to timeout", averageResponseTime: "Prompt Response", ticketStatus: "Pending", currentStatus: "Pending" }
-                ]
+                escalations: [] // Empty array - data comes from API
             }
         },
         {
