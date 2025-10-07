@@ -7,35 +7,19 @@ interface DocumentSlideProps {
 
 /**
  * DocumentSlide component for displaying various document types (PDF, Office files, images)
- * Optimized for full-screen LED display with download prevention
+ * Optimized for full-screen LED display without interactive elements
  */
 const DocumentSlide: React.FC<DocumentSlideProps> = ({ slide }) => {
-    const [pdfError, setPdfError] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
-    const [pdfLoadTimeout, setPdfLoadTimeout] = useState<NodeJS.Timeout | null>(null);
+    const [useDirectUrl, setUseDirectUrl] = useState(false);
+    const [pdfDisplayMethod, setPdfDisplayMethod] = useState<'iframe' | 'object' | 'embed'>('iframe');
 
-    // Reset error state when file URL changes
+    // Reset loading state when file URL changes
     useEffect(() => {
-        setPdfError(false);
         setIsLoading(true);
-
-        // Set a timeout to detect if PDF fails to load
-        const timeout = setTimeout(() => {
-            if (isLoading) {
-                console.log("DocumentSlide - PDF load timeout, trying fallback");
-                setPdfError(true);
-                setIsLoading(false);
-            }
-        }, 5000); // 5 second timeout
-
-        setPdfLoadTimeout(timeout);
-
-        return () => {
-            if (timeout) {
-                clearTimeout(timeout);
-            }
-        };
-    }, [slide?.data?.fileUrl, isLoading]);
+        setUseDirectUrl(false);
+        setPdfDisplayMethod('iframe');
+    }, [slide?.data?.fileUrl]);
 
     // Validate slide data structure
     if (!slide || !slide.data) {
@@ -87,30 +71,9 @@ const DocumentSlide: React.FC<DocumentSlideProps> = ({ slide }) => {
         return url;
     };
 
-    // Handle PDF load errors
-    const handlePdfError = () => {
-        console.log("PDF failed to load, trying fallback");
-        setPdfError(true);
-        setIsLoading(false);
-
-        // Clear the timeout since we're handling the error
-        if (pdfLoadTimeout) {
-            clearTimeout(pdfLoadTimeout);
-            setPdfLoadTimeout(null);
-        }
-    };
-
     // Handle PDF load success
     const handlePdfLoad = () => {
-        console.log("PDF loaded successfully");
-        setPdfError(false);
         setIsLoading(false);
-
-        // Clear the timeout since PDF loaded successfully
-        if (pdfLoadTimeout) {
-            clearTimeout(pdfLoadTimeout);
-            setPdfLoadTimeout(null);
-        }
     };
 
     // Early return if no file URL
@@ -152,46 +115,41 @@ const DocumentSlide: React.FC<DocumentSlideProps> = ({ slide }) => {
             );
         }
 
-        // For PDFs, use multiple fallback approaches
+        // For PDFs, use multiple display approaches
         if (fileType === "pdf") {
-            console.log("DocumentSlide - Rendering as PDF");
-            // If PDF failed to load, show fallback message
-            if (pdfError) {
-                return (
-                    <div className="w-full h-full flex items-center justify-center bg-persivia-white">
-                        <div className="text-center p-8">
-                            <h2 className="text-2xl md:text-3xl font-bold text-persivia-blue mb-4">PDF Display Error</h2>
-                            <p className="text-gray-600 mb-4">Unable to display PDF in browser.</p>
-                            <p className="text-sm text-gray-500">File: {fileUrl.split('/').pop()}</p>
-                            <div className="mt-4 space-x-2">
-                                <button
-                                    onClick={() => {
-                                        setPdfError(false);
-                                        setIsLoading(true);
-                                    }}
-                                    className="px-4 py-2 bg-persivia-blue text-white rounded hover:bg-blue-600"
-                                >
-                                    Retry
-                                </button>
-                                <button
-                                    onClick={() => window.open(fileUrl, '_blank')}
-                                    className="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700"
-                                >
-                                    Open in New Tab
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                );
-            }
+            console.log("DocumentSlide - Rendering as PDF with method:", pdfDisplayMethod);
 
-            // Try the special PDF view endpoint first
+            // Try different URL approaches
             const pdfViewUrl = getPdfViewUrl(fileUrl);
-            console.log("DocumentSlide - PDF View URL:", pdfViewUrl);
+            const directUrl = fileUrl;
 
-            // Simplified PDF URL without complex parameters
-            const pdfUrl = `${pdfViewUrl}#toolbar=0&navpanes=0&scrollbar=0&statusbar=0&messages=0&view=Fit&zoom=page-fit`;
-            console.log("DocumentSlide - Final PDF URL:", pdfUrl);
+            // Simple URL without complex parameters that might cause issues
+            const simplePdfUrl = useDirectUrl ? directUrl : pdfViewUrl;
+
+            // Enhanced PDF URL with all controls hidden for display screens
+            const displayPdfUrl = `${simplePdfUrl}#toolbar=0&navpanes=0&scrollbar=0&statusbar=0&messages=0&view=Fit&zoom=page-fit&disableWorker=true&textLayer=0&annotationLayer=0&sidebar=0&secondaryToolbar=0&findbar=0&print=0&download=0&openfile=0&attachments=0&bookmarks=0&presentationMode=0&editorFreeText=0&editorInk=0&editorStamp=0&editorHighlight=0&editorUnderline=0&editorSquiggly=0&editorStrikeOut=0&editorRedact=0&editorCaret=0&editorStamp=0&editorFreeText=0&editorInk=0&editorHighlight=0&editorUnderline=0&editorSquiggly=0&editorStrikeOut=0&editorRedact=0&editorCaret=0`;
+
+            const handlePdfError = () => {
+                console.error("DocumentSlide - PDF display error, trying next method");
+                if (pdfDisplayMethod === 'iframe') {
+                    setPdfDisplayMethod('object');
+                    setIsLoading(true);
+                } else if (pdfDisplayMethod === 'object') {
+                    setPdfDisplayMethod('embed');
+                    setIsLoading(true);
+                } else if (!useDirectUrl) {
+                    setUseDirectUrl(true);
+                    setPdfDisplayMethod('iframe');
+                    setIsLoading(true);
+                } else {
+                    setIsLoading(false);
+                }
+            };
+
+            const handlePdfSuccess = () => {
+                console.log("DocumentSlide - PDF loaded successfully with method:", pdfDisplayMethod);
+                setIsLoading(false);
+            };
 
             return (
                 <div className="w-full h-full relative document-slide-container">
@@ -200,68 +158,61 @@ const DocumentSlide: React.FC<DocumentSlideProps> = ({ slide }) => {
                             <div className="text-center">
                                 <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-persivia-blue mx-auto mb-4"></div>
                                 <p className="text-persivia-blue">Loading PDF...</p>
-                                <p className="text-sm text-gray-500 mt-2">If this takes too long, try opening in a new tab</p>
-                                <button
-                                    onClick={() => window.open(fileUrl, '_blank')}
-                                    className="mt-2 px-3 py-1 bg-persivia-blue text-white text-sm rounded hover:bg-blue-600"
-                                >
-                                    Open in New Tab
-                                </button>
+                                <p className="text-sm text-gray-500 mt-2">Method: {pdfDisplayMethod}</p>
                             </div>
                         </div>
                     )}
-                    <iframe
-                        src={pdfUrl}
-                        className="w-full h-full document-slide-iframe bg-persivia-white"
-                        title={caption || "PDF Document"}
-                        frameBorder="0"
-                        scrolling="no"
-                        onLoad={() => {
-                            console.log("DocumentSlide - PDF iframe loaded successfully");
-                            handlePdfLoad();
-                        }}
-                        onError={(e) => {
-                            console.error("DocumentSlide - PDF iframe error:", e);
-                            console.log("DocumentSlide - PDF view endpoint failed, trying direct URL");
-                            setPdfError(true);
-                            setIsLoading(false);
-                        }}
-                        sandbox="allow-same-origin allow-scripts allow-downloads"
-                        style={{
-                            width: "100%",
-                            height: "100%",
-                            border: "none"
-                        }}
-                    />
 
-                    {/* Fallback iframe with direct PDF URL */}
-                    {pdfError && (
+                    {/* Method 1: iframe */}
+                    {pdfDisplayMethod === 'iframe' && (
                         <iframe
-                            src={fileUrl}
+                            src={displayPdfUrl}
                             className="w-full h-full document-slide-iframe bg-persivia-white"
-                            title={caption || "PDF Document (Direct)"}
+                            title={caption || "PDF Document"}
                             frameBorder="0"
                             scrolling="no"
-                            onLoad={() => {
-                                console.log("DocumentSlide - Direct PDF iframe loaded successfully");
-                                setPdfError(false);
-                                setIsLoading(false);
-                            }}
-                            onError={(e) => {
-                                console.error("DocumentSlide - Direct PDF iframe also failed:", e);
-                                setPdfError(true);
-                                setIsLoading(false);
-                            }}
-                            sandbox="allow-same-origin allow-scripts allow-downloads"
+                            onLoad={handlePdfSuccess}
+                            onError={handlePdfError}
                             style={{
                                 width: "100%",
                                 height: "100%",
-                                border: "none",
-                                position: "absolute",
-                                top: 0,
-                                left: 0,
-                                zIndex: 1
+                                border: "none"
                             }}
+                            allow="fullscreen"
+                        />
+                    )}
+
+                    {/* Method 2: object element */}
+                    {pdfDisplayMethod === 'object' && (
+                        <object
+                            data={displayPdfUrl}
+                            type="application/pdf"
+                            className="w-full h-full bg-persivia-white"
+                            style={{
+                                width: "100%",
+                                height: "100%",
+                                border: "none"
+                            }}
+                            onLoad={handlePdfSuccess}
+                            onError={handlePdfError}
+                        >
+                            <p>Your browser does not support PDFs.</p>
+                        </object>
+                    )}
+
+                    {/* Method 3: embed element */}
+                    {pdfDisplayMethod === 'embed' && (
+                        <embed
+                            src={displayPdfUrl}
+                            type="application/pdf"
+                            className="w-full h-full bg-persivia-white"
+                            style={{
+                                width: "100%",
+                                height: "100%",
+                                border: "none"
+                            }}
+                            onLoad={handlePdfSuccess}
+                            onError={handlePdfError}
                         />
                     )}
                 </div>
@@ -303,15 +254,6 @@ const DocumentSlide: React.FC<DocumentSlideProps> = ({ slide }) => {
 
     return (
         <div className="w-full h-full bg-persivia-white relative">
-            {/* Debug overlay - remove this in production */}
-            <div className="absolute top-2 left-2 bg-black/80 text-white text-xs p-2 rounded z-50">
-                <div>Slide ID: {slide.id}</div>
-                <div>File URL: {fileUrl ? 'Present' : 'Missing'}</div>
-                <div>File Type: {fileType}</div>
-                <div>Loading: {isLoading ? 'Yes' : 'No'}</div>
-                <div>PDF Error: {pdfError ? 'Yes' : 'No'}</div>
-            </div>
-
             {renderDocument()}
             {caption && (
                 <div className="absolute bottom-0 left-0 right-0 bg-black/50 text-white p-4 text-center">

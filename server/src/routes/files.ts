@@ -249,11 +249,15 @@ router.get("/:id/view", async (req, res) => {
 
         // Set headers specifically for PDF viewing to prevent downloads
         res.setHeader("Content-Type", "application/pdf");
-        res.setHeader("Content-Disposition", "inline");
+        res.setHeader("Content-Disposition", "inline; filename=\"" + fileData.filename + "\"");
         res.setHeader("Cache-Control", "public, max-age=31536000");
         res.setHeader("Access-Control-Allow-Origin", "*");
+        res.setHeader("Access-Control-Allow-Methods", "GET, HEAD, OPTIONS");
+        res.setHeader("Access-Control-Allow-Headers", "Range, Content-Range, Content-Length, Content-Type");
         res.setHeader("X-Content-Type-Options", "nosniff");
-        res.setHeader("X-Frame-Options", "SAMEORIGIN");
+        res.setHeader("Accept-Ranges", "bytes");
+        // Allow iframe embedding for display screens
+        res.setHeader("X-Frame-Options", "ALLOWALL");
 
         // Send file buffer
         res.send(fileData.buffer);
