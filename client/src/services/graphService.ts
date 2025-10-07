@@ -9,7 +9,7 @@ const retryWithBackoff = async <T>(
     maxRetries: number = 3,
     baseDelay: number = 1000
 ): Promise<T> => {
-    let lastError: Error;
+    let lastError: Error | undefined = undefined;
 
     for (let attempt = 0; attempt <= maxRetries; attempt++) {
         try {
@@ -29,7 +29,8 @@ const retryWithBackoff = async <T>(
         }
     }
 
-    throw lastError!;
+    // This should never be reached due to the logic above, but TypeScript needs this
+    throw new Error(lastError?.message || 'Failed after maximum retries');
 };
 
 /**
@@ -79,14 +80,21 @@ export const fetchTeamWiseData = async (): Promise<GraphSlideData> => {
     } catch (error) {
         console.error('Error fetching team wise data via backend proxy:', error);
 
+        // Log detailed error information
+        if (error instanceof Error) {
+            console.error('Error message:', error.message);
+            console.error('Error stack:', error.stack);
+        }
+
         const currentYear = getCurrentYear();
 
-        // Return fallback data structure
+        // Return empty data structure when API fails
+        console.log("GraphService: Returning empty data due to API failure");
         return {
             title: `Team Wise Data ${currentYear}`,
-            description: "",
+            description: "No data available - API connection failed",
             graphType: 'bar',
-            data: [],
+            data: [], // Empty data array
             timeRange: 'monthly',
             lastUpdated: new Date().toISOString(),
             categories: ['C-Level (Top Priority: fix immediately)', 'P1 - Blocker (fix immediately)', 'P2 - Critical (must fix)', 'P3 - Major (really should fix)', 'P4 - Minor (should fix)']

@@ -463,9 +463,25 @@ export const UnifiedProvider: React.FC<UnifiedProviderProps> = ({ children }) =>
 
     // Update slide with immediate save for critical changes (only on non-display pages)
     const updateSlide = useCallback((updatedSlide: Slide) => {
-        setSlides(prev => prev.map(slide =>
-            slide.id === updatedSlide.id ? updatedSlide : slide
-        ));
+        setSlides(prev => {
+            const updatedSlides = prev.map(slide =>
+                slide.id === updatedSlide.id ? updatedSlide : slide
+            );
+
+            // Dispatch real-time sync event for immediate DisplayPage updates
+            if (!isDisplayPage) {
+                const changes = [`Slide ${updatedSlide.name} updated`];
+                if (updatedSlide.active !== undefined) {
+                    changes.push(`Slide ${updatedSlide.active ? 'activated' : 'deactivated'}`);
+                }
+
+                // Dispatch slides change event for real-time sync
+                dispatchSlidesChange(updatedSlides, changes, 'homepage');
+                console.log("📡 UnifiedContext: Dispatched real-time sync for slide update");
+            }
+
+            return updatedSlides;
+        });
 
         // Immediate save for critical changes (active status, order changes) - only on non-display pages
         if (updatedSlide.active !== undefined && !isDisplayPage) {
@@ -482,8 +498,14 @@ export const UnifiedProvider: React.FC<UnifiedProviderProps> = ({ children }) =>
     const reorderSlides = useCallback((reorderedSlides: Slide[]) => {
         setSlides(reorderedSlides);
 
-        // Immediate save for reorder operations - only on non-display pages
+        // Dispatch real-time sync event for immediate DisplayPage updates
         if (!isDisplayPage) {
+            const changes = ['Slides reordered'];
+
+            // Dispatch slides change event for real-time sync
+            dispatchSlidesChange(reorderedSlides, changes, 'homepage');
+            console.log("📡 UnifiedContext: Dispatched real-time sync for slide reorder");
+
             console.log("🔄 Reorder detected, saving immediately...");
             setTimeout(() => {
                 saveToDatabase().catch(error => {

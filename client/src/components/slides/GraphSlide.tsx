@@ -61,6 +61,16 @@ export const GraphSlide: React.FC<{ slide: GraphSlideType }> = ({ slide }) => {
     React.useEffect(() => {
         console.log("GraphSlide - graphData:", graphData);
         console.log("GraphSlide - teamWiseData:", teamWiseData);
+        console.log("GraphSlide - graphData type:", typeof graphData);
+        console.log("GraphSlide - graphData null check:", graphData === null);
+        console.log("GraphSlide - graphData undefined check:", graphData === undefined);
+
+        if (graphData) {
+            console.log("GraphSlide - graphData.data:", graphData.data);
+            console.log("GraphSlide - graphData.data length:", graphData.data?.length);
+            console.log("GraphSlide - graphData.categories:", graphData.categories);
+            console.log("GraphSlide - graphData.categories length:", graphData.categories?.length);
+        }
     }, [graphData, teamWiseData]);
 
     // Use live data from context if available, otherwise show loading or empty state
@@ -175,8 +185,7 @@ export const GraphSlide: React.FC<{ slide: GraphSlideType }> = ({ slide }) => {
                 const selectedPriority = chartData.categories[datasetIndex];
 
                 // Handle click - you can add navigation logic here
-                // Graph clicked
-
+                console.log("Graph clicked:", { selectedTeam, selectedPriority });
             }
         }
     };
@@ -216,10 +225,29 @@ export const GraphSlide: React.FC<{ slide: GraphSlideType }> = ({ slide }) => {
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
                                     </svg>
                                 </div>
-                                <p className="text-white/70 text-lg font-medium">No data available for graph</p>
+                                <p className="text-white/70 text-lg font-medium">No team data available</p>
+                                <p className="text-white/50 text-sm mt-2">
+                                    {chartData.description || "Unable to load performance data from API"}
+                                </p>
+                                <p className="text-white/40 text-xs mt-4">
+                                    The external API may be unavailable or there may be no data to display at this time.
+                                </p>
                                 {error && (
                                     <p className="text-red-300 text-sm mt-2">Error: {error}</p>
                                 )}
+                                <div className="mt-4 text-xs text-white/40 max-w-md">
+                                    <p>Check console for detailed logs</p>
+                                    <p>API endpoint: /api/proxy/jira-chart</p>
+                                    <div className="mt-2 p-2 bg-black/20 rounded text-left">
+                                        <p>Debug Info:</p>
+                                        <p>• GraphData: {graphData === null ? "null" : graphData === undefined ? "undefined" : "exists"}</p>
+                                        <p>• Data Array: {graphData?.data ? `${graphData.data.length} items` : "missing"}</p>
+                                        <p>• Categories: {graphData?.categories ? `${graphData.categories.length} items` : "missing"}</p>
+                                        {graphData && (
+                                            <p>• Keys: {Object.keys(graphData).join(', ')}</p>
+                                        )}
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     )}
