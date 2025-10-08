@@ -16,6 +16,7 @@ import SwiperSlideshow from "../components/SwiperSlideshow";
 import { useUnified } from '../contexts/UnifiedContext';
 import { useSettings } from '../contexts/SettingsContext';
 import realtimeSync, { SyncEvent } from '../utils/realtimeSync';
+import { logger } from '../utils/logger';
 
 /**
  * DisplayPage: Simple display page with two core functions:
@@ -34,16 +35,16 @@ const DisplayPage: React.FC = () => {
     // Get latest data on mount
     useEffect(() => {
         const getLatestData = async () => {
-            console.log("🖥️ DisplayPage: Getting latest settings and unified data...");
+            logger.sync("DisplayPage: Getting latest settings and unified data...");
             try {
                 // Get latest settings
                 await syncSettings();
                 // Get latest unified object
                 await syncFromDatabase();
-                console.log("✅ DisplayPage: Latest data loaded successfully");
-                console.log("🖥️ DisplayPage: Current displaySettings:", displaySettings);
+                logger.success("DisplayPage: Latest data loaded successfully");
+                logger.debug("DisplayPage: Current displaySettings:", displaySettings);
             } catch (error) {
-                console.error("❌ DisplayPage: Failed to load latest data:", error);
+                logger.error("DisplayPage: Failed to load latest data:", error);
             }
         };
 
@@ -52,12 +53,12 @@ const DisplayPage: React.FC = () => {
 
     // Debug: Log displaySettings changes
     useEffect(() => {
-        console.log("🖥️ DisplayPage: displaySettings changed:", displaySettings);
+        logger.debug("DisplayPage: displaySettings changed:", displaySettings);
     }, [displaySettings]);
 
     // Force Swiper refresh when slides data changes
     useEffect(() => {
-        console.log("🔄 DisplayPage: Slides data changed, Swiper will auto-refresh", {
+        logger.sync("DisplayPage: Slides data changed, Swiper will auto-refresh", {
             totalSlides: slides.length,
             activeSlides: activeSlides.length,
             slideIds: activeSlides.map(s => s.id)
@@ -66,14 +67,14 @@ const DisplayPage: React.FC = () => {
         // If we have very few active slides compared to total slides, force a refresh
         // This handles cases where the database might have stale data
         if (slides.length > 0 && activeSlides.length < slides.length * 0.5) {
-            console.log("⚠️ DisplayPage: Detected potential data mismatch, forcing refresh...");
+            logger.warn("DisplayPage: Detected potential data mismatch, forcing refresh...");
             setTimeout(async () => {
                 try {
-                    console.log("🔄 DisplayPage: Forcing data refresh due to low active slide count...");
+                    logger.sync("DisplayPage: Forcing data refresh due to low active slide count...");
                     await syncFromDatabase();
-                    console.log("✅ DisplayPage: Forced refresh completed");
+                    logger.success("DisplayPage: Forced refresh completed");
                 } catch (error) {
-                    console.error("❌ DisplayPage: Forced refresh failed:", error);
+                    logger.error("DisplayPage: Forced refresh failed:", error);
                 }
             }, 1000);
         }
@@ -81,11 +82,11 @@ const DisplayPage: React.FC = () => {
 
     // Real-time sync - listen for immediate updates from HomePage
     useEffect(() => {
-        console.log("🔄 DisplayPage: Setting up real-time sync listeners...");
+        logger.sync("DisplayPage: Setting up real-time sync listeners...");
 
         // Listen for slides changes from HomePage
         const unsubscribeSlides = realtimeSync.addEventListener('slides', async (event: SyncEvent) => {
-            console.log("🔄 DisplayPage: Slides data changed, Swiper will auto-refresh", {
+            logger.sync("DisplayPage: Slides data changed, Swiper will auto-refresh", {
                 totalSlides: event.data.totalCount,
                 activeSlides: event.data.activeCount,
                 slideIds: event.data.slides.map((s: any) => s.id),
@@ -96,15 +97,15 @@ const DisplayPage: React.FC = () => {
             try {
                 // Sync from database to get the latest data
                 await syncFromDatabase();
-                console.log("✅ DisplayPage: Successfully synced slides from database");
+                logger.success("DisplayPage: Successfully synced slides from database");
             } catch (error) {
-                console.error("❌ DisplayPage: Failed to sync slides:", error);
+                logger.error("DisplayPage: Failed to sync slides:", error);
             }
         });
 
         // Listen for settings changes from HomePage
         const unsubscribeSettings = realtimeSync.addEventListener('settings', async (event: SyncEvent) => {
-            console.log("🔄 DisplayPage: Settings changed, updating display", {
+            logger.sync("DisplayPage: Settings changed, updating display", {
                 changes: event.data.changes,
                 newSettings: event.data.displaySettings,
                 source: event.source
@@ -113,15 +114,15 @@ const DisplayPage: React.FC = () => {
             try {
                 // Sync settings from database
                 await syncSettings();
-                console.log("✅ DisplayPage: Successfully synced settings from database");
+                logger.success("DisplayPage: Successfully synced settings from database");
             } catch (error) {
-                console.error("❌ DisplayPage: Failed to sync settings:", error);
+                logger.error("DisplayPage: Failed to sync settings:", error);
             }
         });
 
         // Listen for API data changes
         const unsubscribeApiData = realtimeSync.addEventListener('api-data', async (event: SyncEvent) => {
-            console.log("🔄 DisplayPage: API data changed, updating display", {
+            logger.data("DisplayPage: API data changed, updating display", {
                 employeesCount: event.data.employees?.length || 0,
                 hasGraphData: !!event.data.graphData,
                 changes: event.data.changes,
@@ -131,15 +132,15 @@ const DisplayPage: React.FC = () => {
             try {
                 // Sync from database to get the latest API data
                 await syncFromDatabase();
-                console.log("✅ DisplayPage: Successfully synced API data from database");
+                logger.success("DisplayPage: Successfully synced API data from database");
             } catch (error) {
-                console.error("❌ DisplayPage: Failed to sync API data:", error);
+                logger.error("DisplayPage: Failed to sync API data:", error);
             }
         });
 
         // Listen for force reload events
         const unsubscribeForceReload = realtimeSync.addEventListener('force-reload', async (event: SyncEvent) => {
-            console.log("🔄 DisplayPage: Force reload requested", {
+            logger.sync("DisplayPage: Force reload requested", {
                 reason: event.data.reason,
                 source: event.source
             });
@@ -147,28 +148,28 @@ const DisplayPage: React.FC = () => {
             try {
                 // Sync both settings and data
                 await Promise.all([syncSettings(), syncFromDatabase()]);
-                console.log("✅ DisplayPage: Force reload completed successfully");
+                logger.success("DisplayPage: Force reload completed successfully");
             } catch (error) {
-                console.error("❌ DisplayPage: Force reload failed:", error);
+                logger.error("DisplayPage: Force reload failed:", error);
             }
         });
 
         // Fallback: Periodic sync every 5 minutes as backup (much less frequent)
         const fallbackInterval = setInterval(async () => {
-            console.log("🔄 DisplayPage: Fallback sync (every 5 minutes)...");
+            logger.sync("DisplayPage: Fallback sync (every 5 minutes)...");
             try {
                 await Promise.all([syncSettings(), syncFromDatabase()]);
-                console.log("✅ DisplayPage: Fallback sync completed");
+                logger.success("DisplayPage: Fallback sync completed");
             } catch (error) {
-                console.error("❌ DisplayPage: Fallback sync failed:", error);
+                logger.error("DisplayPage: Fallback sync failed:", error);
             }
         }, 300000); // 5 minutes
 
-        console.log("✅ DisplayPage: Real-time sync listeners established");
+        logger.success("DisplayPage: Real-time sync listeners established");
 
         // Cleanup function
         return () => {
-            console.log("🧹 DisplayPage: Cleaning up real-time sync listeners");
+            logger.debug("DisplayPage: Cleaning up real-time sync listeners");
             unsubscribeSlides();
             unsubscribeSettings();
             unsubscribeApiData();
@@ -181,40 +182,40 @@ const DisplayPage: React.FC = () => {
     useEffect(() => {
         const handleSettingsChanged = async (event: Event) => {
             const customEvent = event as CustomEvent;
-            console.log("⚙️ DisplayPage: Settings changed event received", customEvent.detail);
+            logger.debug("DisplayPage: Settings changed event received", customEvent.detail);
 
             // Since DisplayPage might be in a different tab, we need to sync from database
             // to get the latest settings AND slides data that were just saved together
             try {
-                console.log("🔄 DisplayPage: Syncing settings and slides from database...");
+                logger.sync("DisplayPage: Syncing settings and slides from database...");
                 await syncSettings();
                 await syncFromDatabase(); // Also sync slides data since they're saved together
-                console.log("✅ DisplayPage: Settings and slides synced successfully");
+                logger.success("DisplayPage: Settings and slides synced successfully");
 
                 // Log the current state after sync
-                console.log("📊 DisplayPage: Current state after sync:", {
+                logger.debug("DisplayPage: Current state after sync:", {
                     totalSlides: slides.length,
                     activeSlides: slides.filter(s => s.active).length,
                     slideIds: slides.filter(s => s.active).map(s => s.id)
                 });
             } catch (error) {
-                console.error("❌ DisplayPage: Failed to sync settings and slides:", error);
+                logger.error("DisplayPage: Failed to sync settings and slides:", error);
             }
         };
 
         const handleForceReload = async (event: Event) => {
             const customEvent = event as CustomEvent;
-            console.log("🔄 DisplayPage: Force reload event received", customEvent.detail);
+            logger.sync("DisplayPage: Force reload event received", customEvent.detail);
             try {
                 // Refresh data instead of full page reload
-                console.log("🔄 DisplayPage: Refreshing data from database...");
+                logger.sync("DisplayPage: Refreshing data from database...");
                 await syncSettings();
                 await syncFromDatabase();
-                console.log("✅ DisplayPage: Data refreshed successfully without page reload");
+                logger.success("DisplayPage: Data refreshed successfully without page reload");
             } catch (error) {
-                console.error("❌ DisplayPage: Failed to refresh data:", error);
+                logger.error("DisplayPage: Failed to refresh data:", error);
                 // Fallback to page reload if data refresh fails
-                console.log("🔄 DisplayPage: Falling back to page reload...");
+                logger.sync("DisplayPage: Falling back to page reload...");
                 window.location.reload();
             }
         };

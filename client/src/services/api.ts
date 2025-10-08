@@ -1,4 +1,31 @@
+/**
+ * API Service - Legacy Compatibility Layer
+ * 
+ * DEPRECATED: Manual polling has been replaced by React Query
+ * See: client/src/hooks/useDashboardData.ts and server/src/routes/dashboard.ts
+ * 
+ * This file is maintained for backward compatibility only. The following functions
+ * are now wrappers or no-ops:
+ * - startApiPolling() -> no-op (React Query handles polling)
+ * - stopApiPolling() -> no-op
+ * - forceApiCheck() -> triggers React Query refetch via listeners
+ * - clearApiCache() -> invalidates React Query cache
+ * 
+ * Legacy functions still work:
+ * - fetchEmployeesData() -> calls individual endpoints (not recommended)
+ * - fetchGraphData() -> calls individual endpoints (not recommended)
+ * - addDataChangeListener() -> still functional for backward compatibility
+ * 
+ * MIGRATION GUIDE:
+ * Old: import { addDataChangeListener, startApiPolling } from './services/api'
+ * New: import { useDashboardData } from './hooks/useDashboardData'
+ * 
+ * TODO: Remove this file once all components are migrated to useDashboardData
+ * TODO: Consider WebSocket/SSE instead of polling for real-time updates
+ */
+
 import axios from "axios";
+import { logger } from "../utils/logger";
 
 // Get the backend URL based on environment
 const getBackendUrl = (): string => {
@@ -18,8 +45,10 @@ export const backendApi = axios.create({
     },
 });
 
-// API Data Polling Configuration
-const API_POLLING_INTERVAL = 30 * 1000; // 30 seconds for testing
+// API Data Polling Configuration (DEPRECATED - React Query handles this)
+// Kept for reference only - not used in production
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+const API_POLLING_INTERVAL = 30 * 1000; // 30 seconds for testing (DEPRECATED)
 
 // API Endpoints Configuration - Add new APIs here without code changes
 interface ApiEndpoint {
@@ -83,8 +112,9 @@ const API_ENDPOINTS: ApiEndpoint[] = [
     // }
 ];
 
-// Polling state management
-let pollingInterval: NodeJS.Timeout | null = null;
+// Polling state management (DEPRECATED - kept for backward compatibility)
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+let pollingInterval: NodeJS.Timeout | null = null; // DEPRECATED: Not used with React Query
 let isPolling = false;
 let lastDataHash = "";
 let lastApiCheck: Date | null = null;
@@ -135,14 +165,14 @@ const notifyPollingStateChange = (state: any) => {
  */
 const fetchApiData = async (endpoint: ApiEndpoint): Promise<any> => {
     try {
-        console.log(`📡 Fetching data from ${endpoint.description} (${endpoint.url})`);
+        logger.api(`Fetching data from ${endpoint.description} (${endpoint.url})`);
         const response = await backendApi.get(endpoint.url);
         const data = response.data;
 
         // Apply transformation if provided
         const transformedData = endpoint.transform ? endpoint.transform(data) : data;
 
-        console.log(`✅ Successfully fetched ${endpoint.key}:`, {
+        logger.success(`Successfully fetched ${endpoint.key}:`, {
             hasData: !!transformedData,
             dataType: Array.isArray(transformedData) ? `array[${transformedData.length}]` : typeof transformedData
         });
@@ -161,7 +191,7 @@ const fetchAllApiData = async (): Promise<Record<string, any>> => {
     const enabledEndpoints = API_ENDPOINTS.filter(endpoint => endpoint.enabled);
     const results: Record<string, any> = {};
 
-    console.log(`🔄 Fetching data from ${enabledEndpoints.length} API endpoints...`);
+    logger.api(`Fetching data from ${enabledEndpoints.length} API endpoints...`);
 
     // Fetch all APIs in parallel for better performance
     const fetchPromises = enabledEndpoints.map(async (endpoint) => {
@@ -214,7 +244,9 @@ export const fetchEscalationsData = async (): Promise<any[]> => {
 
 /**
  * Check for API data updates
+ * DEPRECATED: Not used with React Query, kept for potential debugging
  */
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const checkForApiUpdates = async (): Promise<void> => {
     if (pollingInProgress) {
         return;
@@ -232,14 +264,14 @@ const checkForApiUpdates = async (): Promise<void> => {
 
         // Check if data has changed
         if (currentDataHash !== lastDataHash) {
-            console.log("🔄 API data has changed, updating cached data");
+            logger.sync("API data has changed, updating cached data");
 
             // Extract employees data for backward compatibility
             const employees = freshApiData.employees || [];
             const graphData = freshApiData.graphData || null;
             const escalations = freshApiData.escalations || [];
 
-            console.log("🔄 API Data Update:", {
+            logger.data("API Data Update:", {
                 employees: employees.length,
                 graphData: !!graphData,
                 escalations: escalations.length,
@@ -247,7 +279,7 @@ const checkForApiUpdates = async (): Promise<void> => {
             });
 
             // Debug escalations data specifically
-            console.log("🔄 Escalations Debug:", {
+            logger.debug("Escalations Debug:", {
                 rawEscalations: freshApiData.escalations,
                 escalationsLength: escalations.length,
                 escalationsType: typeof escalations,
@@ -298,9 +330,9 @@ const checkForApiUpdates = async (): Promise<void> => {
 
                     // Log specific transitions for debugging
                     if (isDataCleared) {
-                        console.log("🧹 All employee data has been cleared from the API");
+                        logger.info("All employee data has been cleared from the API");
                     } else if (areBirthdaysCleared || areAnniversariesCleared) {
-                        console.log("🎉 Event data transitions:", {
+                        logger.info("Event data transitions:", {
                             birthdaysCleared: areBirthdaysCleared,
                             anniversariesCleared: areAnniversariesCleared,
                             message: "Birthday/Anniversary data has been cleared - display should update automatically"
@@ -311,7 +343,7 @@ const checkForApiUpdates = async (): Promise<void> => {
                 changeDetails.endpoints[endpoint.key] = endpointChanges;
             });
 
-            console.log("📊 API Data Change Details:", changeDetails);
+            logger.data("API Data Change Details:", changeDetails);
 
             // IMPORTANT: Always update cached data when hash changes
             // This ensures stale data is cleared even when new data is empty
@@ -339,7 +371,7 @@ const checkForApiUpdates = async (): Promise<void> => {
                 pollingInProgress: false
             });
         } else {
-            console.log("No API data changes detected");
+            logger.debug("No API data changes detected");
 
             // Update polling state without data change
             notifyPollingStateChange({
@@ -369,26 +401,14 @@ const checkForApiUpdates = async (): Promise<void> => {
 
 /**
  * Start automatic API polling
+ * DEPRECATED: No-op for backward compatibility
+ * React Query handles polling automatically via useDashboardData hook
  */
 export const startApiPolling = (): void => {
-    if (isPolling) {
-        console.log("API polling is already running");
-        return;
-    }
-
-    console.log("Starting API data polling every hour");
-    console.log("🔄 API Endpoints configured:", API_ENDPOINTS.filter(ep => ep.enabled).map(ep => ({ key: ep.key, url: ep.url })));
+    logger.debug("startApiPolling called (no-op - React Query handles polling)");
+    // No-op: React Query automatically polls via refetchInterval in useDashboardData
+    // Update state for backward compatibility
     isPolling = true;
-
-    // Initial check
-    checkForApiUpdates();
-
-    // Set up interval for regular checks
-    pollingInterval = setInterval(() => {
-        checkForApiUpdates();
-    }, API_POLLING_INTERVAL);
-
-    // Update polling state
     notifyPollingStateChange({
         isPolling: true,
         lastApiCheck,
@@ -400,22 +420,14 @@ export const startApiPolling = (): void => {
 
 /**
  * Stop automatic API polling
+ * DEPRECATED: No-op for backward compatibility
+ * React Query handles polling automatically
  */
 export const stopApiPolling = (): void => {
-    if (!isPolling) {
-        console.log("API polling is not running");
-        return;
-    }
-
-    console.log("Stopping API data polling");
+    logger.debug("stopApiPolling called (no-op - React Query handles polling)");
+    // No-op: React Query polling cannot be dynamically stopped in this implementation
+    // Update state for backward compatibility
     isPolling = false;
-
-    if (pollingInterval) {
-        clearInterval(pollingInterval);
-        pollingInterval = null;
-    }
-
-    // Update polling state
     notifyPollingStateChange({
         isPolling: false,
         lastApiCheck,
@@ -427,27 +439,40 @@ export const stopApiPolling = (): void => {
 
 /**
  * Force an immediate API check
+ * DEPRECATED: Triggers React Query refetch instead of manual polling
+ * For backward compatibility, this function notifies listeners to trigger refetch
  */
 export const forceApiCheck = async (): Promise<void> => {
-    console.log("Forcing immediate API check");
-    // Clear cached data to force fresh fetch
+    logger.api("forceApiCheck called - notifying React Query to refetch");
+    // Clear local cached data for backward compatibility
     lastDataHash = "";
-    cachedApiData = {}; // Clear all API cache
-    await checkForApiUpdates();
+    cachedApiData = {};
+
+    // Notify listeners that a refetch is needed
+    // The UnifiedContext listens to this and calls refetchDashboard()
+    notifyPollingStateChange({
+        isPolling: true,
+        lastApiCheck: new Date(),
+        lastDataHash: "",
+        hasApiChanges: true,
+        pollingInProgress: false,
+        forceRefetch: true // Signal that refetch is needed
+    });
 };
 
 /**
  * Test API endpoints manually
+ * This function still works for debugging purposes
  */
 export const testApiEndpoints = async (): Promise<void> => {
-    console.log("🧪 Testing API endpoints manually...");
+    logger.api("Testing API endpoints manually...");
     const enabledEndpoints = API_ENDPOINTS.filter(endpoint => endpoint.enabled);
 
     for (const endpoint of enabledEndpoints) {
         try {
-            console.log(`🧪 Testing ${endpoint.key} (${endpoint.url})...`);
+            logger.debug(`Testing ${endpoint.key} (${endpoint.url})...`);
             const response = await backendApi.get(endpoint.url);
-            console.log(`✅ ${endpoint.key} response:`, response.data);
+            logger.success(`${endpoint.key} response:`, response.data);
         } catch (error) {
             console.error(`❌ ${endpoint.key} error:`, error);
         }
@@ -456,17 +481,20 @@ export const testApiEndpoints = async (): Promise<void> => {
 
 /**
  * Clear all cached data immediately
+ * DEPRECATED: Clears local cache and notifies React Query
  */
 export const clearApiCache = (): void => {
-    console.log("🧹 Clearing all API cache");
+    logger.info("clearApiCache called - clearing local cache and notifying React Query");
     lastDataHash = "";
     cachedApiData = {};
 
     // Notify listeners of the cleared data
+    // This will trigger React Query to refetch via the listener in UnifiedContext
     notifyDataChange({
         // Backward compatibility
         employees: [],
         graphData: null,
+        escalations: [],
         // New format - empty API data
         apiData: {},
         timestamp: new Date(),
@@ -522,46 +550,39 @@ export const addPollingStateListener = (listener: (state: any) => void): (() => 
 
 /**
  * Initialize API polling with user activity detection
+ * DEPRECATED: No-op for backward compatibility
+ * React Query handles polling automatically via useDashboardData hook
  */
 export const initializeApiPolling = (): void => {
-    // Start polling immediately
-    startApiPolling();
+    logger.debug("initializeApiPolling called (no-op - React Query handles polling)");
+    // No-op: React Query automatically polls via refetchInterval in useDashboardData
+    // User activity detection is not needed as React Query manages this efficiently
 
-    // Handle user activity to pause/resume polling
-    let userActivityTimeout: NodeJS.Timeout | null = null;
-    const USER_INACTIVITY_THRESHOLD = 5 * 60 * 1000; // 5 minutes
-
-    const handleUserActivity = () => {
-        // Clear existing timeout
-        if (userActivityTimeout) {
-            clearTimeout(userActivityTimeout);
-        }
-
-        // Resume polling if it was paused
-        if (!isPolling) {
-            startApiPolling();
-        }
-
-        // Set timeout to pause polling after inactivity
-        userActivityTimeout = setTimeout(() => {
-            console.log("User inactive, pausing API polling");
-            stopApiPolling();
-        }, USER_INACTIVITY_THRESHOLD);
-    };
-
-    // Listen for user activity
-    const events = ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart', 'click'];
-    events.forEach(event => {
-        document.addEventListener(event, handleUserActivity, true);
+    // Update state for backward compatibility
+    isPolling = true;
+    notifyPollingStateChange({
+        isPolling: true,
+        lastApiCheck: new Date(),
+        lastDataHash: "",
+        hasApiChanges: false,
+        pollingInProgress: false
     });
-
-    // Initial activity
-    handleUserActivity();
 };
 
-// Auto-initialize polling when module loads
-if (typeof window !== 'undefined') {
-    // Only initialize in browser environment
-    initializeApiPolling();
-}
+/**
+ * NOTE: Auto-initialization removed
+ * React Query (via useDashboardData hook) now handles all polling automatically
+ * No manual initialization is needed
+ * 
+ * The polling starts when:
+ * 1. UnifiedProvider mounts (via useDashboardData hook)
+ * 2. Any component calls useDashboardData() 
+ * 
+ * Benefits:
+ * - Automatic polling every 60 seconds
+ * - Intelligent caching with 30-second stale time
+ * - No duplicate requests across components
+ * - Built-in error handling and retry logic
+ * - Automatic request deduplication
+ */
 

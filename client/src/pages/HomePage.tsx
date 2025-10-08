@@ -3,6 +3,7 @@ import { useUnified } from '../contexts/UnifiedContext';
 import { useSettings } from '../contexts/SettingsContext';
 import { dispatchSlidesChange } from '../utils/realtimeSync';
 import { Slide, SLIDE_TYPES, ImageSlide as ImageSlideType, VideoSlide as VideoSlideType, NewsSlide, EventSlide as EventSlideType, TeamComparisonSlide as TeamComparisonSlideType, GraphSlide as GraphSlideType, DocumentSlide as DocumentSlideType, TextSlide as TextSlideType, Employee } from '../types';
+import { logger } from '../utils/logger';
 import { EventSlideComponent, ImageSlide, CurrentEscalationsSlideComponent, TeamComparisonSlideComponent, GraphSlide, DocumentSlide, TextSlide } from "../components/slides";
 import {
     DndContext,
@@ -396,7 +397,7 @@ const SlideManagementColumn: React.FC<{
                             </div>
                         ) : (
                             slides.map((slide, index) => {
-                                console.log(`🏠 Rendering slide ${index}:`, {
+                                logger.debug(`Rendering slide ${index}:`, {
                                     id: slide.id,
                                     name: slide.name,
                                     type: slide.type,
@@ -461,7 +462,7 @@ const HomePage: React.FC = () => {
 
     // Debug logging for slides
     useEffect(() => {
-        console.log("🏠 HomePage - Current slides:", {
+        logger.debug("HomePage - Current slides:", {
             totalSlides: slides.length,
             eventSlides: slides.filter(s => s.type === SLIDE_TYPES.EVENT).length,
             allSlides: slides.map(s => ({ id: s.id, name: s.name, type: s.type, active: s.active }))
@@ -470,7 +471,7 @@ const HomePage: React.FC = () => {
 
     // Debug logging for employees
     useEffect(() => {
-        console.log("👥 HomePage - Current employees:", {
+        logger.data("HomePage - Current employees:", {
             totalEmployees: employees.length,
             anniversaryCount: employees.filter(e => e.isAnniversary).length,
             birthdayCount: employees.filter(e => e.isBirthday).length
@@ -519,7 +520,7 @@ const HomePage: React.FC = () => {
 
         const syncNeeded = hasApiChanges || settingsNeedSync || hasSlideChanges || isInEditingMode;
 
-        console.log("🔍 HomePage: Sync detection:", {
+        logger.debug("HomePage: Sync detection:", {
             hasApiChanges,
             settingsNeedSync,
             hasSlideChanges,
@@ -549,34 +550,34 @@ const HomePage: React.FC = () => {
 
     // Debug log for page detection
     useEffect(() => {
-        console.log("🏠 HomePage: isDisplayPage =", isDisplayPage);
+        logger.debug("HomePage: isDisplayPage =", isDisplayPage);
     }, [isDisplayPage]);
 
     // Simple test function
     const testDataFlow = async () => {
-        console.log("🧪 Testing data flow...");
-        console.log("Current slides:", slides.length);
-        console.log("Active slides:", activeSlides.length);
-        console.log("Display settings:", displaySettings);
+        logger.debug("Testing data flow...");
+        logger.debug("Current slides:", slides.length);
+        logger.debug("Active slides:", activeSlides.length);
+        logger.debug("Display settings:", displaySettings);
 
         // Test saving data
         try {
-            console.log("🧪 Testing save to database...");
+            logger.debug("Testing save to database...");
             await saveToDatabase();
-            console.log("✅ Save test successful!");
+            logger.success("Save test successful!");
         } catch (error) {
-            console.error("❌ Save test failed:", error);
+            logger.error("Save test failed:", error);
         }
     };
 
     // API test function
     const testApiEndpoints = async () => {
-        console.log("🧪 Testing API endpoints...");
+        logger.api("Testing API endpoints...");
         try {
             const { testApiEndpoints } = await import('../services/api');
             await testApiEndpoints();
         } catch (error) {
-            console.error("❌ API test failed:", error);
+            logger.error("API test failed:", error);
         }
     };
 
@@ -605,7 +606,7 @@ const HomePage: React.FC = () => {
         dispatchSlidesChange(newSlides, [`slide-reordered-from-${sourceIndex}-to-${destinationIndex}`], 'homepage');
 
         // Trigger display page refresh when slides are reordered
-        console.log("🔄 HomePage: Triggering display page refresh for slide reorder...");
+        logger.sync("HomePage: Triggering display page refresh for slide reorder...");
         const reloadEvent = new CustomEvent('forceDisplayReload', {
             detail: {
                 timestamp: new Date().toISOString(),
@@ -617,12 +618,12 @@ const HomePage: React.FC = () => {
             }
         });
         window.dispatchEvent(reloadEvent);
-        console.log("✅ HomePage: Display page refresh triggered for slide reorder");
+        logger.success("HomePage: Display page refresh triggered for slide reorder");
     };
 
     // Handle slide activation toggle
     const handleToggleActive = async (slideId: string) => {
-        console.log('🔄 HomePage - Slide activation toggle started:', {
+        logger.sync('HomePage - Slide activation toggle started:', {
             slideId: slideId,
             timestamp: new Date().toISOString()
         });
@@ -632,7 +633,7 @@ const HomePage: React.FC = () => {
         if (slideToUpdate) {
             const newActiveState = !slideToUpdate.active;
 
-            console.log('🔄 HomePage - Slide activation toggle details:', {
+            logger.debug('HomePage - Slide activation toggle details:', {
                 slideId: slideToUpdate.id,
                 slideName: slideToUpdate.name,
                 slideType: slideToUpdate.type,
@@ -647,7 +648,7 @@ const HomePage: React.FC = () => {
                 const eventSlide = slideToUpdate as EventSlideType;
                 const hasEvents = eventSlide.data.hasEvents;
 
-                console.log('🎉 HomePage - Event slide toggle:', {
+                logger.debug('HomePage - Event slide toggle:', {
                     eventSlideId: eventSlide.id,
                     eventSlideName: eventSlide.name,
                     eventType: eventSlide.data.eventType,
@@ -658,7 +659,7 @@ const HomePage: React.FC = () => {
 
             const updatedSlide = { ...slideToUpdate, active: newActiveState };
 
-            console.log('💾 HomePage - Calling updateSlide with:', {
+            logger.sync('HomePage - Calling updateSlide with:', {
                 slideId: updatedSlide.id,
                 slideName: updatedSlide.name,
                 slideType: updatedSlide.type,
@@ -676,7 +677,7 @@ const HomePage: React.FC = () => {
             // Context handles the update automatically
 
             // Trigger display page refresh when slide active status changes
-            console.log("🔄 HomePage: Triggering display page refresh for slide toggle...");
+            logger.sync("HomePage: Triggering display page refresh for slide toggle...");
             const reloadEvent = new CustomEvent('forceDisplayReload', {
                 detail: {
                     timestamp: new Date().toISOString(),
@@ -687,7 +688,7 @@ const HomePage: React.FC = () => {
                 }
             });
             window.dispatchEvent(reloadEvent);
-            console.log("✅ HomePage: Display page refresh triggered for slide toggle");
+            logger.success("HomePage: Display page refresh triggered for slide toggle");
 
             // Event slide states are now managed through the unified context
         }
@@ -697,7 +698,7 @@ const HomePage: React.FC = () => {
     const handleToggleFullscreen = useCallback(() => {
         if (!document.fullscreenElement) {
             slidesContainerRef.current?.requestFullscreen().catch(err => {
-                console.error(`Error attempting to enable fullscreen: ${err.message}`);
+                logger.error(`Error attempting to enable fullscreen: ${err.message}`);
             });
             setIsFullscreen(true);
         } else {
@@ -770,7 +771,7 @@ const HomePage: React.FC = () => {
 
     // Update displaySettings handlers
     const handleEffectChange = async (effect: string) => {
-        console.log('⚙️ HomePage - Effect change started:', {
+        logger.sync('HomePage - Effect change started:', {
             newEffect: effect,
             currentEffect: displaySettings.swiperEffect,
             timestamp: new Date().toISOString()
@@ -778,20 +779,20 @@ const HomePage: React.FC = () => {
 
         try {
             await updateDisplaySettings({ swiperEffect: effect });
-            console.log('✅ HomePage - Effect change successful:', {
+            logger.success('HomePage - Effect change successful:', {
                 newEffect: effect,
                 timestamp: new Date().toISOString()
             });
             addToast("✅ Slide effect updated successfully", "success");
         } catch (error) {
-            console.error("❌ HomePage - Error updating slide effect:", error);
+            logger.error("HomePage - Error updating slide effect:", error);
             addToast("❌ Failed to update slide effect", "error");
         }
     };
 
     const handleDateStampToggle = async () => {
         const newValue = !displaySettings.showDateStamp;
-        console.log('⚙️ HomePage - Date stamp toggle started:', {
+        logger.sync('HomePage - Date stamp toggle started:', {
             newValue: newValue,
             currentValue: displaySettings.showDateStamp,
             timestamp: new Date().toISOString()
@@ -799,20 +800,20 @@ const HomePage: React.FC = () => {
 
         try {
             await updateDisplaySettings({ showDateStamp: newValue });
-            console.log('✅ HomePage - Date stamp toggle successful:', {
+            logger.success('HomePage - Date stamp toggle successful:', {
                 newValue: newValue,
                 timestamp: new Date().toISOString()
             });
             addToast("✅ Date stamp setting updated successfully", "success");
         } catch (error) {
-            console.error("❌ HomePage - Error updating date stamp setting:", error);
+            logger.error("HomePage - Error updating date stamp setting:", error);
             addToast("❌ Failed to update date stamp setting", "error");
         }
     };
 
     const handlePaginationToggle = async () => {
         const newValue = !displaySettings.hidePagination;
-        console.log('⚙️ HomePage - Pagination toggle started:', {
+        logger.sync('HomePage - Pagination toggle started:', {
             newValue: newValue,
             currentValue: displaySettings.hidePagination,
             timestamp: new Date().toISOString()
@@ -820,20 +821,20 @@ const HomePage: React.FC = () => {
 
         try {
             await updateDisplaySettings({ hidePagination: newValue });
-            console.log('✅ HomePage - Pagination toggle successful:', {
+            logger.success('HomePage - Pagination toggle successful:', {
                 newValue: newValue,
                 timestamp: new Date().toISOString()
             });
             addToast("✅ Pagination setting updated successfully", "success");
         } catch (error) {
-            console.error("❌ HomePage - Error updating pagination setting:", error);
+            logger.error("HomePage - Error updating pagination setting:", error);
             addToast("❌ Failed to update pagination setting", "error");
         }
     };
 
     const handleArrowsToggle = async () => {
         const newValue = !displaySettings.hideArrows;
-        console.log('⚙️ HomePage - Arrows toggle started:', {
+        logger.sync('HomePage - Arrows toggle started:', {
             newValue: newValue,
             currentValue: displaySettings.hideArrows,
             timestamp: new Date().toISOString()
@@ -841,20 +842,20 @@ const HomePage: React.FC = () => {
 
         try {
             await updateDisplaySettings({ hideArrows: newValue });
-            console.log('✅ HomePage - Arrows toggle successful:', {
+            logger.success('HomePage - Arrows toggle successful:', {
                 newValue: newValue,
                 timestamp: new Date().toISOString()
             });
             addToast("✅ Arrow navigation setting updated successfully", "success");
         } catch (error) {
-            console.error("❌ HomePage - Error updating arrow navigation setting:", error);
+            logger.error("HomePage - Error updating arrow navigation setting:", error);
             addToast("❌ Failed to update arrow navigation setting", "error");
         }
     };
 
     const handleHidePersiviaLogoToggle = async () => {
         const newValue = !displaySettings.hidePersiviaLogo;
-        console.log('⚙️ HomePage - Logo visibility toggle started:', {
+        logger.sync('HomePage - Logo visibility toggle started:', {
             newValue: newValue,
             currentValue: displaySettings.hidePersiviaLogo,
             timestamp: new Date().toISOString()
@@ -862,20 +863,20 @@ const HomePage: React.FC = () => {
 
         try {
             await updateDisplaySettings({ hidePersiviaLogo: newValue });
-            console.log('✅ HomePage - Logo visibility toggle successful:', {
+            logger.success('HomePage - Logo visibility toggle successful:', {
                 newValue: newValue,
                 timestamp: new Date().toISOString()
             });
             addToast("✅ Logo visibility setting updated successfully", "success");
         } catch (error) {
-            console.error("❌ HomePage - Error updating logo visibility setting:", error);
+            logger.error("HomePage - Error updating logo visibility setting:", error);
             addToast("❌ Failed to update logo visibility setting", "error");
         }
     };
 
     const handleDevelopmentModeToggle = async () => {
         const newValue = !displaySettings.developmentMode;
-        console.log('⚙️ HomePage - Development mode toggle started:', {
+        logger.sync('HomePage - Development mode toggle started:', {
             newValue: newValue,
             currentValue: displaySettings.developmentMode,
             timestamp: new Date().toISOString()
@@ -883,13 +884,13 @@ const HomePage: React.FC = () => {
 
         try {
             await updateDisplaySettings({ developmentMode: newValue });
-            console.log('✅ HomePage - Development mode toggle successful:', {
+            logger.success('HomePage - Development mode toggle successful:', {
                 newValue: newValue,
                 timestamp: new Date().toISOString()
             });
             addToast("✅ Development mode setting updated successfully", "success");
         } catch (error) {
-            console.error("❌ HomePage - Error updating development mode setting:", error);
+            logger.error("HomePage - Error updating development mode setting:", error);
             addToast("❌ Failed to update development mode setting", "error");
         }
     };
@@ -1192,32 +1193,32 @@ const HomePage: React.FC = () => {
                 <button
                     type="button"
                     onClick={async () => {
-                        console.log("🔄 Force Sync button clicked!");
+                        logger.sync("Force Sync button clicked!");
                         try {
-                            console.log("🔄 HomePage: Force syncing - updating API data, unified objects, saving to database, syncing displays, and reloading...");
+                            logger.sync("HomePage: Force syncing - updating API data, unified objects, saving to database, syncing displays, and reloading...");
 
                             // Step 1: Clear any stale cached data first
-                            console.log("🧹 Step 1: Clearing API cache...");
+                            logger.sync("Step 1: Clearing API cache...");
                             clearApiCache();
 
                             // Step 2: Update API data (refresh from external APIs)
-                            console.log("📡 Step 2: Refreshing API data...");
+                            logger.api("Step 2: Refreshing API data...");
                             await refreshApiData();
 
                             // Step 3: Force API check to ensure fresh data
-                            console.log("🔄 Step 3: Force API check...");
+                            logger.api("Step 3: Force API check...");
                             await forceApiCheck();
 
                             // Step 4: Save current state to database (preserve current settings)
-                            console.log("💾 Step 4: Saving current state to database...");
+                            logger.sync("Step 4: Saving current state to database...");
                             await saveToDatabase();
 
                             // Step 5: Sync to remote displays
-                            console.log("📡 Step 5: Syncing to remote displays...");
+                            logger.sync("Step 5: Syncing to remote displays...");
                             await syncToRemoteDisplays();
 
                             // Step 6: Force reload the display page silently
-                            console.log("🔄 Step 6: Silently reloading display page...");
+                            logger.sync("Step 6: Silently reloading display page...");
 
                             // Dispatch custom event to reload display page
                             const reloadEvent = new CustomEvent('forceDisplayReload', {
@@ -1230,7 +1231,7 @@ const HomePage: React.FC = () => {
 
                             addToast("✅ Force sync completed - API updated, settings preserved, displays synced, page reloaded", "success");
                         } catch (error) {
-                            console.error("❌ Error during force sync:", error);
+                            logger.error("Error during force sync:", error);
                             addToast("❌ Failed to force sync", "error");
                         }
                     }}

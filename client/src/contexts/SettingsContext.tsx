@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
 import { sessionService } from '../services/sessionService';
 import { dispatchSettingsChange } from '../utils/realtimeSync';
+import { logger } from '../utils/logger';
 
 interface DisplaySettings {
     swiperEffect: string;
@@ -66,14 +67,14 @@ export const SettingsProvider: React.FC<SettingsProviderProps> = ({ children }) 
                 setDisplaySettings(prevSettings => {
                     const isDifferent = JSON.stringify(prevSettings) !== JSON.stringify(newSettings);
                     if (isDifferent) {
-                        console.log('🔄 SettingsContext: Loading settings from database:', {
+                        logger.sync('SettingsContext: Loading settings from database:', {
                             previous: prevSettings,
                             new: newSettings,
                             isUserEditing
                         });
                         return newSettings;
                     } else {
-                        console.log('🔄 SettingsContext: Settings unchanged, skipping update');
+                        logger.debug('SettingsContext: Settings unchanged, skipping update');
                     }
                     return prevSettings;
                 });
@@ -112,7 +113,7 @@ export const SettingsProvider: React.FC<SettingsProviderProps> = ({ children }) 
             localStorage.setItem('displaySettings', JSON.stringify(settings));
             setLastSynced(new Date());
 
-            console.log('✅ Settings saved and synced to all devices (preserving slides data)');
+            logger.success('Settings saved and synced to all devices (preserving slides data)');
         } catch (error) {
             console.error('❌ Failed to save settings:', error);
             throw error;
@@ -145,7 +146,7 @@ export const SettingsProvider: React.FC<SettingsProviderProps> = ({ children }) 
             // Dispatch real-time sync event to all DisplayPages immediately
             dispatchSettingsChange(updatedSettings, ['settings-updated'], 'homepage');
 
-            console.log('✅ Settings updated and event dispatched');
+            logger.success('Settings updated and event dispatched');
         } catch (error) {
             console.error('Failed to sync settings:', error);
             // Revert to previous settings on error
@@ -154,7 +155,7 @@ export const SettingsProvider: React.FC<SettingsProviderProps> = ({ children }) 
         } finally {
             // Reset editing flag after a delay to allow for user to make multiple changes
             setTimeout(() => {
-                console.log('🔄 SettingsContext: Resetting user editing flag');
+                logger.debug('SettingsContext: Resetting user editing flag');
                 setIsUserEditing(false);
             }, 5000); // Increased from 2 seconds to 5 seconds
         }
@@ -174,13 +175,13 @@ export const SettingsProvider: React.FC<SettingsProviderProps> = ({ children }) 
     useEffect(() => {
         const interval = setInterval(() => {
             if (!isUserEditing) {
-                console.log('🔄 SettingsContext: Performing intelligent periodic sync...', {
+                logger.sync('SettingsContext: Performing intelligent periodic sync...', {
                     currentSettings: displaySettings,
                     isUserEditing
                 });
                 syncSettings();
             } else {
-                console.log('⏸️ SettingsContext: Skipping periodic sync - user is editing', {
+                logger.debug('SettingsContext: Skipping periodic sync - user is editing', {
                     isUserEditing,
                     currentSettings: displaySettings
                 });

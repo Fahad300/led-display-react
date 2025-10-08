@@ -12,15 +12,6 @@ export const TeamComparisonSlideComponent: React.FC<{ slide: TeamComparisonSlide
     const loading = false; // Loading is handled in UnifiedContext
     const error = null; // Error handling is in UnifiedContext
 
-    // Debug logging to understand the data structure
-    React.useEffect(() => {
-        console.log("TeamComparisonSlide - graphData:", graphData);
-        console.log("TeamComparisonSlide - teamWiseData:", teamWiseData);
-        if (teamWiseData && teamWiseData.data) {
-            console.log("TeamComparisonSlide - teamWiseData.data length:", teamWiseData.data.length);
-            console.log("TeamComparisonSlide - first team data:", teamWiseData.data[0]);
-        }
-    }, [graphData, teamWiseData]);
 
     // Format date range for display
     const formatDateRange = (lastUpdated: string | undefined): string => {
@@ -44,11 +35,8 @@ export const TeamComparisonSlideComponent: React.FC<{ slide: TeamComparisonSlide
         }
 
         const allTeams = teamWiseData.data.map((team: any, index: number) => {
-            console.log(`Team ${index}:`, team);
-
             // Ensure dataPoints exists and is an array
             if (!team.dataPoints || !Array.isArray(team.dataPoints) || team.dataPoints.length === 0) {
-                console.log(`Team ${index} has no dataPoints, skipping`);
                 // Skip teams with no data instead of showing "Unknown Team"
                 return null;
             }

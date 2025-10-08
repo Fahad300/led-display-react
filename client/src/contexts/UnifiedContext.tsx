@@ -1,24 +1,18 @@
 /**
  * UNIFIED CONTEXT - Database-backed state management
  * Simple, reliable persistence with proper error handling
+ * 
+ * REFACTORED: Now uses React Query for optimized data fetching and caching
+ * instead of manual polling. See useDashboardData hook for implementation.
  */
 
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo, useRef, ReactNode } from 'react';
 import { Slide, Employee, GraphSlideData, SlideshowData, SLIDE_TYPES, CurrentEscalationsSlide, TeamComparisonSlide, GraphSlide, EventSlide } from '../types';
 import { sessionService } from '../services/sessionService';
-import { fetchEmployeesData } from '../services/eventsService';
-import { fetchTeamWiseData } from '../services/graphService';
 import { DEFAULT_SLIDE_CONFIGS } from '../config/defaultSlides';
-import {
-    addDataChangeListener,
-    addPollingStateListener,
-    clearApiCache,
-    forceApiCheck,
-    startApiPolling,
-    stopApiPolling,
-    initializeApiPolling
-} from '../services/api';
+import { useDashboardData } from '../hooks/useDashboardData';
 import { dispatchSlidesChange, dispatchApiDataChange } from '../utils/realtimeSync';
+import { logger } from '../utils/logger';
 
 interface UnifiedContextType {
     // Slides
@@ -43,7 +37,7 @@ interface UnifiedContextType {
     // Page detection
     isDisplayPage: boolean;
 
-    // API Polling state
+    // API Polling state (maintained for backward compatibility)
     apiPollingState: {
         isPolling: boolean;
         lastApiCheck: Date | null;
@@ -55,12 +49,12 @@ interface UnifiedContextType {
     // Actions
     saveToDatabase: (slidesToSave?: Slide[]) => Promise<void>;
     syncFromDatabase: () => Promise<void>;
-    refreshApiData: () => Promise<void>;
+    refreshApiData: () => Promise<void>; // Triggers React Query refetch
     syncToRemoteDisplays: () => Promise<void>;
-    forceApiCheck: () => Promise<void>;
-    clearApiCache: () => void;
-    startApiPolling: () => void;
-    stopApiPolling: () => void;
+    forceApiCheck: () => Promise<void>; // Backward compatibility wrapper for React Query refetch
+    clearApiCache: () => void; // Backward compatibility wrapper for React Query cache invalidation
+    startApiPolling: () => void; // No-op for backward compatibility
+    stopApiPolling: () => void; // No-op for backward compatibility
     forceMigrateVideoUrls: () => void;
     hasUnsavedChanges: () => boolean;
 }
@@ -87,7 +81,7 @@ const migrateVideoUrls = (slides: Slide[]): Slide[] => {
             }
 
             if (needsMigration && fileId) {
-                console.log("🔄 Migrating video URL to serverUrl format:", {
+                logger.sync("Migrating video URL to serverUrl format:", {
                     oldUrl: videoSlide.data.videoUrl,
                     fileId: fileId
                 });
@@ -104,7 +98,7 @@ const migrateVideoUrls = (slides: Slide[]): Slide[] => {
 const createDefaultSlides = (): Slide[] => {
     const defaultSlides: Slide[] = [];
 
-    console.log("🔧 Creating default slides from configs:", DEFAULT_SLIDE_CONFIGS);
+    logger.debug("Creating default slides from configs:", DEFAULT_SLIDE_CONFIGS);
 
     DEFAULT_SLIDE_CONFIGS.forEach(config => {
         switch (config.type) {
@@ -161,7 +155,7 @@ const createDefaultSlides = (): Slide[] => {
                 break;
 
             case 'event':
-                console.log("🔧 Processing event config:", config);
+                logger.debug("Processing event config:", config);
                 const eventSlide: EventSlide = {
                     id: config.id,
                     name: config.name,
@@ -179,12 +173,12 @@ const createDefaultSlides = (): Slide[] => {
                     }
                 };
                 defaultSlides.push(eventSlide);
-                console.log("🔧 Created event slide:", eventSlide);
+                logger.debug("Created event slide:", eventSlide);
                 break;
         }
     });
 
-    console.log("🔧 Created default slides:", {
+    logger.debug("Created default slides:", {
         totalSlides: defaultSlides.length,
         eventSlides: defaultSlides.filter(s => s.type === SLIDE_TYPES.EVENT).length,
         slideDetails: defaultSlides.map(s => ({ id: s.id, name: s.name, type: s.type, active: s.active }))
@@ -198,6 +192,15 @@ interface UnifiedProviderProps {
 }
 
 export const UnifiedProvider: React.FC<UnifiedProviderProps> = ({ children }) => {
+    // React Query hook for optimized dashboard data fetching
+    const {
+        data: dashboardData,
+        isLoading: isDashboardLoading,
+        refetch: refetchDashboard,
+        dataUpdatedAt,
+        isFetching
+    } = useDashboardData();
+
     // State
     const [slides, setSlides] = useState<Slide[]>([]);
     // Display settings now handled by SettingsContext
@@ -207,9 +210,9 @@ export const UnifiedProvider: React.FC<UnifiedProviderProps> = ({ children }) =>
     const [isLoading, setIsLoading] = useState(true);
     const [isEditing, setIsEditing] = useState(false);
 
-    // API Polling state
+    // API Polling state (maintained for backward compatibility, now derived from React Query)
     const [apiPollingState, setApiPollingState] = useState({
-        isPolling: false,
+        isPolling: true, // React Query is always "polling" via refetchInterval
         lastApiCheck: null as Date | null,
         lastDataHash: "",
         hasApiChanges: false,
@@ -223,6 +226,42 @@ export const UnifiedProvider: React.FC<UnifiedProviderProps> = ({ children }) =>
     const isDisplayPage = useMemo(() => {
         return window.location.pathname === '/display' || window.location.pathname === '/display/';
     }, []);
+
+    /**
+     * Sync React Query dashboard data to local state
+     * This effect updates employees, graphData, and escalations when dashboard data changes
+     */
+    useEffect(() => {
+        if (dashboardData) {
+            logger.data("UnifiedContext: Dashboard data received from React Query", {
+                employeesCount: dashboardData.employees?.length || 0,
+                hasGraphData: !!dashboardData.graphData,
+                escalationsCount: dashboardData.escalations?.length || 0
+            });
+
+            // Update local state with fresh data
+            setEmployees(dashboardData.employees || []);
+            setGraphData(dashboardData.graphData || null);
+            setEscalations(dashboardData.escalations || []);
+
+            // Update polling state for backward compatibility
+            setApiPollingState(prev => ({
+                ...prev,
+                lastApiCheck: new Date(dataUpdatedAt),
+                pollingInProgress: isFetching,
+                hasApiChanges: true
+            }));
+
+            // Dispatch real-time sync event for other components
+            dispatchApiDataChange(
+                dashboardData.employees || [],
+                dashboardData.graphData || null,
+                dashboardData.escalations || [],
+                ['react-query-data-updated'],
+                'api'
+            );
+        }
+    }, [dashboardData, dataUpdatedAt, isFetching]);
 
     // Helper functions for event detection
     const isBirthdayToday = useCallback((employee: Employee): boolean => {
@@ -240,7 +279,7 @@ export const UnifiedProvider: React.FC<UnifiedProviderProps> = ({ children }) =>
         const birthdayEmployees = employees.filter(employee => isBirthdayToday(employee));
         const anniversaryEmployees = employees.filter(employee => isAnniversaryToday(employee));
 
-        console.log("🔄 UnifiedContext: Updating event slides with current data", {
+        logger.sync("UnifiedContext: Updating event slides with current data", {
             totalEmployees: employees.length,
             birthdayCount: birthdayEmployees.length,
             anniversaryCount: anniversaryEmployees.length,
@@ -300,11 +339,11 @@ export const UnifiedProvider: React.FC<UnifiedProviderProps> = ({ children }) =>
     // Sync to remote displays
     const syncToRemoteDisplays = useCallback(async () => {
         try {
-            console.log("🔄 Syncing to remote displays...");
+            logger.sync("Syncing to remote displays...");
             await sessionService.triggerRemoteRefresh("all");
-            console.log("✅ Remote displays synced successfully");
+            logger.success("Remote displays synced successfully");
         } catch (error) {
-            console.error("❌ Error syncing to remote displays:", error);
+            logger.error("Error syncing to remote displays:", error);
             throw error;
         }
     }, []);
@@ -330,12 +369,12 @@ export const UnifiedProvider: React.FC<UnifiedProviderProps> = ({ children }) =>
                 if (savedSettings) {
                     const parsed = JSON.parse(savedSettings);
                     currentSettings = { ...currentSettings, ...parsed };
-                    console.log("🔄 UnifiedContext: Using settings from localStorage:", currentSettings);
+                    logger.debug("UnifiedContext: Using settings from localStorage:", currentSettings);
                 } else {
-                    console.log("🔄 UnifiedContext: No settings in localStorage, using defaults");
+                    logger.debug("UnifiedContext: No settings in localStorage, using defaults");
                 }
             } catch (error) {
-                console.warn("Failed to load settings from localStorage, using defaults:", error);
+                logger.warn("Failed to load settings from localStorage, using defaults:", error);
             }
 
             const slideshowData: SlideshowData = {
@@ -352,53 +391,42 @@ export const UnifiedProvider: React.FC<UnifiedProviderProps> = ({ children }) =>
 
             // Trigger remote display refresh after saving to database
             try {
-                console.log("🔄 UnifiedContext: Triggering remote display refresh...");
+                logger.sync("UnifiedContext: Triggering remote display refresh...");
                 await syncToRemoteDisplays();
-                console.log("✅ UnifiedContext: Remote display refresh completed");
+                logger.success("UnifiedContext: Remote display refresh completed");
             } catch (refreshError) {
-                console.warn("⚠️ UnifiedContext: Remote display refresh failed:", refreshError);
+                logger.warn("UnifiedContext: Remote display refresh failed:", refreshError);
                 // Don't throw error here as the main save was successful
             }
 
             // Update the last saved state to prevent unnecessary saves
             lastSavedStateRef.current = JSON.stringify({ slides: slidesToUse });
-            console.log("✅ UnifiedContext: Data saved to database successfully with settings:", currentSettings);
+            logger.success("UnifiedContext: Data saved to database successfully with settings:", currentSettings);
         } catch (error) {
-            console.error("❌ Error saving data to database:", error);
+            logger.error("Error saving data to database:", error);
             throw error; // Re-throw so calling code can handle it
         }
     }, [slides, syncToRemoteDisplays]);
 
 
-    // Refresh API data (employees and graph data)
+    /**
+     * Refresh API data using React Query
+     * This triggers a refetch of dashboard data from the server
+     */
     const refreshApiData = useCallback(async () => {
         try {
-            console.log("🔄 Refreshing API data (employees and graph data)...");
-            const [employeesData, graphDataResult] = await Promise.all([
-                fetchEmployeesData(),
-                fetchTeamWiseData().catch(() => null)
-            ]);
-
-            console.log("📊 Employees data received:", {
-                totalEmployees: employeesData.length,
-                anniversaryEmployees: employeesData.filter(e => e.isAnniversary).length,
-                birthdayEmployees: employeesData.filter(e => e.isBirthday).length,
-                anniversaryNames: employeesData.filter(e => e.isAnniversary).map(e => e.name),
-                birthdayNames: employeesData.filter(e => e.isBirthday).map(e => e.name)
-            });
-
-            setEmployees(employeesData);
-            setGraphData(graphDataResult);
-            console.log("✅ API data refreshed successfully");
+            logger.api("Refreshing API data via React Query...");
+            await refetchDashboard();
+            logger.success("API data refreshed successfully via React Query");
         } catch (error) {
-            console.error("❌ Error refreshing API data:", error);
+            logger.error("Error refreshing API data:", error);
         }
-    }, []);
+    }, [refetchDashboard]);
 
     // Sync data from database (for DisplayPage - only updates if data is newer)
     const syncFromDatabase = useCallback(async () => {
         try {
-            console.log("🔄 Syncing data from database...");
+            logger.sync("Syncing data from database...");
             const slideshowData = await sessionService.loadSlideshowData();
 
             if (slideshowData) {
@@ -425,10 +453,10 @@ export const UnifiedProvider: React.FC<UnifiedProviderProps> = ({ children }) =>
                         })));
 
                         if (prevSlidesHash !== newSlidesHash) {
-                            console.log("📥 UnifiedContext: Data changed, updating slides");
-                            console.log("📥 UnifiedContext: Previous slides count:", prevSlides.length);
-                            console.log("📥 UnifiedContext: New slides count:", slideshowData.slides.length);
-                            console.log("📥 UnifiedContext: New slides active count:", slideshowData.slides.filter(s => s.active).length);
+                            logger.sync("UnifiedContext: Data changed, updating slides");
+                            logger.debug("UnifiedContext: Previous slides count:", prevSlides.length);
+                            logger.debug("UnifiedContext: New slides count:", slideshowData.slides.length);
+                            logger.debug("UnifiedContext: New slides active count:", slideshowData.slides.filter(s => s.active).length);
 
                             // Apply URL migration to loaded slides
                             const migratedSlides = migrateVideoUrls(slideshowData.slides);
@@ -446,18 +474,18 @@ export const UnifiedProvider: React.FC<UnifiedProviderProps> = ({ children }) =>
 
                             return migratedSlides;
                         } else {
-                            console.log("📥 UnifiedContext: No changes detected, keeping existing slides");
+                            logger.debug("UnifiedContext: No changes detected, keeping existing slides");
                         }
                         return prevSlides;
                     });
                 } else {
-                    console.log("📥 UnifiedContext: No slides found in database data");
+                    logger.debug("UnifiedContext: No slides found in database data");
                 }
             } else {
-                console.log("📥 UnifiedContext: No slideshow data found in database");
+                logger.debug("UnifiedContext: No slideshow data found in database");
             }
         } catch (error) {
-            console.error("❌ Error syncing data from database:", error);
+            logger.error("Error syncing data from database:", error);
         }
     }, []);
 
@@ -477,7 +505,7 @@ export const UnifiedProvider: React.FC<UnifiedProviderProps> = ({ children }) =>
 
                 // Dispatch slides change event for real-time sync
                 dispatchSlidesChange(updatedSlides, changes, 'homepage');
-                console.log("📡 UnifiedContext: Dispatched real-time sync for slide update");
+                logger.debug("UnifiedContext: Dispatched real-time sync for slide update");
             }
 
             return updatedSlides;
@@ -485,10 +513,10 @@ export const UnifiedProvider: React.FC<UnifiedProviderProps> = ({ children }) =>
 
         // Immediate save for critical changes (active status, order changes) - only on non-display pages
         if (updatedSlide.active !== undefined && !isDisplayPage) {
-            console.log("🔄 Critical change detected, saving immediately...");
+            logger.sync("Critical change detected, saving immediately...");
             setTimeout(() => {
                 saveToDatabase().catch(error => {
-                    console.error("❌ Immediate save failed:", error);
+                    logger.error("Immediate save failed:", error);
                 });
             }, 100); // Very short delay for critical changes
         }
@@ -504,12 +532,12 @@ export const UnifiedProvider: React.FC<UnifiedProviderProps> = ({ children }) =>
 
             // Dispatch slides change event for real-time sync
             dispatchSlidesChange(reorderedSlides, changes, 'homepage');
-            console.log("📡 UnifiedContext: Dispatched real-time sync for slide reorder");
+            logger.debug("UnifiedContext: Dispatched real-time sync for slide reorder");
 
-            console.log("🔄 Reorder detected, saving immediately...");
+            logger.sync("Reorder detected, saving immediately...");
             setTimeout(() => {
                 saveToDatabase().catch(error => {
-                    console.error("❌ Immediate save failed:", error);
+                    logger.error("Immediate save failed:", error);
                 });
             }, 100); // Very short delay for reorder changes
         }
@@ -541,14 +569,14 @@ export const UnifiedProvider: React.FC<UnifiedProviderProps> = ({ children }) =>
                 });
 
                 if (hasCriticalChanges) {
-                    console.log("🔄 UnifiedContext: Critical changes detected, auto-saving...");
+                    logger.sync("UnifiedContext: Critical changes detected, auto-saving...");
                     saveTimeoutRef.current = setTimeout(() => {
                         saveToDatabase().catch(error => {
-                            console.error("❌ Auto-save failed:", error);
+                            logger.error("Auto-save failed:", error);
                         });
                     }, 5000); // 5 second debounce for critical changes only
                 } else {
-                    console.log("🔄 UnifiedContext: Non-critical changes detected, skipping auto-save");
+                    logger.debug("UnifiedContext: Non-critical changes detected, skipping auto-save");
                 }
             }
         }
@@ -560,207 +588,114 @@ export const UnifiedProvider: React.FC<UnifiedProviderProps> = ({ children }) =>
         };
     }, [slides, saveToDatabase, isEditing, isDisplayPage]);
 
-    // Listen for data changes from polling system AND API changes
+    /**
+     * Listen for data changes from other sources (e.g., realtime sync)
+     * NOTE: API polling is now handled by React Query, this is only for
+     * backward compatibility with realtime sync events
+     */
     useEffect(() => {
         const handleDataChange = (e: CustomEvent) => {
-            console.log("🔄 UnifiedContext: Data change event received from polling system");
+            logger.sync("UnifiedContext: Data change event received from realtime sync");
             const { data, source } = e.detail;
-            if (source === 'polling' && data) {
-                // Update slides if they have changed
-                if (data.slides && data.slides.length > 0) {
-                    setSlides(prevSlides => {
-                        // Check if the data is actually different
-                        const prevSlidesHash = JSON.stringify(prevSlides.map(s => ({
-                            id: s.id,
-                            name: s.name,
-                            type: s.type,
-                            active: s.active,
-                            duration: s.duration,
-                            data: s.data
-                        })));
 
-                        const newSlidesHash = JSON.stringify(data.slides.map((s: any) => ({
-                            id: s.id,
-                            name: s.name,
-                            type: s.type,
-                            active: s.active,
-                            duration: s.duration,
-                            data: s.data
-                        })));
+            // Only handle non-API sources (API data is now handled by React Query)
+            if (source !== 'api' && data && data.slides && data.slides.length > 0) {
+                setSlides(prevSlides => {
+                    // Check if the data is actually different
+                    const prevSlidesHash = JSON.stringify(prevSlides.map(s => ({
+                        id: s.id,
+                        name: s.name,
+                        type: s.type,
+                        active: s.active,
+                        duration: s.duration,
+                        data: s.data
+                    })));
 
-                        if (prevSlidesHash !== newSlidesHash) {
-                            console.log("📥 UnifiedContext: Polling data changed, updating slides");
-                            return data.slides;
-                        } else {
-                            console.log("📥 UnifiedContext: Polling data unchanged, keeping existing slides");
-                        }
-                        return prevSlides;
-                    });
-                }
-            }
-        };
+                    const newSlidesHash = JSON.stringify(data.slides.map((s: any) => ({
+                        id: s.id,
+                        name: s.name,
+                        type: s.type,
+                        active: s.active,
+                        duration: s.duration,
+                        data: s.data
+                    })));
 
-        // Listen for API data changes (employees, graph data)
-        const handleApiDataChange = (apiData: any) => {
-            console.log("🔄 UnifiedContext: API data change received", {
-                employeesCount: apiData.employees?.length || 0,
-                hasGraphData: !!apiData.graphData,
-                escalationsCount: apiData.escalations?.length || 0,
-                dataChangeType: apiData.employees?.length === 0 ? "CLEARED_DATA" : "NEW_DATA"
-            });
-
-            // CRITICAL: Update employees immediately when API data changes
-            // This ensures stale birthday/anniversary data is cleared
-            if (apiData.employees !== undefined) {
-                console.log("🔄 UnifiedContext: Updating employees state", {
-                    previousCount: employees.length,
-                    newCount: apiData.employees.length,
-                    action: apiData.employees.length === 0 ? "CLEARING_STALE_DATA" : "UPDATING_WITH_NEW_DATA"
+                    if (prevSlidesHash !== newSlidesHash) {
+                        logger.sync("UnifiedContext: Realtime sync data changed, updating slides");
+                        return data.slides;
+                    } else {
+                        logger.debug("UnifiedContext: Realtime sync data unchanged, keeping existing slides");
+                    }
+                    return prevSlides;
                 });
-                setEmployees(apiData.employees); // Will be [] if API returns empty
             }
-
-            if (apiData.graphData !== undefined) {
-                setGraphData(apiData.graphData);
-            }
-
-            if (apiData.escalations !== undefined) {
-                setEscalations(apiData.escalations); // Will be [] if API returns empty
-            }
-
-            // Dispatch real-time sync event to all DisplayPages immediately
-            dispatchApiDataChange(
-                apiData.employees || [],
-                apiData.graphData || null,
-                apiData.escalations || [],
-                ['api-data-updated'],
-                'api'
-            );
         };
-
-        // Set up API data listener
-        const removeApiListener = addDataChangeListener(handleApiDataChange);
 
         window.addEventListener('dataChanged', handleDataChange as EventListener);
         return () => {
             window.removeEventListener('dataChanged', handleDataChange as EventListener);
-            removeApiListener();
         };
-    }, [employees.length]);
+    }, []);
 
-    // API Polling integration
-    useEffect(() => {
-        // Listen for API data changes
-        const unsubscribeDataChange = addDataChangeListener((data) => {
-            console.log("🔄 UnifiedContext: API data change received:", data);
+    /**
+     * NOTE: API Polling integration removed - now handled by React Query
+     * The useDashboardData hook automatically fetches and caches data,
+     * eliminating the need for manual polling setup
+     * 
+     * TODO: Consider migrating to WebSocket or Server-Sent Events for
+     * true real-time updates instead of polling (current refetchInterval: 60s)
+     */
 
-            // Update employees, graph data, and escalations when API data changes
-            if (data.employees) {
-                setEmployees(data.employees);
-            }
-            if (data.graphData) {
-                setGraphData(data.graphData);
-            }
-            if (data.escalations) {
-                setEscalations(data.escalations);
-            }
-
-            // Trigger a refresh of slides that depend on API data
-            if (data.employees || data.graphData || data.escalations) {
-                console.log("🔄 UnifiedContext: Refreshing slides with updated API data");
-                // Force a re-render by updating slides that depend on API data
-                setSlides(prevSlides => {
-                    return prevSlides.map(slide => {
-                        if (slide.type === SLIDE_TYPES.EVENT && slide.data.employees) {
-                            // Update event slides with new employee data
-                            return {
-                                ...slide,
-                                data: {
-                                    ...slide.data,
-                                    employees: data.employees || slide.data.employees
-                                }
-                            };
-                        }
-                        if (slide.type === SLIDE_TYPES.GRAPH && data.graphData) {
-                            // Update graph slides with new graph data
-                            return {
-                                ...slide,
-                                data: {
-                                    ...slide.data,
-                                    ...data.graphData
-                                }
-                            };
-                        }
-                        if (slide.type === SLIDE_TYPES.TEAM_COMPARISON && data.graphData) {
-                            // Update team comparison slides with new graph data
-                            return {
-                                ...slide,
-                                data: {
-                                    ...slide.data,
-                                    lastUpdated: new Date().toISOString()
-                                }
-                            };
-                        }
-                        if (slide.type === SLIDE_TYPES.CURRENT_ESCALATIONS && data.escalations) {
-                            // Update current escalations slides with new escalations data
-                            return {
-                                ...slide,
-                                data: {
-                                    ...slide.data,
-                                    escalations: data.escalations
-                                }
-                            };
-                        }
-                        return slide;
-                    });
-                });
-            }
-        });
-
-        // Listen for polling state changes
-        const unsubscribePollingState = addPollingStateListener((state) => {
-            console.log("🔄 UnifiedContext: API polling state changed:", state);
-            setApiPollingState(state);
-        });
-
-        // Initialize API polling
-        startApiPolling();
-
-        return () => {
-            unsubscribeDataChange();
-            unsubscribePollingState();
-            stopApiPolling();
-        };
-    }, [employees.length]);
-
-    // Force API check function
+    /**
+     * Force API check - now triggers React Query refetch
+     * Backward compatibility wrapper
+     */
     const handleForceApiCheck = useCallback(async () => {
         try {
-            console.log("🔄 UnifiedContext: Forcing API check...");
-            await forceApiCheck();
+            logger.api("UnifiedContext: Forcing API check via React Query refetch...");
+            await refetchDashboard();
+            logger.success("Forced API check completed");
         } catch (error) {
-            console.error("❌ Error forcing API check:", error);
+            logger.error("Error forcing API check:", error);
         }
-    }, []);
+    }, [refetchDashboard]);
 
-    // Start API polling function
+    /**
+     * Start API polling - no-op for backward compatibility
+     * React Query handles polling automatically via refetchInterval
+     */
     const handleStartApiPolling = useCallback(() => {
-        console.log("🔄 UnifiedContext: Starting API polling...");
-        startApiPolling();
+        logger.debug("UnifiedContext: startApiPolling called (no-op - React Query handles polling)");
+        // No-op: React Query automatically polls via refetchInterval
     }, []);
 
-    // Stop API polling function
+    /**
+     * Stop API polling - no-op for backward compatibility
+     * React Query handles polling automatically
+     */
     const handleStopApiPolling = useCallback(() => {
-        console.log("🔄 UnifiedContext: Stopping API polling...");
-        stopApiPolling();
+        logger.debug("UnifiedContext: stopApiPolling called (no-op - React Query handles polling)");
+        // No-op: React Query polling cannot be dynamically stopped in this implementation
+        // If needed, we could expose queryClient.cancelQueries() here
     }, []);
+
+    /**
+     * Clear API cache - uses React Query cache invalidation
+     * Backward compatibility wrapper
+     */
+    const handleClearApiCache = useCallback(() => {
+        logger.api("UnifiedContext: Clearing API cache via React Query...");
+        // Trigger immediate refetch which will get fresh data
+        refetchDashboard();
+        logger.success("API cache cleared and refetching");
+    }, [refetchDashboard]);
 
     // Force migrate video URLs function
     const forceMigrateVideoUrls = useCallback(() => {
-        console.log("🔄 UnifiedContext: Force migrating video URLs...");
+        logger.sync("UnifiedContext: Force migrating video URLs...");
         setSlides(prevSlides => {
             const migratedSlides = migrateVideoUrls(prevSlides);
-            console.log("✅ UnifiedContext: Video URL migration completed");
+            logger.success("UnifiedContext: Video URL migration completed");
             return migratedSlides;
         });
     }, []);
@@ -769,7 +704,7 @@ export const UnifiedProvider: React.FC<UnifiedProviderProps> = ({ children }) =>
     const hasUnsavedChanges = useCallback(() => {
         const currentState = JSON.stringify({ slides });
         const hasChanges = currentState !== lastSavedStateRef.current;
-        console.log("🔍 UnifiedContext: Checking for unsaved changes:", {
+        logger.debug("UnifiedContext: Checking for unsaved changes:", {
             hasChanges,
             currentStateHash: currentState.substring(0, 50) + "...",
             lastSavedHash: lastSavedStateRef.current.substring(0, 50) + "..."
@@ -781,18 +716,18 @@ export const UnifiedProvider: React.FC<UnifiedProviderProps> = ({ children }) =>
     useEffect(() => {
         const initializeData = async () => {
             try {
-                console.log("🔄 UnifiedContext: Initializing data...");
-                console.log("🔄 UnifiedContext: isDisplayPage =", isDisplayPage);
+                logger.sync("UnifiedContext: Initializing data...");
+                logger.debug("UnifiedContext: isDisplayPage =", isDisplayPage);
 
                 // Display settings now handled by SettingsContext
 
                 // Attempt to load saved data from database FIRST
                 setIsLoading(true);
-                console.log("🔄 UnifiedContext: Attempting to load saved data from database...");
+                logger.sync("UnifiedContext: Attempting to load saved data from database...");
                 const slideshowData = await sessionService.loadSlideshowData();
 
                 if (slideshowData) {
-                    console.log("📥 Loaded slideshow data from database:", {
+                    logger.data("Loaded slideshow data from database:", {
                         slidesCount: slideshowData.slides?.length || 0,
                         loadedSlidesDetails: slideshowData.slides?.map(s => ({ id: s.id, name: s.name, active: s.active, type: s.type })),
                         displaySettings: slideshowData.displaySettings
@@ -808,15 +743,15 @@ export const UnifiedProvider: React.FC<UnifiedProviderProps> = ({ children }) =>
 
                     // Check if we have event slides in the final slides array
                     const hasEventSlides = finalSlides.some(s => s.type === SLIDE_TYPES.EVENT);
-                    console.log("🔍 Final slides has event slides:", hasEventSlides);
+                    logger.debug("Final slides has event slides:", hasEventSlides);
 
                     // If we don't have event slides, add them (avoiding duplicates)
                     if (!hasEventSlides) {
-                        console.log("🔧 Adding missing event slides to final slides");
+                        logger.debug("Adding missing event slides to final slides");
                         const defaultSlides = createDefaultSlides();
                         const eventSlides = defaultSlides.filter(s => s.type === SLIDE_TYPES.EVENT);
                         finalSlides = [...finalSlides, ...eventSlides];
-                        console.log("🔧 Added event slides:", eventSlides.map(s => ({ id: s.id, name: s.name, type: s.type })));
+                        logger.debug("Added event slides:", eventSlides.map(s => ({ id: s.id, name: s.name, type: s.type })));
                     } else {
                         // Check for duplicate event slides and remove them
                         const eventSlideIds = new Set<string>();
@@ -825,12 +760,12 @@ export const UnifiedProvider: React.FC<UnifiedProviderProps> = ({ children }) =>
                             if (slide.type === SLIDE_TYPES.EVENT) {
                                 // Check for duplicate by ID
                                 if (eventSlideIds.has(slide.id)) {
-                                    console.log("🔧 Removing duplicate event slide by ID:", slide.id, slide.name);
+                                    logger.debug("Removing duplicate event slide by ID:", slide.id, slide.name);
                                     return false;
                                 }
                                 // Check for duplicate by name (in case IDs are different but names are same)
                                 if (eventSlideNames.has(slide.name)) {
-                                    console.log("🔧 Removing duplicate event slide by name:", slide.id, slide.name);
+                                    logger.debug("Removing duplicate event slide by name:", slide.id, slide.name);
                                     return false;
                                 }
                                 eventSlideIds.add(slide.id);
@@ -840,12 +775,12 @@ export const UnifiedProvider: React.FC<UnifiedProviderProps> = ({ children }) =>
                         });
 
                         if (uniqueSlides.length !== finalSlides.length) {
-                            console.log("🔧 Removed duplicate event slides, final count:", uniqueSlides.length);
+                            logger.debug("Removed duplicate event slides, final count:", uniqueSlides.length);
                             finalSlides = uniqueSlides;
                         }
                     }
 
-                    console.log("🔄 UnifiedContext: Setting slides from database:", {
+                    logger.sync("UnifiedContext: Setting slides from database:", {
                         finalSlidesCount: finalSlides.length,
                         activeSlidesCount: finalSlides.filter(s => s.active).length,
                         finalSlidesDetails: finalSlides.map(s => ({ id: s.id, name: s.name, active: s.active, type: s.type }))
@@ -855,12 +790,12 @@ export const UnifiedProvider: React.FC<UnifiedProviderProps> = ({ children }) =>
                     lastSavedStateRef.current = JSON.stringify({ slides: finalSlides });
 
                     // Settings are handled by SettingsContext, so we don't need to do anything with them here
-                    console.log("✅ UnifiedContext: Smart merge applied:", {
+                    logger.success("UnifiedContext: Smart merge applied:", {
                         slidesSource: slideshowData.slides && slideshowData.slides.length > 0 ? 'database' : 'defaults',
                         settingsHandledBy: 'SettingsContext'
                     });
                 } else {
-                    console.log("🔄 No saved data found in database. Using defaults...");
+                    logger.debug("No saved data found in database. Using defaults...");
                     // No database data, use defaults
                     const defaultSlides = createDefaultSlides();
                     setSlides(defaultSlides);
@@ -868,12 +803,12 @@ export const UnifiedProvider: React.FC<UnifiedProviderProps> = ({ children }) =>
                 }
 
                 // Load API data only once on mount
-                console.log("🔄 UnifiedContext: Loading API data...");
+                logger.sync("UnifiedContext: Loading API data...");
                 await refreshApiData();
 
-                console.log("✅ UnifiedContext: Initial data loading complete.");
+                logger.success("UnifiedContext: Initial data loading complete.");
             } catch (error) {
-                console.error("❌ UnifiedContext: Failed to initialize data:", error);
+                logger.error("UnifiedContext: Failed to initialize data:", error);
                 // Ensure default slides are set even on error
                 const defaultSlides = createDefaultSlides();
                 setSlides(defaultSlides);
@@ -885,22 +820,15 @@ export const UnifiedProvider: React.FC<UnifiedProviderProps> = ({ children }) =>
 
         initializeData();
 
-        // Initialize API polling for real-time data updates
-        console.log("🔄 UnifiedContext: Initializing API polling...");
-        initializeApiPolling();
+        // NOTE: API polling initialization removed - React Query handles this automatically
+        // The useDashboardData hook polls every 60 seconds via refetchInterval
     }, [refreshApiData, isDisplayPage]); // Run only once on mount - intentionally omitting slides and isLoading to prevent infinite loops
 
-    // Periodically refresh API data (every 8 hours) - only when not editing and not on display page
-    useEffect(() => {
-        const refreshInterval = setInterval(() => {
-            if (!isEditing && !isDisplayPage) {
-                console.log("🔄 Periodic API data refresh...");
-                refreshApiData();
-            }
-        }, 8 * 60 * 60 * 1000); // 8 hours - very infrequent to reduce API calls
-
-        return () => clearInterval(refreshInterval);
-    }, [refreshApiData, isEditing, isDisplayPage]);
+    /**
+     * NOTE: Periodic API refresh removed - React Query handles this automatically
+     * The useDashboardData hook already polls every 60 seconds, which is more frequent
+     * than the old 8-hour refresh interval
+     */
 
     // Save data before page unload (only on non-display pages)
     useEffect(() => {
@@ -908,7 +836,7 @@ export const UnifiedProvider: React.FC<UnifiedProviderProps> = ({ children }) =>
             if (slides.length > 0 && !isDisplayPage) {
                 // Use synchronous save for beforeunload
                 saveToDatabase().catch(error => {
-                    console.error("❌ Save on unload failed:", error);
+                    logger.error("Save on unload failed:", error);
                 });
             }
         };
@@ -926,7 +854,7 @@ export const UnifiedProvider: React.FC<UnifiedProviderProps> = ({ children }) =>
         employees,
         graphData,
         escalations,
-        isLoading,
+        isLoading: isLoading || isDashboardLoading, // Combine both loading states
         isEditing,
         setIsEditing,
         isDisplayPage,
@@ -936,7 +864,7 @@ export const UnifiedProvider: React.FC<UnifiedProviderProps> = ({ children }) =>
         refreshApiData,
         syncToRemoteDisplays,
         forceApiCheck: handleForceApiCheck,
-        clearApiCache,
+        clearApiCache: handleClearApiCache,
         startApiPolling: handleStartApiPolling,
         stopApiPolling: handleStopApiPolling,
         forceMigrateVideoUrls,

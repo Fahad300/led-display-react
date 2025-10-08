@@ -57,21 +57,6 @@ export const GraphSlide: React.FC<{ slide: GraphSlideType }> = ({ slide }) => {
     const loading = false; // Loading is handled in UnifiedContext
     const error = null; // Error handling is in UnifiedContext
 
-    // Debug logging to understand the data structure
-    React.useEffect(() => {
-        console.log("GraphSlide - graphData:", graphData);
-        console.log("GraphSlide - teamWiseData:", teamWiseData);
-        console.log("GraphSlide - graphData type:", typeof graphData);
-        console.log("GraphSlide - graphData null check:", graphData === null);
-        console.log("GraphSlide - graphData undefined check:", graphData === undefined);
-
-        if (graphData) {
-            console.log("GraphSlide - graphData.data:", graphData.data);
-            console.log("GraphSlide - graphData.data length:", graphData.data?.length);
-            console.log("GraphSlide - graphData.categories:", graphData.categories);
-            console.log("GraphSlide - graphData.categories length:", graphData.categories?.length);
-        }
-    }, [graphData, teamWiseData]);
 
     // Use live data from context if available, otherwise show loading or empty state
     const chartData = teamWiseData || {

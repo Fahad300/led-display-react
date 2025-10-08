@@ -9,12 +9,6 @@ import { useUnified } from "../../contexts/UnifiedContext";
 export const CurrentEscalationsSlideComponent: React.FC<{ slide: CurrentEscalationsSlide }> = ({ slide }) => {
     const { escalations } = useUnified();
 
-    // Debug logging
-    React.useEffect(() => {
-        console.log("CurrentEscalationsSlide - escalations data:", escalations);
-        console.log("CurrentEscalationsSlide - escalations length:", escalations?.length || 0);
-    }, [escalations]);
-
     // Color mapping for categories
     const categoryColorMap: Record<string, string> = {
         'code blue': 'bg-blue-500/90',
@@ -72,20 +66,18 @@ export const CurrentEscalationsSlideComponent: React.FC<{ slide: CurrentEscalati
         return 'bg-gray-500/90'; // Default gray for unknown statuses
     };
 
-    // Transform API data to match the expected table format
+    /**
+     * Transform API data to match the expected table format
+     */
     const transformEscalationsData = (data: any[]) => {
-        console.log("🔍 TransformEscalationsData - Raw data:", data);
-        return data.map(item => {
-            console.log("🔍 TransformEscalationsData - Item:", item);
-            return {
-                key: item.key || "N/A",
-                ticketCategory: item.category || "N/A",
-                teamName: item.team || "N/A",
-                clientName: item.client || "N/A",
-                ticketSummary: item.summary || "N/A",
-                currentStatus: item.status || "N/A"
-            };
-        });
+        return data.map(item => ({
+            key: item.key || "N/A",
+            ticketCategory: item.category || "N/A",
+            teamName: item.team || "N/A",
+            clientName: item.client || "N/A",
+            ticketSummary: item.summary || "N/A",
+            currentStatus: item.status || "N/A"
+        }));
     };
 
     const escalationsData = escalations.length > 0 ? transformEscalationsData(escalations) : [];

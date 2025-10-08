@@ -10,6 +10,7 @@ import adminRoutes from "./routes/admin";
 import sessionsRoutes from "./routes/sessions";
 import filesRoutes from "./routes/files";
 import proxyRoutes from "./routes/proxy";
+import dashboardRoutes from "./routes/dashboard";
 import mainRoutes from "./routes/main";
 import { initializePassport } from "./config/passport";
 
@@ -89,6 +90,7 @@ app.use("/api/admin", adminRoutes);
 // Display routes removed - using unified slideshow data instead
 app.use("/api/sessions", sessionsRoutes);
 app.use("/api/files", filesRoutes);
+app.use("/api/dashboard", dashboardRoutes); // Consolidated dashboard endpoint
 app.use("/api/proxy", proxyRoutes);
 app.use("/", mainRoutes);
 
