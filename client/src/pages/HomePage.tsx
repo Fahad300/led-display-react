@@ -4,6 +4,7 @@ import { useSettings } from '../contexts/SettingsContext';
 import { dispatchSlidesChange } from '../utils/realtimeSync';
 import { Slide, SLIDE_TYPES, ImageSlide as ImageSlideType, VideoSlide as VideoSlideType, NewsSlide, EventSlide as EventSlideType, TeamComparisonSlide as TeamComparisonSlideType, GraphSlide as GraphSlideType, DocumentSlide as DocumentSlideType, TextSlide as TextSlideType, Employee } from '../types';
 import { logger } from '../utils/logger';
+import { videoPreloadManager } from '../utils/videoPreloadManager';
 import { EventSlideComponent, ImageSlide, CurrentEscalationsSlideComponent, TeamComparisonSlideComponent, GraphSlide, DocumentSlide, TextSlide } from "../components/slides";
 import {
     DndContext,
@@ -460,6 +461,15 @@ const HomePage: React.FC = () => {
         clearApiCache
     } = useUnified();
 
+    // State to track event slide toggle states
+    const [eventSlideStates, setEventSlideStates] = useState<{
+        "birthday-event-slide": boolean;
+        "anniversary-event-slide": boolean;
+    }>({
+        "birthday-event-slide": false,
+        "anniversary-event-slide": false
+    });
+
     // Debug logging for slides
     useEffect(() => {
         logger.debug("HomePage - Current slides:", {
@@ -477,31 +487,158 @@ const HomePage: React.FC = () => {
             birthdayCount: employees.filter(e => e.isBirthday).length
         });
     }, [employees]);
+
+    // Create event slides and process all slides
+    const processedSlides = useMemo(() => {
+        // Remove any existing event slides from the slides array
+        const nonEventSlides = slides.filter(slide => slide.type !== SLIDE_TYPES.EVENT);
+
+        // Create birthday event slide
+        const birthdayEmployees = employees.filter(employee => employee.isBirthday === true);
+        const birthdayEventSlide: EventSlideType = {
+            id: "birthday-event-slide",
+            name: "Birthday Celebrations",
+            type: SLIDE_TYPES.EVENT,
+            active: eventSlideStates["birthday-event-slide"], // Use state from eventSlideStates
+            duration: 10,
+            data: {
+                title: "Birthday Celebrations",
+                description: "Celebrating our team members' birthdays",
+                date: new Date().toISOString(),
+                isEmployeeSlide: true,
+                employees: birthdayEmployees,
+                eventType: "birthday",
+                hasEvents: birthdayEmployees.length > 0,
+                eventCount: birthdayEmployees.length
+            },
+            dataSource: "manual"
+        };
+
+        // Create anniversary event slide
+        const anniversaryEmployees = employees.filter(employee => employee.isAnniversary === true);
+        const anniversaryEventSlide: EventSlideType = {
+            id: "anniversary-event-slide",
+            name: "Work Anniversaries",
+            type: SLIDE_TYPES.EVENT,
+            active: eventSlideStates["anniversary-event-slide"], // Use state from eventSlideStates
+            duration: 10,
+            data: {
+                title: "Work Anniversaries",
+                description: "Celebrating our team members' work anniversaries",
+                date: new Date().toISOString(),
+                isEmployeeSlide: true,
+                employees: anniversaryEmployees,
+                eventType: "anniversary",
+                hasEvents: anniversaryEmployees.length > 0,
+                eventCount: anniversaryEmployees.length
+            },
+            dataSource: "manual"
+        };
+
+        // Combine all slides: non-event slides + event slides
+        const eventSlides: EventSlideType[] = [birthdayEventSlide, anniversaryEventSlide];
+        const allSlides = [...nonEventSlides, ...eventSlides];
+
+        logger.data("HomePage - Processed slides:", {
+            nonEventSlides: nonEventSlides.length,
+            eventSlides: eventSlides.length,
+            totalSlides: allSlides.length,
+            birthdayEmployees: birthdayEmployees.length,
+            anniversaryEmployees: anniversaryEmployees.length
+        });
+
+        return allSlides;
+    }, [slides, employees, eventSlideStates]);
+
     const { displaySettings, updateDisplaySettings, lastSynced } = useSettings();
     const { addToast } = useToast();
     const [isFullscreen, setIsFullscreen] = useState(false);
-    const [videoReadyState, setVideoReadyState] = useState<Map<string, boolean>>(new Map());
     const slidesContainerRef = useRef<HTMLDivElement>(null);
+    const [videoReadinessCheck, setVideoReadinessCheck] = useState(0); // Force re-render when videos become ready
 
-    // Get active slides directly from context - no local state needed
-    // Filter out video slides that aren't ready yet
-    const activeSlides = slides.filter(slide => {
-        if (!slide.active) return false;
+    /**
+     * Get active slides from processed slides (with employee counts injected)
+     * Filter out video slides that aren't ready yet using the global video preload manager
+     */
+    const activeSlides = useMemo(() => {
+        return processedSlides.filter(slide => {
+            if (!slide.active) return false;
 
-        // For video slides, only include if they're preloaded and ready
-        if (slide.type === SLIDE_TYPES.VIDEO) {
-            return videoReadyState.get(slide.id) === true;
-        }
+            // For video slides, only include if fully preloaded and ready
+            if (slide.type === SLIDE_TYPES.VIDEO) {
+                const videoSlide = slide as VideoSlideType;
+                const isReady = videoPreloadManager.isVideoReady(videoSlide.data.videoUrl);
 
-        // Include all other slide types
-        return true;
-    });
+                if (!isReady) {
+                    logger.debug(`⏳ Skipping video slide in HomePage (not ready): ${slide.name}`);
+                }
 
-    // Create a key that changes when video ready state changes to force re-render
+                return isReady;
+            }
+
+            // All other slide types are always ready
+            return true;
+        });
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [processedSlides, videoReadinessCheck]); // videoReadinessCheck intentionally forces re-computation when videos become ready
+
+    // Create a key that changes when active slides change to force re-render
     const slideshowKey = useMemo(() => {
-        const videoReadyCount = Array.from(videoReadyState.values()).filter(Boolean).length;
-        return `slideshow-${activeSlides.length}-${videoReadyCount}`;
-    }, [activeSlides.length, videoReadyState]);
+        return `slideshow-${activeSlides.map(s => s.id).join('-')}`;
+    }, [activeSlides]);
+
+    /**
+     * Preload all videos in background and listen for ready state changes
+     */
+    useEffect(() => {
+        const preloadAllVideos = async () => {
+            // Extract all video URLs from processed slides
+            const videoUrls: string[] = [];
+
+            processedSlides.forEach(slide => {
+                if (slide.type === SLIDE_TYPES.VIDEO) {
+                    const videoSlide = slide as VideoSlideType;
+                    if (videoSlide.data.videoUrl) {
+                        videoUrls.push(videoSlide.data.videoUrl);
+                    }
+                }
+            });
+
+            if (videoUrls.length === 0) return;
+
+            logger.info(`🎬 HomePage: Preloading ${videoUrls.length} videos in background`);
+
+            // Preload all videos
+            await videoPreloadManager.preloadMultipleVideos(videoUrls);
+
+            // Force re-render to include newly ready videos
+            setVideoReadinessCheck(prev => prev + 1);
+
+            logger.success(`✅ HomePage: Video preload complete`);
+            videoPreloadManager.logCacheStats();
+        };
+
+        preloadAllVideos();
+
+        // Set up periodic check for video readiness (every 5 seconds)
+        const readinessCheckInterval = setInterval(() => {
+            // Check if any new videos have become ready
+            const hasNewReadyVideos = processedSlides.some(slide => {
+                if (slide.type === SLIDE_TYPES.VIDEO) {
+                    const videoSlide = slide as VideoSlideType;
+                    return videoPreloadManager.isVideoReady(videoSlide.data.videoUrl);
+                }
+                return false;
+            });
+
+            if (hasNewReadyVideos) {
+                // Force re-render to include newly ready videos
+                setVideoReadinessCheck(prev => prev + 1);
+            }
+        }, 5000); // Check every 5 seconds
+
+        return () => clearInterval(readinessCheckInterval);
+    }, [processedSlides]);
 
     // Determine if sync is needed
     const needsSync = useMemo(() => {
@@ -628,7 +765,7 @@ const HomePage: React.FC = () => {
             timestamp: new Date().toISOString()
         });
 
-        const slideToUpdate = slides.find(s => s.id === slideId);
+        const slideToUpdate = processedSlides.find(s => s.id === slideId);
 
         if (slideToUpdate) {
             const newActiveState = !slideToUpdate.active;
@@ -643,7 +780,7 @@ const HomePage: React.FC = () => {
                 timestamp: new Date().toISOString()
             });
 
-            // For event slides, log the toggle action
+            // For event slides, update the local state and trigger display refresh
             if (slideToUpdate.type === SLIDE_TYPES.EVENT) {
                 const eventSlide = slideToUpdate as EventSlideType;
                 const hasEvents = eventSlide.data.hasEvents;
@@ -655,8 +792,31 @@ const HomePage: React.FC = () => {
                     hasEvents: hasEvents,
                     newActiveState: newActiveState
                 });
+
+                // Update the event slide state
+                setEventSlideStates(prev => ({
+                    ...prev,
+                    [eventSlide.id]: newActiveState
+                }));
+
+                // Trigger a display refresh to update the UI
+                logger.sync("HomePage: Event slide toggle - triggering display refresh...");
+                const reloadEvent = new CustomEvent('forceDisplayReload', {
+                    detail: {
+                        timestamp: new Date().toISOString(),
+                        reason: 'event_slide_toggle',
+                        slideId: eventSlide.id,
+                        slideName: eventSlide.name,
+                        active: newActiveState,
+                        eventType: eventSlide.data.eventType
+                    }
+                });
+                window.dispatchEvent(reloadEvent);
+                logger.success("HomePage: Display refresh triggered for event slide toggle");
+                return; // Don't save event slides to database
             }
 
+            // For regular slides, update in the database
             const updatedSlide = { ...slideToUpdate, active: newActiveState };
 
             logger.sync('HomePage - Calling updateSlide with:', {
@@ -671,10 +831,7 @@ const HomePage: React.FC = () => {
             updateSlide(updatedSlide);
 
             // Dispatch real-time sync event to notify DisplayPage immediately
-            dispatchSlidesChange(slides.map(s => s.id === slideId ? updatedSlide : s), [`slide-${slideId}-toggled-${newActiveState ? 'active' : 'inactive'}`], 'homepage');
-
-            // Update local state to reflect the change immediately
-            // Context handles the update automatically
+            dispatchSlidesChange(processedSlides.map(s => s.id === slideId ? updatedSlide : s), [`slide-${slideId}-toggled-${newActiveState ? 'active' : 'inactive'}`], 'homepage');
 
             // Trigger display page refresh when slide active status changes
             logger.sync("HomePage: Triggering display page refresh for slide toggle...");
@@ -689,8 +846,6 @@ const HomePage: React.FC = () => {
             });
             window.dispatchEvent(reloadEvent);
             logger.success("HomePage: Display page refresh triggered for slide toggle");
-
-            // Event slide states are now managed through the unified context
         }
     };
 
@@ -798,17 +953,12 @@ const HomePage: React.FC = () => {
             timestamp: new Date().toISOString()
         });
 
-        try {
-            await updateDisplaySettings({ showDateStamp: newValue });
-            logger.success('HomePage - Date stamp toggle successful:', {
-                newValue: newValue,
-                timestamp: new Date().toISOString()
-            });
-            addToast("✅ Date stamp setting updated successfully", "success");
-        } catch (error) {
-            logger.error("HomePage - Error updating date stamp setting:", error);
-            addToast("❌ Failed to update date stamp setting", "error");
-        }
+        await updateDisplaySettings({ showDateStamp: newValue });
+        logger.success('HomePage - Date stamp toggle successful:', {
+            newValue: newValue,
+            timestamp: new Date().toISOString()
+        });
+        addToast("✅ Date stamp setting updated successfully", "success");
     };
 
     const handlePaginationToggle = async () => {
@@ -819,17 +969,12 @@ const HomePage: React.FC = () => {
             timestamp: new Date().toISOString()
         });
 
-        try {
-            await updateDisplaySettings({ hidePagination: newValue });
-            logger.success('HomePage - Pagination toggle successful:', {
-                newValue: newValue,
-                timestamp: new Date().toISOString()
-            });
-            addToast("✅ Pagination setting updated successfully", "success");
-        } catch (error) {
-            logger.error("HomePage - Error updating pagination setting:", error);
-            addToast("❌ Failed to update pagination setting", "error");
-        }
+        await updateDisplaySettings({ hidePagination: newValue });
+        logger.success('HomePage - Pagination toggle successful:', {
+            newValue: newValue,
+            timestamp: new Date().toISOString()
+        });
+        addToast("✅ Pagination setting updated successfully", "success");
     };
 
     const handleArrowsToggle = async () => {
@@ -840,17 +985,12 @@ const HomePage: React.FC = () => {
             timestamp: new Date().toISOString()
         });
 
-        try {
-            await updateDisplaySettings({ hideArrows: newValue });
-            logger.success('HomePage - Arrows toggle successful:', {
-                newValue: newValue,
-                timestamp: new Date().toISOString()
-            });
-            addToast("✅ Arrow navigation setting updated successfully", "success");
-        } catch (error) {
-            logger.error("HomePage - Error updating arrow navigation setting:", error);
-            addToast("❌ Failed to update arrow navigation setting", "error");
-        }
+        await updateDisplaySettings({ hideArrows: newValue });
+        logger.success('HomePage - Arrows toggle successful:', {
+            newValue: newValue,
+            timestamp: new Date().toISOString()
+        });
+        addToast("✅ Arrow navigation setting updated successfully", "success");
     };
 
     const handleHidePersiviaLogoToggle = async () => {
@@ -861,17 +1001,12 @@ const HomePage: React.FC = () => {
             timestamp: new Date().toISOString()
         });
 
-        try {
-            await updateDisplaySettings({ hidePersiviaLogo: newValue });
-            logger.success('HomePage - Logo visibility toggle successful:', {
-                newValue: newValue,
-                timestamp: new Date().toISOString()
-            });
-            addToast("✅ Logo visibility setting updated successfully", "success");
-        } catch (error) {
-            logger.error("HomePage - Error updating logo visibility setting:", error);
-            addToast("❌ Failed to update logo visibility setting", "error");
-        }
+        await updateDisplaySettings({ hidePersiviaLogo: newValue });
+        logger.success('HomePage - Logo visibility toggle successful:', {
+            newValue: newValue,
+            timestamp: new Date().toISOString()
+        });
+        addToast("✅ Logo visibility setting updated successfully", "success");
     };
 
     const handleDevelopmentModeToggle = async () => {
@@ -882,17 +1017,12 @@ const HomePage: React.FC = () => {
             timestamp: new Date().toISOString()
         });
 
-        try {
-            await updateDisplaySettings({ developmentMode: newValue });
-            logger.success('HomePage - Development mode toggle successful:', {
-                newValue: newValue,
-                timestamp: new Date().toISOString()
-            });
-            addToast("✅ Development mode setting updated successfully", "success");
-        } catch (error) {
-            logger.error("HomePage - Error updating development mode setting:", error);
-            addToast("❌ Failed to update development mode setting", "error");
-        }
+        await updateDisplaySettings({ developmentMode: newValue });
+        logger.success('HomePage - Development mode toggle successful:', {
+            newValue: newValue,
+            timestamp: new Date().toISOString()
+        });
+        addToast("✅ Development mode setting updated successfully", "success");
     };
 
     // Show controls even when there are no active slides
@@ -902,7 +1032,7 @@ const HomePage: React.FC = () => {
         <div className="flex h-full bg-persivia-light-gray" data-editing={isEditing ? "true" : "false"}>
             {/* Slide Management - First Column */}
             <SlideManagementColumn
-                slides={slides}
+                slides={processedSlides}
                 onReorder={handleReorder}
                 onToggleActive={handleToggleActive}
                 employees={employees}
@@ -996,8 +1126,6 @@ const HomePage: React.FC = () => {
                                     hideArrows={displaySettings.hideArrows}
                                     effect={displaySettings.swiperEffect}
                                     isFullscreen={isFullscreen}
-                                    videoReadyState={videoReadyState}
-                                    setVideoReadyState={setVideoReadyState}
                                 />
                             ) : (
                                 <div className="w-full h-full flex flex-col items-center justify-center bg-persivia-light-gray">
@@ -1039,7 +1167,7 @@ const HomePage: React.FC = () => {
                     <div className="grid grid-cols-2 gap-4">
                         <div className="text-center">
                             <div className="text-2xl font-bold text-persivia-blue">
-                                {slides.length}
+                                {processedSlides.length}
                             </div>
                             <div className="text-sm text-gray-600">Total Slides</div>
                         </div>

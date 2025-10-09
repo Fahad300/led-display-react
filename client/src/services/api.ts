@@ -1,31 +1,12 @@
-/**
- * API Service - Legacy Compatibility Layer
- * 
- * DEPRECATED: Manual polling has been replaced by React Query
- * See: client/src/hooks/useDashboardData.ts and server/src/routes/dashboard.ts
- * 
- * This file is maintained for backward compatibility only. The following functions
- * are now wrappers or no-ops:
- * - startApiPolling() -> no-op (React Query handles polling)
- * - stopApiPolling() -> no-op
- * - forceApiCheck() -> triggers React Query refetch via listeners
- * - clearApiCache() -> invalidates React Query cache
- * 
- * Legacy functions still work:
- * - fetchEmployeesData() -> calls individual endpoints (not recommended)
- * - fetchGraphData() -> calls individual endpoints (not recommended)
- * - addDataChangeListener() -> still functional for backward compatibility
- * 
- * MIGRATION GUIDE:
- * Old: import { addDataChangeListener, startApiPolling } from './services/api'
- * New: import { useDashboardData } from './hooks/useDashboardData'
- * 
- * TODO: Remove this file once all components are migrated to useDashboardData
- * TODO: Consider WebSocket/SSE instead of polling for real-time updates
- */
-
 import axios from "axios";
 import { logger } from "../utils/logger";
+
+// Show deprecation warning on import
+if (process.env.NODE_ENV === "development") {
+    logger.warn(
+        "⚠️ services/api.ts is DEPRECATED. Use @/api/backendApi.ts and @/hooks/useDashboardData.ts instead. See docs/architecture.md"
+    );
+}
 
 // Get the backend URL based on environment
 const getBackendUrl = (): string => {
@@ -33,11 +14,9 @@ const getBackendUrl = (): string => {
     return process.env.REACT_APP_BACKEND_URL || "http://localhost:5000";
 };
 
-// Log backend URL only in development
-if (process.env.NODE_ENV === 'development') {
-    // Backend URL configured
-}
-
+/**
+ * @deprecated Import from "@/api/backendApi" instead
+ */
 export const backendApi = axios.create({
     baseURL: getBackendUrl(),
     headers: {

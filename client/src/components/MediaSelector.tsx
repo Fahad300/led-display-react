@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { useToast } from "../contexts/ToastContext";
 import MediaModal from "./MediaModal";
-import { backendApi } from "../services/api";
+import { backendApi } from "../api/backendApi";
 
 interface MediaFile {
     name: string;

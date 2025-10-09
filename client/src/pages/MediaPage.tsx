@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { useToast } from "../contexts/ToastContext";
 import MediaModal from "../components/MediaModal";
-import { backendApi } from "../services/api";
+import { backendApi } from "../api/backendApi";
 
 
 

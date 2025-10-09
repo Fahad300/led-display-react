@@ -3,7 +3,8 @@ import { Slide, SLIDE_TYPES, VideoSlide as VideoSlideType } from "../types";
 import { Swiper, SwiperSlide } from 'swiper/react';
 import { EffectFade, Navigation, Pagination, Autoplay } from "swiper/modules";
 import type { Swiper as SwiperType } from "swiper";
-import { preloadVideos, extractFileId } from '../utils/localFileServer';
+import { videoPreloadManager } from '../utils/videoPreloadManager';
+import { logger } from "../utils/logger";
 import "swiper/css";
 import "swiper/css/effect-fade";
 import "swiper/css/navigation";
@@ -29,9 +30,7 @@ const SwiperSlideshow: React.FC<{
     effect?: string;
     isFullscreen?: boolean;
     settings?: any;
-    videoReadyState?: Map<string, boolean>;
-    setVideoReadyState?: React.Dispatch<React.SetStateAction<Map<string, boolean>>>;
-}> = ({ slides, renderSlideContent, onSlideChange, hidePagination = false, hideArrows = false, effect = "slide", isFullscreen = false, videoReadyState = new Map(), setVideoReadyState }) => {
+}> = ({ slides, renderSlideContent, onSlideChange, hidePagination = false, hideArrows = false, effect = "slide", isFullscreen = false }) => {
     // Debug mode - only log when explicitly enabled
     const isDebugMode = process.env.REACT_APP_DEBUG_SWIPER_SLIDESHOW === 'true';
 
@@ -44,19 +43,41 @@ const SwiperSlideshow: React.FC<{
     const [currentSlideIndex, setCurrentSlideIndex] = useState(0);
     const [remainingTime, setRemainingTime] = useState(0);
     const [isVideoPlaying, setIsVideoPlaying] = useState(false);
-    // Video ready state is now managed by parent component
-    // Removed videoDurations - not needed with simplified approach
 
-    // Filter out inactive slides
+    /**
+     * Filter slides to only include:
+     * 1. Active slides
+     * 2. For video slides: Only those that are fully preloaded and ready
+     * 
+     * This ensures no buffering or black frames appear on the LED display
+     */
     const activeSlides = useMemo(() => {
-        return slides.filter(slide => slide.active);
+        return slides.filter(slide => {
+            // Must be active
+            if (!slide.active) return false;
+
+            // For video slides, check if video is fully preloaded and ready
+            if (slide.type === SLIDE_TYPES.VIDEO) {
+                const videoSlide = slide as VideoSlideType;
+                const isReady = videoPreloadManager.isVideoReady(videoSlide.data.videoUrl);
+
+                if (!isReady) {
+                    logger.debug(`⏳ Skipping video slide (not ready): ${slide.name} - ${videoSlide.data.videoUrl}`);
+                }
+
+                return isReady;
+            }
+
+            // All other slide types are always ready
+            return true;
+        });
     }, [slides]);
 
     /**
-     * Aggressively preload next video slides for smoother transitions
-     * Preloads current, next, and next+1 videos to ensure smooth playback
+     * Preload videos for current and upcoming slides
+     * Uses the global video preload manager for centralized caching
      */
-    const preloadNextVideos = useCallback(async () => {
+    const preloadUpcomingVideos = useCallback(async () => {
         if (activeSlides.length === 0) return;
 
         const currentIndex = currentSlideIndex;
@@ -70,34 +91,15 @@ const SwiperSlideshow: React.FC<{
             const slide = activeSlides[index];
             if (slide?.type === SLIDE_TYPES.VIDEO) {
                 const videoSlide = slide as VideoSlideType;
-                if (videoSlide.data.videoUrl) {
+                if (videoSlide.data.videoUrl && !videoPreloadManager.isVideoReady(videoSlide.data.videoUrl)) {
                     videoUrls.push(videoSlide.data.videoUrl);
                 }
             }
         });
 
         if (videoUrls.length > 0) {
-            try {
-                console.log(`🚀 Preloading ${videoUrls.length} videos (current + next 2 slides)`);
-                await preloadVideos(videoUrls);
-                console.log(`✅ Successfully preloaded ${videoUrls.length} videos`);
-
-                // Mark videos as ready in state
-                indicesToPreload.forEach(index => {
-                    const slide = activeSlides[index];
-                    if (slide?.type === SLIDE_TYPES.VIDEO) {
-                        if (setVideoReadyState) {
-                            setVideoReadyState(prev => {
-                                const newState = new Map(prev);
-                                newState.set(slide.id, true);
-                                return newState;
-                            });
-                        }
-                    }
-                });
-            } catch (error) {
-                console.warn('⚠️ Failed to preload some videos:', error);
-            }
+            logger.info(`🚀 Preloading ${videoUrls.length} upcoming videos`);
+            await videoPreloadManager.preloadMultipleVideos(videoUrls);
         }
     }, [activeSlides, currentSlideIndex]);
 
@@ -249,20 +251,19 @@ const SwiperSlideshow: React.FC<{
                 totalSlides: activeSlides.length,
                 slideName: currentSlide?.name,
                 slideType: currentSlide?.type,
-                isVideoReady: currentSlide ? videoReadyState.get(currentSlide.id) : false,
+                isVideoSlide: currentSlide?.type === SLIDE_TYPES.VIDEO,
                 isLoop: (swiper.loopedSlides || 0) > 0,
                 loopedSlides: swiper.loopedSlides || 0
             });
         }
 
-        // CRITICAL: Aggressively preload next videos BEFORE starting autoplay
-        // This ensures videos are ready when we need them
-        preloadNextVideos();
+        // Preload upcoming videos in background
+        preloadUpcomingVideos();
 
         // All slides in activeSlides are ready (video slides are filtered out if not ready)
         // For video slides, force play and start autoplay immediately
         if (currentSlide?.type === SLIDE_TYPES.VIDEO) {
-            console.log('🎬 Video slide detected, forcing video play');
+            logger.debug('🎬 Video slide detected, forcing video play');
             forceVideoPlay(currentSlide.id);
         }
 
@@ -282,7 +283,7 @@ const SwiperSlideshow: React.FC<{
             }
         });
         window.dispatchEvent(event);
-    }, [onSlideChange, activeSlides, startCustomAutoplay, isDebugMode, preloadNextVideos]);
+    }, [onSlideChange, activeSlides, startCustomAutoplay, isDebugMode, preloadUpcomingVideos]);
 
     /**
      * Handle video end - advance to next slide immediately
@@ -297,7 +298,7 @@ const SwiperSlideshow: React.FC<{
 
         if (swiperRef.current && activeSlides.length > 1) {
             // Preload next videos before transitioning
-            preloadNextVideos();
+            preloadUpcomingVideos();
 
             // Use a small delay to ensure the video has fully ended and next slide is ready
             setTimeout(() => {
@@ -317,7 +318,7 @@ const SwiperSlideshow: React.FC<{
                 }
             }, 1000);
         }
-    }, [activeSlides, clearAllTimers, isDebugMode, preloadNextVideos]);
+    }, [activeSlides, clearAllTimers, isDebugMode, preloadUpcomingVideos]);
 
 
     // Enhanced render function that passes video handlers
@@ -341,7 +342,7 @@ const SwiperSlideshow: React.FC<{
         swiperRef.current = swiper;
 
         // Immediately preload videos for smoother experience
-        preloadNextVideos();
+        preloadUpcomingVideos();
 
         // Start autoplay when swiper is ready (only if multiple slides)
         if (activeSlides.length > 1) {
@@ -357,7 +358,7 @@ const SwiperSlideshow: React.FC<{
             // Single video slide - just start the countdown
             startCountdownTimer(activeSlides[0].duration || 10);
         }
-    }, [activeSlides, startCustomAutoplay, getAutoplayConfig, isDebugMode, preloadNextVideos, startCountdownTimer]);
+    }, [activeSlides, startCustomAutoplay, getAutoplayConfig, isDebugMode, preloadUpcomingVideos, startCountdownTimer]);
 
 
     // Enhanced periodic check to ensure slideshow doesn't get stuck
@@ -439,125 +440,41 @@ const SwiperSlideshow: React.FC<{
     }, [effect, hideArrows, hidePagination, isDebugMode]);
 
     /**
-     * Force Swiper update when slides change
-     * Also preloads all videos in the slideshow for maximum smoothness
+     * Preload all videos when slides change
+     * Uses the global video preload manager for centralized caching
      */
     useEffect(() => {
-        if (swiperRef.current && isDebugMode) {
-            console.log('SwiperSlideshow: Slides changed, forcing Swiper update', {
-                activeSlidesCount: activeSlides.length,
-                slideIds: activeSlides.map(s => s.id)
-            });
-        }
+        const preloadAllSlideVideos = async () => {
+            // Extract all video URLs from slides
+            const videoUrls: string[] = [];
 
-        // Force Swiper to re-render when slides change
-        if (swiperRef.current) {
-            swiperRef.current.update();
-        }
-
-        // Preload all videos completely in background before slideshow starts
-        const preloadAllVideos = async () => {
-            const videoSlides = activeSlides.filter(slide => slide.type === SLIDE_TYPES.VIDEO);
-
-            if (videoSlides.length === 0) return;
-
-            console.log(`🚀 Preloading ${videoSlides.length} videos completely in background`);
-
-            // Create video elements and preload them completely
-            const preloadPromises = videoSlides.map(async (slide) => {
-                const videoSlide = slide as VideoSlideType;
-                const videoUrl = videoSlide.data.videoUrl;
-
-                if (!videoUrl) return;
-
-                return new Promise<void>((resolve) => {
-                    const video = document.createElement('video');
-                    video.preload = 'auto';
-                    video.muted = true;
-                    video.crossOrigin = 'anonymous';
-                    video.style.display = 'none'; // Hidden video element
-
-                    let isResolved = false;
-
-                    const handleCanPlayThrough = () => {
-                        if (isResolved) return;
-                        isResolved = true;
-
-                        console.log(`✅ Video fully preloaded: ${slide.name}`);
-                        if (setVideoReadyState) {
-                            setVideoReadyState(prev => {
-                                const newState = new Map(prev);
-                                newState.set(slide.id, true);
-                                return newState;
-                            });
-                        }
-
-                        // Clean up event listeners
-                        video.removeEventListener('canplaythrough', handleCanPlayThrough);
-                        video.removeEventListener('loadeddata', handleLoadedData);
-                        video.removeEventListener('error', handleError);
-                        video.removeEventListener('stalled', handleStalled);
-
-                        resolve();
-                    };
-
-                    const handleLoadedData = () => {
-                        console.log(`📊 Video data loaded: ${slide.name}`);
-                    };
-
-                    const handleError = (e: Event) => {
-                        if (isResolved) return;
-                        isResolved = true;
-
-                        console.warn(`⚠️ Failed to preload video: ${slide.name}`, e);
-                        video.removeEventListener('canplaythrough', handleCanPlayThrough);
-                        video.removeEventListener('loadeddata', handleLoadedData);
-                        video.removeEventListener('error', handleError);
-                        video.removeEventListener('stalled', handleStalled);
-                        resolve(); // Resolve anyway to not block other videos
-                    };
-
-                    const handleStalled = () => {
-                        console.log(`⏸️ Video stalled during preload: ${slide.name}`);
-                    };
-
-                    video.addEventListener('canplaythrough', handleCanPlayThrough);
-                    video.addEventListener('loadeddata', handleLoadedData);
-                    video.addEventListener('error', handleError);
-                    video.addEventListener('stalled', handleStalled);
-
-                    // Start loading
-                    video.src = videoUrl;
-                    video.load();
-
-                    // Store reference for cleanup
-                    preloadedVideos.current.set(slide.id, video);
-
-                    // Timeout fallback - resolve after 30 seconds regardless
-                    setTimeout(() => {
-                        if (!isResolved) {
-                            console.warn(`⏰ Video preload timeout: ${slide.name}`);
-                            isResolved = true;
-                            video.removeEventListener('canplaythrough', handleCanPlayThrough);
-                            video.removeEventListener('loadeddata', handleLoadedData);
-                            video.removeEventListener('error', handleError);
-                            video.removeEventListener('stalled', handleStalled);
-                            resolve();
-                        }
-                    }, 30000);
-                });
+            slides.forEach(slide => {
+                if (slide.type === SLIDE_TYPES.VIDEO && slide.active) {
+                    const videoSlide = slide as VideoSlideType;
+                    if (videoSlide.data.videoUrl) {
+                        videoUrls.push(videoSlide.data.videoUrl);
+                    }
+                }
             });
 
-            try {
-                await Promise.all(preloadPromises);
-                console.log(`✅ All ${videoSlides.length} videos preloaded successfully`);
-            } catch (error) {
-                console.warn('⚠️ Some videos failed to preload:', error);
+            if (videoUrls.length === 0) return;
+
+            logger.info(`🎬 Preloading ${videoUrls.length} videos for slideshow`);
+
+            // Preload all videos using the global manager
+            await videoPreloadManager.preloadMultipleVideos(videoUrls);
+
+            // Log cache stats
+            videoPreloadManager.logCacheStats();
+
+            // Force Swiper to re-render now that videos are ready
+            if (swiperRef.current) {
+                swiperRef.current.update();
             }
         };
 
-        preloadAllVideos();
-    }, [activeSlides, isDebugMode]);
+        preloadAllSlideVideos();
+    }, [slides]);
 
     // Cleanup on unmount
     useEffect(() => {

@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { backendApi } from "../services/api";
+import { backendApi } from "../api/backendApi";
 import axios from "axios";
 
 interface RegisterProps { }

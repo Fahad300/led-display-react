@@ -13,6 +13,8 @@ import HomePage from './pages/HomePage';
 import AdminPage from './pages/AdminPage';
 import MediaPage from './pages/MediaPage';
 import DisplayPage from "./pages/DisplayPage";
+import { useInitializeApp } from "./hooks/useInitializeApp";
+import { logger } from "./utils/logger";
 
 /**
  * React Query Client Configuration
@@ -36,63 +38,103 @@ const queryClient = new QueryClient({
   },
 });
 
+/**
+ * App Initializer Component
+ * Handles one-time initialization before rendering the app
+ */
+const AppInitializer: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { isInitialized, error } = useInitializeApp();
+
+  // Show loading screen while initializing
+  if (!isInitialized) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-900">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-white mx-auto mb-4"></div>
+          <p className="text-white text-lg">Initializing LED Display System...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show error screen if initialization failed (but still let app load with defaults)
+  if (error) {
+    logger.warn("App initialized with errors:", error);
+  }
+
+  return <>{children}</>;
+};
+
 const App: React.FC = () => {
   return (
     <QueryClientProvider client={queryClient}>
       <ToastProvider>
         <Router>
           <AuthProvider>
+            {/* 
+              ⚠️ DEPRECATED PROVIDERS - Maintained for backward compatibility
+              These will be removed in v2.0.0 after all components are migrated
+              to use Zustand (useUIStore) and React Query (useDashboardData) directly
+              
+              New architecture doesn't need these providers:
+              - SettingsProvider → useUIStore() for display settings
+              - UnifiedProvider → useDashboardData() + useUIStore()
+              
+              See docs/MIGRATION_GUIDE.md for migration instructions
+            */}
             <SettingsProvider>
               <UnifiedProvider>
-                <Routes>
-                  {/* Public Routes */}
-                  <Route path="/login" element={<Login />} />
+                <AppInitializer>
+                  <Routes>
+                    {/* Public Routes */}
+                    <Route path="/login" element={<Login />} />
 
-                  {/* Display Route - No Header/Footer - Public Access for LED Screen */}
-                  <Route
-                    path="/display"
-                    element={<DisplayPage />}
-                  />
+                    {/* Display Route - No Header/Footer - Public Access for LED Screen */}
+                    <Route
+                      path="/display"
+                      element={<DisplayPage />}
+                    />
 
-                  {/* Protected Routes with Header/Footer */}
-                  <Route element={<MainLayout />}>
-                    <Route
-                      path="/"
-                      element={
-                        <ProtectedRoute>
-                          <HomePage />
-                        </ProtectedRoute>
-                      }
-                    />
-                    <Route
-                      path="/admin"
-                      element={
-                        <ProtectedRoute>
-                          <AdminPage />
-                        </ProtectedRoute>
-                      }
-                    />
-                    <Route
-                      path="/media"
-                      element={
-                        <ProtectedRoute>
-                          <MediaPage />
-                        </ProtectedRoute>
-                      }
-                    />
-                    <Route
-                      path="/register"
-                      element={
-                        <ProtectedRoute>
-                          <Register />
-                        </ProtectedRoute>
-                      }
-                    />
-                  </Route>
+                    {/* Protected Routes with Header/Footer */}
+                    <Route element={<MainLayout />}>
+                      <Route
+                        path="/"
+                        element={
+                          <ProtectedRoute>
+                            <HomePage />
+                          </ProtectedRoute>
+                        }
+                      />
+                      <Route
+                        path="/admin"
+                        element={
+                          <ProtectedRoute>
+                            <AdminPage />
+                          </ProtectedRoute>
+                        }
+                      />
+                      <Route
+                        path="/media"
+                        element={
+                          <ProtectedRoute>
+                            <MediaPage />
+                          </ProtectedRoute>
+                        }
+                      />
+                      <Route
+                        path="/register"
+                        element={
+                          <ProtectedRoute>
+                            <Register />
+                          </ProtectedRoute>
+                        }
+                      />
+                    </Route>
 
-                  {/* Fallback Route */}
-                  <Route path="*" element={<Navigate to="/" replace />} />
-                </Routes>
+                    {/* Fallback Route */}
+                    <Route path="*" element={<Navigate to="/" replace />} />
+                  </Routes>
+                </AppInitializer>
               </UnifiedProvider>
             </SettingsProvider>
           </AuthProvider>

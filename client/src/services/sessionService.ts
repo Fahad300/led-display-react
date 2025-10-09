@@ -349,15 +349,29 @@ class SessionService {
      */
     async triggerRemoteRefresh(refreshType: "all" | "data" | "settings" | "slides" = "all"): Promise<void> {
         try {
+            // Check if user is authenticated before making the request
+            const token = localStorage.getItem("token");
+            if (!token) {
+                // Silently skip if not authenticated - this is expected behavior
+                return;
+            }
+
             const response = await backendApi.post("/api/sessions/trigger-refresh", {
                 refreshType
             });
 
             console.debug(`Remote refresh triggered: ${refreshType}`, response.data);
             return response.data;
-        } catch (error) {
+        } catch (error: any) {
+            // Handle authentication errors gracefully (completely silent)
+            if (error?.response?.status === 401) {
+                // Silently skip authentication errors - this is expected when not logged in
+                return;
+            }
+
+            // Only log non-auth errors
             console.error("Error triggering remote refresh:", error);
-            throw error;
+            // Don't throw error - just log it to avoid breaking the UI flow
         }
     }
 

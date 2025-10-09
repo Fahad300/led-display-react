@@ -19,7 +19,7 @@ import {
     DocumentSlideData,
     TextSlide,
 } from "../types";
-import { backendApi } from "../services/api";
+import { backendApi } from "../api/backendApi";
 import RichTextEditor from "../components/RichTextEditor";
 
 // Utility function to generate UUID that works across all browsers

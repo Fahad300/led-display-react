@@ -17,6 +17,8 @@ import { useUnified } from '../contexts/UnifiedContext';
 import { useSettings } from '../contexts/SettingsContext';
 import realtimeSync, { SyncEvent } from '../utils/realtimeSync';
 import { logger } from '../utils/logger';
+import { videoPreloadManager } from '../utils/videoPreloadManager';
+import { VideoSlide as VideoSlideType } from '../types';
 
 /**
  * DisplayPage: Simple display page with two core functions:
@@ -28,9 +30,63 @@ const DisplayPage: React.FC = () => {
     const { slides, employees, isLoading, syncFromDatabase } = useUnified();
     const { displaySettings, syncSettings } = useSettings();
 
-    // Event processing is now handled in UnifiedContext
-    // Filter active slides directly from context
-    const activeSlides = slides.filter(slide => slide.active);
+    /**
+     * Filter active slides and ensure video slides are only included when ready
+     * This prevents buffering and black frames on the LED display
+     */
+    const activeSlides = useMemo(() => {
+        return slides.filter(slide => {
+            // Must be active
+            if (!slide.active) return false;
+
+            // For video slides, verify they're fully preloaded and ready
+            if (slide.type === SLIDE_TYPES.VIDEO) {
+                const videoSlide = slide as VideoSlideType;
+                const isReady = videoPreloadManager.isVideoReady(videoSlide.data.videoUrl);
+
+                if (!isReady) {
+                    logger.debug(`⏳ DisplayPage: Skipping video slide (not ready): ${slide.name}`);
+                }
+
+                return isReady;
+            }
+
+            // All other slide types are always ready
+            return true;
+        });
+    }, [slides]);
+
+    /**
+     * Preload all videos when slides change
+     * This ensures videos are ready before being shown on the LED display
+     */
+    useEffect(() => {
+        const preloadAllVideos = async () => {
+            // Extract all video URLs
+            const videoUrls: string[] = [];
+
+            slides.forEach(slide => {
+                if (slide.type === SLIDE_TYPES.VIDEO && slide.active) {
+                    const videoSlide = slide as VideoSlideType;
+                    if (videoSlide.data.videoUrl) {
+                        videoUrls.push(videoSlide.data.videoUrl);
+                    }
+                }
+            });
+
+            if (videoUrls.length === 0) return;
+
+            logger.info(`🎬 DisplayPage: Preloading ${videoUrls.length} videos`);
+
+            // Preload all videos
+            await videoPreloadManager.preloadMultipleVideos(videoUrls);
+
+            logger.success(`✅ DisplayPage: Video preload complete`);
+            videoPreloadManager.logCacheStats();
+        };
+
+        preloadAllVideos();
+    }, [slides]);
 
     // Get latest data on mount
     useEffect(() => {

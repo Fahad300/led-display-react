@@ -157,8 +157,24 @@ const fetchAllDashboardData = async (): Promise<{
 
     const failures: ApiFailure[] = [];
 
-    // Extract data from settled promises with fallback to empty arrays/objects
-    const employees = employeesResult.status === "fulfilled" ? employeesResult.value : [];
+    // Extract and process employee data from settled promises with fallback to empty arrays
+    const rawEmployees = employeesResult.status === "fulfilled" ? employeesResult.value : [];
+
+    // Process employee data to ensure isBirthday and isAnniversary flags are set
+    // This matches the processing done in the old eventsService.ts
+    const employees = rawEmployees.map((employee: any) => ({
+        id: employee.id,
+        name: employee.name,
+        dob: employee.dob,
+        designation: employee.designation,
+        teamName: employee.teamName,
+        picture: employee.picture,
+        email: employee.email,
+        gender: employee.gender,
+        dateOfJoining: employee.dateOfJoining,
+        isBirthday: employee.isBirthday || false,
+        isAnniversary: employee.isAnniversary || false
+    }));
 
     // Transform jira-chart data to GraphSlideData format
     const rawGraphData = graphDataResult.status === "fulfilled" ? graphDataResult.value : null;
@@ -174,6 +190,18 @@ const fetchAllDashboardData = async (): Promise<{
         failures.push({ endpoint: "celebrations", error: errorMsg });
     } else {
         logger.info("✅ Successfully fetched employees data");
+        logger.info(`📊 Employee data summary: ${employees.length} total, ${employees.filter((e: any) => e.isBirthday).length} birthdays, ${employees.filter((e: any) => e.isAnniversary).length} anniversaries`);
+
+        // Log specific employees with events for debugging
+        const birthdayEmployees = employees.filter((e: any) => e.isBirthday);
+        const anniversaryEmployees = employees.filter((e: any) => e.isAnniversary);
+
+        if (birthdayEmployees.length > 0) {
+            logger.info("🎂 Birthday employees:", birthdayEmployees.map((e: any) => ({ name: e.name, gender: e.gender })));
+        }
+        if (anniversaryEmployees.length > 0) {
+            logger.info("🎉 Anniversary employees:", anniversaryEmployees.map((e: any) => ({ name: e.name, gender: e.gender })));
+        }
     }
 
     if (graphDataResult.status === "rejected") {

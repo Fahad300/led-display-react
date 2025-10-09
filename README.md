@@ -1,286 +1,447 @@
-# LED Display System - Enterprise Dashboard
+# Persivia LED Display System
 
-A comprehensive React TypeScript application for managing and displaying dynamic content on LED displays in enterprise environments. Features real-time data integration, multiple slide types, and advanced display management capabilities.
+A modern, full-stack LED display management system built with React and Node.js. Manage dynamic slideshow content, display real-time data visualizations, and celebrate employee milestones on LED screens across your organization.
 
-## 🚀 Key Features
+![Version](https://img.shields.io/badge/version-1.9.0-blue)
+![License](https://img.shields.io/badge/license-MIT-green)
+![React](https://img.shields.io/badge/React-19.1-61dafb)
+![TypeScript](https://img.shields.io/badge/TypeScript-4.9-blue)
+![Node](https://img.shields.io/badge/Node-18+-green)
 
-### **Multi-Slide Type Support**
-- **Image Slides**: High-resolution images with captions and effects
-- **Video Slides**: MP4 video playback with custom controls
-- **News Slides**: RSS feed integration with real-time updates
-- **Event Slides**: Employee celebrations (birthdays, anniversaries) with live API data
-- **Graph Slides**: Interactive charts with real-time data visualization
-- **Team Comparison Slides**: Performance metrics and escalation tracking
-- **Current Escalations**: Live ticket status and priority management
-- **Document Slides**: PDF and document display capabilities
+---
 
-### **Real-Time Data Integration**
-- **Employee API**: Live employee data for celebrations and events
-- **Graph API**: Real-time performance metrics and team comparisons
-- **News API**: Dynamic news feed updates
-- **Backend Proxy**: CORS-free external API integration
-- **Auto-refresh**: Configurable polling for live data updates
+## ✨ Features
 
-### **Advanced Display Management**
-- **Responsive LED Display**: Optimized for large screens and LED walls
-- **Dynamic Scaling**: Automatic text and element scaling for various display sizes
-- **Multiple Transitions**: Fade, cube, coverflow, flip, and card effects
-- **Auto-play Control**: Configurable slide timing and transitions
-- **Fullscreen Mode**: Dedicated display page for LED screens
+### 📺 Display Capabilities
+- **Multiple Slide Types**: Images, videos, news, events, documents, graphs, and rich text
+- **Real-Time Data**: Live employee celebrations, escalations, and performance metrics
+- **Responsive Design**: Optimized for LED screens of any size
+- **Smooth Transitions**: Multiple effect options (fade, slide, cube, etc.)
+- **Auto-Play Slideshow**: Configurable timing and automatic transitions
 
-### **Admin Interface**
-- **Slide Management**: Create, edit, delete, and organize slides
+### 🎛️ Management Interface
 - **Drag & Drop**: Intuitive slide reordering
-- **Real-time Preview**: Live preview of slide changes
-- **Bulk Operations**: Mass slide activation/deactivation
-- **Settings Panel**: Comprehensive display and behavior configuration
+- **Live Preview**: See changes before publishing
+- **Rich Text Editor**: Create formatted content with images and links
+- **Media Library**: Centralized file management
+- **Display Settings**: Control transitions, pagination, and overlay elements
 
-### **Enterprise Features**
-- **User Authentication**: JWT-based secure login system
-- **Role-based Access**: Admin and display user roles
-- **Database Integration**: Persistent slide and user data storage
-- **Session Management**: Cross-device synchronization
-- **Error Handling**: Robust error recovery and fallback mechanisms
+### 🔒 Security & Authentication
+- **JWT Authentication**: Secure user login
+- **Protected Routes**: Role-based access control
+- **Session Management**: Multi-device support
+- **Secure File Upload**: Validated and sanitized uploads
 
-## 🛠 Technology Stack
+### ⚡ Performance
+- **Smart Caching**: Zero-downtime data delivery
+- **Automatic Polling**: Background data updates
+- **Optimized Loading**: Video preloading and lazy loading
+- **State Management**: React Query + Zustand for optimal performance
 
-### **Frontend**
-- **React 18** with TypeScript for type safety
-- **TailwindCSS** for responsive, utility-first styling
-- **Swiper.js** for advanced slideshow functionality
-- **Chart.js** for interactive data visualization
-- **Framer Motion** for smooth animations
-- **Axios** for HTTP client and API integration
+---
 
-### **Backend**
-- **Node.js** with Express.js server
-- **TypeScript** for type-safe server development
-- **SQLite** database with Knex.js ORM
-- **JWT** authentication with Passport.js
-- **File upload** handling with multer
-- **CORS** and proxy management
-
-### **Development Tools**
-- **Vite** for fast development and building
-- **ESLint** and **Prettier** for code quality
-- **Hot reload** for rapid development
-- **Environment variables** for configuration management
-
-## 📦 Installation & Setup
+## 🚀 Quick Start
 
 ### Prerequisites
-- Node.js (version 18 or higher)
-- npm or yarn package manager
+- **Node.js** 18 or higher
+- **npm** 7 or higher
+- **Windows** 10/11 or **Linux** server
 
-### Quick Start
+### Installation
 
 1. **Clone the repository**
    ```bash
    git clone <repository-url>
-   cd led-display-react
+   cd LED
    ```
 
 2. **Install dependencies**
    ```bash
-   # Install client dependencies
-   cd client
-   npm install
-   
    # Install server dependencies
-   cd ../server
+   cd server
+   npm install
+   
+   # Install client dependencies
+   cd ../client
    npm install
    ```
 
-3. **Environment Configuration**
-   ```bash
-   # Client environment (.env in client directory)
-   REACT_APP_BACKEND_URL=http://localhost:3001
-   REACT_APP_EXTERNAL_API_URL=https://your-api-endpoint.com
-   REACT_APP_API_TOKEN=your-api-token
+3. **Configure environment variables**
    
-   # Server environment (.env in server directory)
-   PORT=3001
-   JWT_SECRET=your-jwt-secret
-   DATABASE_URL=./database.sqlite
+   **Server** (`server/.env`):
+   ```env
+   # Server Configuration
+   NODE_ENV=production
+   PORT=5000
+   HOST=0.0.0.0
+
+   # Database (TypeORM with PostgreSQL)
+   DB_HOST=localhost
+   DB_PORT=5432
+   DB_USERNAME=your_db_user
+   DB_PASSWORD=your_db_password
+   DB_DATABASE=led_display
+
+   # JWT Authentication
+   JWT_SECRET=your-super-secret-jwt-key-change-this
+   JWT_EXPIRES_IN=24h
+
+   # File Upload
+   UPLOAD_PATH=./uploads
+   MAX_FILE_SIZE=104857600
+
+   # Server URL (replace with your actual IP/domain)
+   SERVER_URL=http://YOUR_SERVER_IP:5000
+   BACKEND_URL=http://YOUR_SERVER_IP:5000
    ```
 
-4. **Database Setup**
+   **Client** (`client/.env`):
+   ```env
+   # Backend API URL (replace with your actual IP/domain)
+   REACT_APP_BACKEND_URL=http://YOUR_SERVER_IP:5000
+   ```
+
+4. **Set up the database**
    ```bash
    cd server
-   npm run setup-db
-   npm run seed
+   npm run migrate      # Run database migrations
+   npm run seed         # Seed with default admin user
    ```
 
 5. **Start the application**
+   
+   **Development Mode:**
    ```bash
-   # Start backend server
+   # Terminal 1 - Start backend
    cd server
    npm run dev
    
-   # Start frontend (in new terminal)
+   # Terminal 2 - Start frontend
    cd client
    npm start
    ```
 
+   **Production Mode:**
+   ```bash
+   # Build frontend
+   cd client
+   npm run build
+
+   # Start backend (serves frontend automatically)
+   cd ../server
+   npm start
+   ```
+
 6. **Access the application**
-   - **Admin Interface**: `http://localhost:3000`
-   - **Display Page**: `http://localhost:3000/display`
-   - **API Server**: `http://localhost:3001`
+   - **Admin Panel**: `http://localhost:3000` (development) or `http://YOUR_SERVER_IP:5000` (production)
+   - **LED Display**: `http://localhost:3000/display`
+   - **Default Login**: 
+     - Username: `admin`
+     - Password: `admin123` (⚠️ Change immediately!)
 
-## 🎯 Usage Guide
+---
 
-### **Admin Interface** (`/`)
-- **Slide Management**: Create and organize different types of slides
-- **Real-time Preview**: See changes immediately in the preview panel
-- **Settings Configuration**: Adjust display behavior and appearance
-- **User Management**: Manage user accounts and permissions
+## 📖 Documentation
 
-### **Display Page** (`/display`)
-- **Fullscreen Mode**: Optimized for LED displays
-- **Auto-play Slideshow**: Automatic transition between active slides
-- **Real-time Updates**: Live data integration and updates
-- **Responsive Design**: Adapts to various screen sizes
+| Document | Description |
+|----------|-------------|
+| **[DEPLOYMENT_GUIDE.md](./DEPLOYMENT_GUIDE.md)** | Complete deployment instructions for Windows/Linux |
+| **[START_HERE.md](./START_HERE.md)** | Quick overview and getting started |
+| **[docs/QUICK_START.md](./docs/QUICK_START.md)** | Developer quick start guide |
+| **[docs/architecture.md](./docs/architecture.md)** | System architecture and design |
 
-### **Slide Types**
+---
 
-#### **Event Slides**
-- **Birthday Celebrations**: Automatic detection of employee birthdays
-- **Work Anniversaries**: Recognition of employee milestones
-- **Live API Integration**: Real-time employee data updates
-- **Custom Styling**: Responsive design for LED displays
+## 🎨 Usage
 
-#### **Graph Slides**
-- **Team Performance**: Real-time team comparison data
-- **Escalation Trends**: Priority-based escalation tracking
-- **Interactive Charts**: Clickable chart elements
-- **Dynamic Updates**: Live data refresh capabilities
+### Creating Slides
 
-#### **News Slides**
-- **RSS Integration**: Real-time news feed updates
-- **Custom Styling**: Responsive text and layout
-- **Auto-scroll**: Smooth text scrolling for long content
+1. **Login** to the admin panel
+2. **Navigate** to the Admin page
+3. **Click** "Add New Slide"
+4. **Select** slide type (Image, Video, News, etc.)
+5. **Configure** slide content and duration
+6. **Save** and activate the slide
 
-#### **Media Slides**
-- **Image Support**: High-resolution image display
-- **Video Support**: MP4 video playback
-- **Document Support**: PDF and document viewing
+### Display Settings
+
+Access settings from the **Home page**:
+
+- **Transition Effect**: Choose fade, slide, cube, or other effects
+- **Show Date Stamp**: Display current date/time on LED screen
+- **Hide Pagination**: Remove navigation dots
+- **Hide Arrows**: Remove navigation arrows
+- **Development Mode**: Show debugging overlay for testing
+
+### Managing Media
+
+1. **Navigate** to Media page
+2. **Upload** images, videos, or documents
+3. **Preview** files before using in slides
+4. **Copy URL** to use in slides or external sources
+5. **Delete** unused files to save space
+
+---
+
+## 🛠️ Technology Stack
+
+### Frontend
+- **React 19** - Modern UI library
+- **TypeScript** - Type-safe development
+- **React Query v5** - Server state management
+- **Zustand** - UI state management
+- **TailwindCSS** - Utility-first styling
+- **Swiper.js** - Advanced slideshow
+- **Chart.js** - Data visualization
+- **Framer Motion** - Smooth animations
+
+### Backend
+- **Node.js** - JavaScript runtime
+- **Express.js** - Web framework
+- **TypeORM** - Database ORM
+- **PostgreSQL** - Production database
+- **JWT** - Authentication
+- **Passport.js** - Auth middleware
+- **Multer** - File uploads
+
+---
+
+## 📁 Project Structure
+
+```
+LED/
+├── client/                    # React frontend
+│   ├── public/               # Static assets
+│   │   ├── images/          # Logos and default images
+│   │   └── videos/          # Background videos
+│   ├── src/
+│   │   ├── api/            # API client (backendApi.ts)
+│   │   ├── components/     # Reusable components
+│   │   │   └── slides/    # Slide type components
+│   │   ├── contexts/       # React contexts (deprecated)
+│   │   ├── hooks/          # Custom hooks
+│   │   ├── pages/          # Page components
+│   │   ├── services/       # Business logic
+│   │   ├── stores/         # Zustand stores
+│   │   ├── types/          # TypeScript definitions
+│   │   └── utils/          # Utility functions
+│   └── package.json
+│
+├── server/                    # Node.js backend
+│   ├── src/
+│   │   ├── config/         # Configuration files
+│   │   ├── middleware/     # Express middleware
+│   │   ├── migrations/     # Database migrations
+│   │   ├── models/         # Database models
+│   │   ├── routes/         # API routes
+│   │   ├── scripts/        # Setup scripts
+│   │   ├── services/       # Business logic
+│   │   └── utils/          # Utility functions
+│   ├── uploads/            # Uploaded files
+│   └── package.json
+│
+├── docs/                      # Documentation
+│   ├── QUICK_START.md        # Developer guide
+│   ├── architecture.md       # System architecture
+│   └── MIGRATION_GUIDE.md    # Migration instructions
+│
+├── DEPLOYMENT_GUIDE.md        # Deployment instructions
+├── START_HERE.md              # Quick overview
+└── README.md                  # This file
+```
+
+---
 
 ## 🔧 Configuration
 
-### **Display Settings**
-- **Transition Effects**: Choose from multiple slide transition types
-- **Auto-play Timing**: Configure slide duration and transition speed
-- **Display Options**: Show/hide pagination, arrows, and timestamps
-- **Responsive Scaling**: Automatic text and element scaling
+### Environment Variables
 
-### **API Configuration**
-- **External APIs**: Configure employee and graph data sources
-- **Proxy Settings**: Backend proxy for CORS-free API calls
-- **Authentication**: JWT token management for secure API access
-- **Polling Intervals**: Configurable data refresh rates
+#### Server Configuration
+| Variable | Description | Default | Required |
+|----------|-------------|---------|----------|
+| `NODE_ENV` | Environment mode | `development` | No |
+| `PORT` | Server port | `5000` | No |
+| `DB_HOST` | Database host | `localhost` | Yes |
+| `DB_USERNAME` | Database user | - | Yes |
+| `DB_PASSWORD` | Database password | - | Yes |
+| `JWT_SECRET` | JWT signing key | - | Yes |
+| `SERVER_URL` | Server URL | `http://localhost:5000` | Yes |
 
-### **Database Management**
-- **Slide Storage**: Persistent slide configuration and data
-- **User Management**: User accounts and authentication data
-- **Session Tracking**: Cross-device synchronization
-- **Backup & Restore**: Database backup and recovery options
+#### Client Configuration
+| Variable | Description | Default | Required |
+|----------|-------------|---------|----------|
+| `REACT_APP_BACKEND_URL` | Backend API URL | `http://localhost:5000` | Yes |
 
-## 🏗 Project Structure
+### Display Settings
 
-```
-led-display-react/
-├── client/                          # Frontend React application
-│   ├── public/                      # Static assets
-│   │   ├── images/                  # Logo and default images
-│   │   ├── videos/                  # Background videos
-│   │   └── index.html              # HTML template
-│   ├── src/
-│   │   ├── components/             # Reusable UI components
-│   │   │   ├── slides/            # Slide type components
-│   │   │   ├── layout/            # Layout components
-│   │   │   └── ...                # Other components
-│   │   ├── contexts/              # React Context providers
-│   │   ├── hooks/                 # Custom React hooks
-│   │   ├── pages/                 # Page components
-│   │   ├── services/              # API and external services
-│   │   ├── types/                 # TypeScript definitions
-│   │   ├── utils/                 # Utility functions
-│   │   └── App.tsx               # Main application
-│   └── package.json
-├── server/                         # Backend Node.js server
-│   ├── src/
-│   │   ├── config/               # Database and environment config
-│   │   ├── middleware/           # Express middleware
-│   │   ├── models/               # Database models
-│   │   ├── routes/               # API routes
-│   │   ├── services/             # Business logic
-│   │   └── server.ts            # Server entry point
-│   ├── uploads/                  # File upload directory
-│   └── package.json
-└── README.md
-```
+Configure from the **Home page** Settings panel:
+- **Swiper Effect**: `slide`, `fade`, `cube`, `coverflow`, `flip`, `cards`
+- **Slide Duration**: Individual duration per slide (in seconds)
+- **Show Date Stamp**: Display current date/time overlay
+- **Development Mode**: Enable debugging overlay
 
-## 🔄 Development Workflow
+---
 
-### **Adding New Slide Types**
-1. Define the slide type in `client/src/types/index.ts`
-2. Create the slide component in `client/src/components/slides/`
-3. Add the slide to the render function in `SlidesDisplay.tsx`
-4. Update the admin interface for slide creation/editing
+## 🎯 Common Tasks
 
-### **API Integration**
-1. Add API service in `client/src/services/`
-2. Create context provider for state management
-3. Update components to use the new data source
-4. Configure backend proxy if needed
+### Add a New User
+1. Login as admin
+2. Click user menu (top right)
+3. Select "Add User"
+4. Fill in username and password
+5. Click "Register"
 
-### **Database Changes**
-1. Create migration in `server/src/migrations/`
-2. Update models in `server/src/models/`
-3. Add API routes in `server/src/routes/`
-4. Test with sample data
+### Upload Media Files
+1. Go to **Media** page
+2. Click file input or drag & drop
+3. Select image, video, or document
+4. Wait for upload to complete
+5. Use the file URL in your slides
 
-## 🚀 Deployment
+### Activate/Deactivate Slides
+1. Go to **Home** page
+2. Find the slide you want to toggle
+3. Click the switch to activate/deactivate
+4. Changes save automatically
 
-### **Production Build**
+### Change Display Settings
+1. Go to **Home** page
+2. Scroll to Settings panel
+3. Toggle any setting (Date Stamp, Pagination, etc.)
+4. Settings sync automatically to all displays
+
+---
+
+## 🚨 Troubleshooting
+
+### Issue: "Cannot connect to backend"
+**Solution**: Check that the backend server is running and `REACT_APP_BACKEND_URL` is correct.
+
+### Issue: "Files not displaying"
+**Solution**: Verify `SERVER_URL` in server `.env` matches your actual IP address.
+
+### Issue: "401 Unauthorized errors"
+**Solution**: Login again - your session may have expired.
+
+### Issue: "Slides not updating on display"
+**Solution**: Enable Development Mode and check console for data loading errors.
+
+### Issue: "Video not playing"
+**Solution**: Ensure video is MP4 format, under 100MB, and muted is enabled.
+
+---
+
+## 📊 API Endpoints
+
+### Authentication
+- `POST /api/auth/login` - User login
+- `POST /api/auth/register` - User registration
+- `GET /api/auth/me` - Get current user
+
+### Dashboard
+- `GET /api/dashboard` - Get all dashboard data (employees, graphs, escalations)
+- `GET /api/dashboard/cache-status` - Check cache status
+
+### Files
+- `POST /api/files/upload` - Upload media file
+- `GET /api/files` - List all files
+- `GET /api/files/:id` - Get specific file
+- `DELETE /api/files/:id` - Delete file
+
+### Sessions
+- `POST /api/sessions` - Create session
+- `PUT /api/sessions/:token` - Update session data
+- `POST /api/sessions/trigger-refresh` - Trigger remote display refresh
+
+---
+
+## 🔄 Deployment
+
+### Production Deployment
+
+See **[DEPLOYMENT_GUIDE.md](./DEPLOYMENT_GUIDE.md)** for complete instructions.
+
+**Quick steps:**
+
+1. **Configure environment** (set production URLs and secrets)
+2. **Build frontend** (`npm run build` in client/)
+3. **Start backend** (`npm start` in server/)
+4. **Open display** in browser on LED screen
+5. **Full-screen** the /display page (F11)
+
+### Windows VM Deployment
+
+1. Replace `YOUR_VM_IP` in both `.env` files with actual VM IP
+2. Open ports 3000 and 5000 in Windows Firewall
+3. Build and start both client and server
+4. Access from LED screen browser
+
+### Docker Deployment (Optional)
+
 ```bash
-# Build frontend
-cd client
-npm run build
-
-# Build backend
-cd ../server
-npm run build
-```
-
-### **Environment Variables**
-- Configure production API endpoints
-- Set secure JWT secrets
-- Configure database connections
-- Set up SSL certificates
-
-### **Docker Deployment**
-```bash
-# Build and run with Docker
 docker-compose up -d
 ```
 
-## 🤝 Contributing
+---
 
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Add tests if applicable
-5. Submit a pull request
+## 🧪 Development
 
-## 📄 License
+### Run in Development Mode
+```bash
+# Terminal 1 - Backend
+cd server
+npm run dev
 
-This project is licensed under the MIT License - see the LICENSE file for details.
+# Terminal 2 - Frontend
+cd client
+npm start
+```
 
-## 🙏 Acknowledgments
+### Enable Development Mode
+1. Login to application
+2. Go to Home page
+3. Scroll to Settings
+4. Toggle "Development Mode"
+5. Check console for detailed logs
 
-- **React Team** for the amazing framework
-- **TailwindCSS** for the utility-first CSS framework
-- **Swiper.js** for advanced slideshow functionality
-- **Chart.js** for interactive data visualization
-- **Express.js** for the robust backend framework
+### Testing
+```bash
+# Run frontend tests
+cd client
+npm test
+
+# Run backend tests
+cd server
+npm test
+```
+
+---
+
+## 📝 License
+
+Copyright © 2025 Persivia. All rights reserved.
+
+---
+
+## 🆘 Support
+
+For issues, questions, or feature requests:
+1. Check the [documentation](./docs/)
+2. Review the [deployment guide](./DEPLOYMENT_GUIDE.md)
+3. Check browser console for errors
+4. Enable Development Mode for detailed logs
+
+---
+
+## 🔗 Quick Links
+
+- **[Quick Start Guide](./START_HERE.md)** - Get started quickly
+- **[Deployment Guide](./DEPLOYMENT_GUIDE.md)** - Deploy to production
+- **[Developer Docs](./docs/)** - Technical documentation
+- **[Architecture](./docs/architecture.md)** - System design
+
+---
+
+**Version**: 1.9.0  
+**Last Updated**: January 2025  
+**Status**: ✅ Production Ready

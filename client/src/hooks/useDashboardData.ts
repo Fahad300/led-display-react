@@ -27,7 +27,7 @@
  */
 
 import { useQuery, UseQueryResult } from "@tanstack/react-query";
-import { backendApi } from "../services/api";
+import { backendApi } from "../api/backendApi";
 import { logger } from "../utils/logger";
 
 /**
