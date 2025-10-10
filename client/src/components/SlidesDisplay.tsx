@@ -13,6 +13,7 @@ import { TestingOverlay } from "./TestingOverlay";
 import NewsSlideComponent from "./NewsSlideComponent";
 import { motion } from "framer-motion";
 import { onDisplayUpdate, UpdateEvent } from "../utils/updateEvents";
+import { connectSocket, disconnectSocket, onSocketUpdate, onSocketStateChange, ConnectionState } from "../utils/socket";
 import { logger } from "../utils/logger";
 
 /**
@@ -111,17 +112,18 @@ const LoadingComponent: React.FC = () => {
  * SlidesDisplay component: shows only the active slides in a fullscreen/clean view.
  */
 const SlidesDisplay: React.FC = () => {
-    const { slides, employees, isLoading, syncFromDatabase } = useUnified();
+    const { slides, isLoading, syncFromDatabase, setSlides } = useUnified();
     const { displaySettings, syncSettings } = useSettings();
     const queryClient = useQueryClient();
     const [isRefreshing, setIsRefreshing] = React.useState(false);
     const [lastUpdateTime, setLastUpdateTime] = React.useState<Date>(new Date());
+    const [socketState, setSocketState] = React.useState<ConnectionState>("disconnected");
 
-    console.log('📺 SlidesDisplay - Component rendered:', {
+    console.log('📺 SlidesDisplay - Component rendered (DISPLAY-ONLY MODE):', {
         slidesCount: slides.length,
+        activeCount: slides.filter(s => s.active).length,
         isLoading,
         isRefreshing,
-        employeesCount: employees.length,
         settings: {
             swiperEffect: displaySettings.swiperEffect,
             showDateStamp: displaySettings.showDateStamp,
@@ -154,8 +156,22 @@ const SlidesDisplay: React.FC = () => {
             // Handle different update types
             switch (event.type) {
                 case "slides":
-                    logger.info("🔄 Syncing slides from database...");
-                    await syncFromDatabase();
+                    // If slides data is provided in the event, use it directly (faster, no database query)
+                    if (event.data?.slides && Array.isArray(event.data.slides)) {
+                        logger.info("🔄 Updating slides from Socket.IO data (instant sync)...");
+                        logger.debug("📦 Received slides data:", {
+                            slidesCount: event.data.slides.length,
+                            activeCount: event.data.slides.filter((s: any) => s.active).length,
+                            slideIds: event.data.slides.map((s: any) => s.id)
+                        });
+                        // Use setSlides from UnifiedContext to update local state
+                        setSlides(event.data.slides);
+                        logger.success("✅ Slides updated from Socket.IO data");
+                    } else {
+                        // Fallback to database sync if slides data not provided
+                        logger.info("🔄 Syncing slides from database (fallback)...");
+                        await syncFromDatabase();
+                    }
                     break;
 
                 case "settings":
@@ -188,20 +204,70 @@ const SlidesDisplay: React.FC = () => {
         } finally {
             setIsRefreshing(false);
         }
-    }, [syncFromDatabase, syncSettings, queryClient]);
+    }, [syncFromDatabase, syncSettings, queryClient, setSlides]);
 
     /**
-     * Subscribe to display update events
+     * Subscribe to display update events (BroadcastChannel - for same-browser tabs)
      * This replaces all the scattered realtimeSync and custom event listeners
      */
     useEffect(() => {
-        logger.info("🎧 DisplayPage: Subscribing to unified update events");
+        logger.info("🎧 DisplayPage: Subscribing to unified update events (BroadcastChannel)");
 
         const unsubscribe = onDisplayUpdate(handleDisplayUpdate);
 
         return () => {
             logger.info("🔇 DisplayPage: Unsubscribing from update events");
             unsubscribe();
+        };
+    }, [handleDisplayUpdate]);
+
+    /**
+     * Socket.IO Connection for Real-Time Network Updates
+     * 
+     * This provides instant updates across the network when:
+     * - Admin updates slides/settings from HomePage
+     * - Changes come from different devices/networks
+     * - BroadcastChannel can't reach (different browser instances)
+     * 
+     * Falls back to 5-minute polling if socket disconnects.
+     */
+    useEffect(() => {
+        logger.info("🔌 DisplayPage: Connecting to Socket.IO for real-time updates");
+
+        // Connect to Socket.IO server
+        connectSocket();
+
+        // Subscribe to socket state changes
+        const unsubscribeState = onSocketStateChange((state: ConnectionState) => {
+            setSocketState(state);
+            logger.info(`📡 Socket state changed: ${state}`);
+
+            if (state === "connected") {
+                logger.success("✅ Socket.IO connected - real-time updates enabled");
+            } else if (state === "error" || state === "disconnected") {
+                logger.warn(`⚠️ Socket.IO ${state} - falling back to polling`);
+            }
+        });
+
+        // Subscribe to socket update events
+        const unsubscribeUpdates = onSocketUpdate((event) => {
+            logger.info(`📡 Socket update received: ${event.type} from ${event.source}`);
+
+            // Use the same handler as BroadcastChannel updates
+            handleDisplayUpdate({
+                type: event.type,
+                timestamp: new Date().toISOString(),
+                source: event.source || "socket",
+                data: event.data
+            });
+        });
+
+        // Cleanup on unmount
+        return () => {
+            logger.info("🔌 DisplayPage: Disconnecting from Socket.IO");
+            unsubscribeState();
+            unsubscribeUpdates();
+            disconnectSocket();
         };
     }, [handleDisplayUpdate]);
 
@@ -249,13 +315,30 @@ const SlidesDisplay: React.FC = () => {
         };
     }, [lastUpdateTime, syncFromDatabase, syncSettings, queryClient]);
 
-    // Create event slides locally in SlidesDisplay
-    // This ensures consistency with HomePage without circular dependencies
+    /**
+     * ✅ DISPLAY-ONLY APPROACH
+     * 
+     * DisplayPage is ONLY for displaying slides - NO calculations!
+     * 
+     * HomePage/AdminPage responsibilities:
+     * - Calculate processedSlides (with employee data for event slides)
+     * - Broadcast complete, ready-to-display slides via Socket.IO
+     * - Save to database for persistence
+     * 
+     * DisplayPage responsibilities:
+     * - Receive slides from Socket.IO
+     * - Display them as-is
+     * - That's it!
+     * 
+     * NO employee data calculations
+     * NO active state changes
+     * NO data transformations
+     * Just pure display of what HomePage sends!
+     */
     const processedSlides = useMemo(() => {
-        console.log('🔄 SlidesDisplay - Processing slides:', {
+        console.log('🔄 SlidesDisplay - Using slides as-is (display-only mode):', {
             isLoading,
-            slidesCount: slides.length,
-            employeesCount: employees.length
+            slidesCount: slides.length
         });
 
         if (isLoading) {
@@ -263,68 +346,15 @@ const SlidesDisplay: React.FC = () => {
             return [];
         }
 
-        // Remove any existing event slides from the slides array
-        const nonEventSlides = slides.filter(slide => slide.type !== SLIDE_TYPES.EVENT);
-        console.log('📋 SlidesDisplay - Non-event slides:', nonEventSlides.length);
-
-        // Create birthday event slide
-        const birthdayEmployees = employees.filter(employee => employee.isBirthday === true);
-        const birthdayEventSlide: EventSlideType = {
-            id: "birthday-event-slide",
-            name: "Birthday Celebrations",
-            type: SLIDE_TYPES.EVENT,
-            active: birthdayEmployees.length > 0, // Auto-activate if there are events
-            duration: 10,
-            data: {
-                title: "Birthday Celebrations",
-                description: "Celebrating our team members' birthdays",
-                date: new Date().toISOString(),
-                isEmployeeSlide: true,
-                employees: birthdayEmployees,
-                eventType: "birthday",
-                hasEvents: birthdayEmployees.length > 0,
-                eventCount: birthdayEmployees.length
-            },
-            dataSource: "manual"
-        };
-
-        // Create anniversary event slide
-        const anniversaryEmployees = employees.filter(employee => employee.isAnniversary === true);
-        const anniversaryEventSlide: EventSlideType = {
-            id: "anniversary-event-slide",
-            name: "Work Anniversaries",
-            type: SLIDE_TYPES.EVENT,
-            active: anniversaryEmployees.length > 0, // Auto-activate if there are events
-            duration: 10,
-            data: {
-                title: "Work Anniversaries",
-                description: "Celebrating our team members' work anniversaries",
-                date: new Date().toISOString(),
-                isEmployeeSlide: true,
-                employees: anniversaryEmployees,
-                eventType: "anniversary",
-                hasEvents: anniversaryEmployees.length > 0,
-                eventCount: anniversaryEmployees.length
-            },
-            dataSource: "manual"
-        };
-
-        // Combine all slides: non-event slides + event slides
-        const eventSlides: EventSlideType[] = [birthdayEventSlide, anniversaryEventSlide];
-        const allSlides = [...nonEventSlides, ...eventSlides];
-
-        console.log('📊 SlidesDisplay - Final slide composition:', {
-            nonEventSlides: nonEventSlides.length,
-            eventSlides: eventSlides.length,
-            totalSlides: allSlides.length,
-            birthdayActive: birthdayEventSlide.active,
-            anniversaryActive: anniversaryEventSlide.active,
-            birthdayCount: birthdayEmployees.length,
-            anniversaryCount: anniversaryEmployees.length
+        // Just return slides directly - HomePage already calculated everything
+        console.log('📊 SlidesDisplay - Displaying slides from HomePage:', {
+            totalSlides: slides.length,
+            activeSlides: slides.filter(s => s.active).length,
+            slideDetails: slides.map(s => ({ id: s.id, name: s.name, type: s.type, active: s.active }))
         });
 
-        return allSlides;
-    }, [slides, employees, isLoading]);
+        return slides;
+    }, [slides, isLoading]);
 
     // Memoize the render function to prevent unnecessary re-renders
     const renderSlideContent = useMemo(() => {
@@ -356,17 +386,21 @@ const SlidesDisplay: React.FC = () => {
         };
     }, []);
 
-    // Check if there are active slides (slides with duration > 0 and active = true)
-    const hasActiveSlides = useMemo(() => {
-        const activeSlides = processedSlides.filter(slide => slide.active && (slide.duration || 0) > 0);
-        console.log('🎯 SlidesDisplay - Active slides check:', {
+    // Filter only active slides (slides with active = true and duration > 0)
+    const activeSlides = useMemo(() => {
+        const filtered = processedSlides.filter(slide => slide.active && (slide.duration || 0) > 0);
+        console.log('🎯 SlidesDisplay - Active slides filter:', {
             totalProcessedSlides: processedSlides.length,
-            activeSlidesCount: activeSlides.length,
-            hasActiveSlides: activeSlides.length > 0,
-            activeSlidesDetails: activeSlides.map(s => ({ id: s.id, name: s.name, type: s.type, duration: s.duration }))
+            activeSlidesCount: filtered.length,
+            inactiveSlidesFiltered: processedSlides.length - filtered.length,
+            activeSlides: filtered.map(s => ({ id: s.id, name: s.name, type: s.type, duration: s.duration, active: s.active })),
+            inactiveSlides: processedSlides.filter(s => !s.active || (s.duration || 0) <= 0).map(s => ({ id: s.id, name: s.name, active: s.active }))
         });
-        return activeSlides.length > 0;
+        return filtered;
     }, [processedSlides]);
+
+    // Check if there are any active slides
+    const hasActiveSlides = activeSlides.length > 0;
 
     // Show loading component while slides are being loaded
     if (isLoading) {
@@ -374,9 +408,12 @@ const SlidesDisplay: React.FC = () => {
         return <LoadingComponent />;
     }
 
-    // Show animated logo if no slides to display (LED Display mode)
-    if (processedSlides.length === 0) {
-        console.log('🎭 SlidesDisplay - No slides available, showing animated logo');
+    // Show animated logo if no active slides to display (LED Display mode)
+    if (activeSlides.length === 0) {
+        console.log('🎭 SlidesDisplay - No active slides available, showing animated logo', {
+            totalSlides: processedSlides.length,
+            activeSlides: activeSlides.length
+        });
         return (
             <div className="relative w-full h-screen bg-black">
                 <AnimatedLogo hideLogo={displaySettings.hidePersiviaLogo} />
@@ -396,10 +433,11 @@ const SlidesDisplay: React.FC = () => {
         );
     }
 
-    console.log('🎬 SlidesDisplay - Rendering slideshow with slides:', {
-        slidesCount: processedSlides.length,
-        activeSlidesCount: processedSlides.filter(s => s.active && s.duration > 0).length,
-        slides: processedSlides.map(s => ({
+    console.log('🎬 SlidesDisplay - Rendering slideshow with active slides:', {
+        totalProcessedSlides: processedSlides.length,
+        activeSlidesCount: activeSlides.length,
+        inactiveSlidesCount: processedSlides.length - activeSlides.length,
+        activeSlides: activeSlides.map(s => ({
             id: s.id,
             name: s.name,
             type: s.type,
@@ -419,7 +457,7 @@ const SlidesDisplay: React.FC = () => {
         <div className="relative w-full h-screen bg-black">
             <SwiperSlideshow
                 key={`swiper-${displaySettings.swiperEffect}`}
-                slides={processedSlides}
+                slides={activeSlides}
                 renderSlideContent={renderSlideContent}
                 hidePagination={displaySettings.hidePagination}
                 hideArrows={displaySettings.hideArrows}

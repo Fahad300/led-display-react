@@ -26,57 +26,18 @@ export const TestingOverlay: React.FC = () => {
     const countdownIntervalRef = useRef<NodeJS.Timeout | null>(null);
     const [isSlideshowActive, setIsSlideshowActive] = useState(false);
 
-    // Create processed slides (same logic as SlidesDisplay) to include event slides
+    /**
+     * ✅ FIX: Use slides directly - don't recalculate processedSlides
+     * 
+     * TestingOverlay was auto-activating event slides based on employee count,
+     * ignoring the actual active state from HomePage/Database.
+     * 
+     * Solution: Just use slides as-is (HomePage already processed them)
+     */
     const processedSlides = useMemo(() => {
-        // Remove any existing event slides from the slides array
-        const nonEventSlides = slides.filter(slide => slide.type !== SLIDE_TYPES.EVENT);
-
-        // Create birthday event slide
-        const birthdayEmployees = employees.filter(employee => employee.isBirthday === true);
-        const birthdayEventSlide = {
-            id: "birthday-event-slide",
-            name: "Birthday Celebrations",
-            type: SLIDE_TYPES.EVENT,
-            active: birthdayEmployees.length > 0, // Auto-activate if there are events
-            duration: 10,
-            data: {
-                title: "Birthday Celebrations",
-                description: "Celebrating our team members' birthdays",
-                date: new Date().toISOString(),
-                isEmployeeSlide: true,
-                employees: birthdayEmployees,
-                eventType: "birthday",
-                hasEvents: birthdayEmployees.length > 0,
-                eventCount: birthdayEmployees.length
-            },
-            dataSource: "manual"
-        };
-
-        // Create anniversary event slide
-        const anniversaryEmployees = employees.filter(employee => employee.isAnniversary === true);
-        const anniversaryEventSlide = {
-            id: "anniversary-event-slide",
-            name: "Work Anniversaries",
-            type: SLIDE_TYPES.EVENT,
-            active: anniversaryEmployees.length > 0, // Auto-activate if there are events
-            duration: 10,
-            data: {
-                title: "Work Anniversaries",
-                description: "Celebrating our team members' work anniversaries",
-                date: new Date().toISOString(),
-                isEmployeeSlide: true,
-                employees: anniversaryEmployees,
-                eventType: "anniversary",
-                hasEvents: anniversaryEmployees.length > 0,
-                eventCount: anniversaryEmployees.length
-            },
-            dataSource: "manual"
-        };
-
-        // Combine all slides: non-event slides + event slides
-        const eventSlides = [birthdayEventSlide, anniversaryEventSlide];
-        return [...nonEventSlides, ...eventSlides];
-    }, [slides, employees]);
+        // Just return slides directly - HomePage already handles event slide creation and employee data
+        return slides;
+    }, [slides]);
 
     // Memoize active slides to prevent unnecessary re-renders
     const activeSlides = useMemo(() => {

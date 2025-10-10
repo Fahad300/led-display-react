@@ -1,9 +1,11 @@
 import express from "express";
 import cors from "cors";
+import http from "http";
 import { config } from "dotenv";
 import { AppDataSource } from "./config/database";
 import { errorHandler } from "./middleware/errorHandler";
 import { logger } from "./utils/logger";
+import { socketManager } from "./utils/socketManager";
 import authRoutes from "./routes/auth";
 import adminRoutes from "./routes/admin";
 // Display routes removed - using unified slideshow data instead
@@ -97,17 +99,34 @@ app.use("/", mainRoutes);
 // Global error handler
 app.use(errorHandler);
 
+// Create HTTP server (needed for Socket.IO)
+const httpServer = http.createServer(app);
+
+// Initialize Socket.IO for real-time updates
+socketManager.initialize(httpServer);
+
 // Initialize database connection
 AppDataSource.initialize()
     .then(() => {
         logger.info("Database connection established");
 
         const PORT = process.env.PORT || 5000;
-        app.listen(PORT, () => {
-            logger.info(`Server running on port ${PORT}`);
+        httpServer.listen(PORT, () => {
+            logger.info(`🚀 Server running on port ${PORT}`);
             logger.info("✅ Database-based file storage enabled");
+            logger.info("✅ Socket.IO real-time updates enabled");
         });
     })
     .catch((error) => {
         logger.error("Error during database initialization:", error);
-    }); 
+    });
+
+// Graceful shutdown
+process.on("SIGTERM", () => {
+    logger.info("SIGTERM received, shutting down gracefully...");
+    socketManager.shutdown();
+    httpServer.close(() => {
+        logger.info("Server closed");
+        process.exit(0);
+    });
+}); 

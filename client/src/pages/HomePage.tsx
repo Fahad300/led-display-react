@@ -4,6 +4,7 @@ import { useUnified } from '../contexts/UnifiedContext';
 import { useSettings } from '../contexts/SettingsContext';
 import { dispatchSlidesChange } from '../utils/realtimeSync';
 import { triggerDisplayUpdate } from '../utils/updateEvents';
+import { connectSocket, disconnectSocket, onSocketStateChange, ConnectionState } from '../utils/socket';
 import { Slide, SLIDE_TYPES, ImageSlide as ImageSlideType, VideoSlide as VideoSlideType, NewsSlide, EventSlide as EventSlideType, TeamComparisonSlide as TeamComparisonSlideType, GraphSlide as GraphSlideType, DocumentSlide as DocumentSlideType, TextSlide as TextSlideType, Employee } from '../types';
 import { logger } from '../utils/logger';
 import { videoPreloadManager } from '../utils/videoPreloadManager';
@@ -449,6 +450,7 @@ const HomePage: React.FC = () => {
     const queryClient = useQueryClient();
     const {
         slides,
+        setSlides,
         reorderSlides,
         updateSlide,
         employees,
@@ -464,48 +466,114 @@ const HomePage: React.FC = () => {
         clearApiCache
     } = useUnified();
 
-    // State to track event slide toggle states
-    // Initialize from database slides if they exist
-    const [eventSlideStates, setEventSlideStates] = useState<{
-        "birthday-event-slide": boolean;
-        "anniversary-event-slide": boolean;
-    }>(() => {
-        // Try to get initial state from database slides
-        const birthdaySlide = slides.find(s => s.id === "birthday-event-slide");
-        const anniversarySlide = slides.find(s => s.id === "anniversary-event-slide");
+    // Socket.IO connection state (for future UI indication)
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const [socketState, setSocketState] = useState<ConnectionState>("disconnected");
 
-        return {
-            "birthday-event-slide": birthdaySlide?.active ?? false,
-            "anniversary-event-slide": anniversarySlide?.active ?? false
-        };
-    });
-
-    // Sync eventSlideStates when slides change (e.g., after loading from database)
+    /**
+     * Ensure event slides exist in the database - run once on mount
+     * Event slides are stored like regular slides and their active state persists
+     */
     useEffect(() => {
         const birthdaySlide = slides.find(s => s.id === "birthday-event-slide");
         const anniversarySlide = slides.find(s => s.id === "anniversary-event-slide");
 
-        logger.data("📊 HomePage - Event slides from database:", {
-            birthdaySlideFound: !!birthdaySlide,
-            birthdayActive: birthdaySlide?.active,
-            anniversarySlideFound: !!anniversarySlide,
-            anniversaryActive: anniversarySlide?.active,
-            totalSlidesInStore: slides.length,
-            previousBirthdayState: eventSlideStates["birthday-event-slide"],
-            previousAnniversaryState: eventSlideStates["anniversary-event-slide"]
-        });
+        // Only initialize if slides have loaded and event slides don't exist
+        const needsInitialization = (!birthdaySlide || !anniversarySlide) && slides.length > 0;
 
-        if (birthdaySlide || anniversarySlide) {
-            const newStates = {
-                "birthday-event-slide": birthdaySlide?.active ?? eventSlideStates["birthday-event-slide"],
-                "anniversary-event-slide": anniversarySlide?.active ?? eventSlideStates["anniversary-event-slide"]
-            };
+        if (needsInitialization) {
+            logger.info("🎂 Initializing event slides in database");
 
-            logger.sync("🔄 HomePage - Updating event slide states from database:", newStates);
-            setEventSlideStates(newStates);
+            const newSlides: Slide[] = [];
+
+            if (!birthdaySlide) {
+                const birthdayEventSlide: EventSlideType = {
+                    id: "birthday-event-slide",
+                    name: "Birthday Celebrations",
+                    type: SLIDE_TYPES.EVENT,
+                    active: false, // Default to inactive until user enables
+                    duration: 10,
+                    data: {
+                        title: "Birthday Celebrations",
+                        description: "Celebrating our team members' birthdays",
+                        date: new Date().toISOString(),
+                        isEmployeeSlide: true,
+                        employees: [],
+                        eventType: "birthday",
+                        hasEvents: false,
+                        eventCount: 0
+                    },
+                    dataSource: "manual"
+                };
+                newSlides.push(birthdayEventSlide);
+                logger.info("📝 Created birthday event slide");
+            }
+
+            if (!anniversarySlide) {
+                const anniversaryEventSlide: EventSlideType = {
+                    id: "anniversary-event-slide",
+                    name: "Work Anniversaries",
+                    type: SLIDE_TYPES.EVENT,
+                    active: false, // Default to inactive until user enables
+                    duration: 10,
+                    data: {
+                        title: "Work Anniversaries",
+                        description: "Celebrating our team members' work anniversaries",
+                        date: new Date().toISOString(),
+                        isEmployeeSlide: true,
+                        employees: [],
+                        eventType: "anniversary",
+                        hasEvents: false,
+                        eventCount: 0
+                    },
+                    dataSource: "manual"
+                };
+                newSlides.push(anniversaryEventSlide);
+                logger.info("📝 Created anniversary event slide");
+            }
+
+            if (newSlides.length > 0) {
+                // Add new event slides to existing slides
+                const updatedSlides = [...slides, ...newSlides];
+                setSlides(updatedSlides);
+                saveToDatabase(updatedSlides);
+                logger.success("✅ Event slides initialized and saved to database");
+            }
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [slides]); // Run when slides change (e.g., after database load) - eventSlideStates intentionally omitted to prevent infinite loop
+    }, [slides]); // Only depend on slides - setSlides and saveToDatabase are stable
+
+    /**
+     * Socket.IO Connection for Broadcasting Updates
+     * 
+     * HomePage connects to Socket.IO to broadcast updates to remote DisplayPages.
+     * When admin saves slides/settings, it triggers network-wide updates.
+     */
+    useEffect(() => {
+        logger.info("🔌 HomePage: Connecting to Socket.IO for broadcasting updates");
+
+        // Connect to Socket.IO server
+        connectSocket();
+
+        // Subscribe to socket state changes
+        const unsubscribe = onSocketStateChange((state: ConnectionState) => {
+            setSocketState(state);
+            logger.info(`📡 HomePage Socket state: ${state}`);
+
+            if (state === "connected") {
+                logger.success("✅ HomePage: Socket.IO connected - ready to broadcast");
+            } else if (state === "error") {
+                logger.warn("⚠️ HomePage: Socket.IO error - updates will use BroadcastChannel only");
+            }
+        });
+
+        // Cleanup on unmount
+        return () => {
+            logger.info("🔌 HomePage: Disconnecting from Socket.IO");
+            unsubscribe();
+            disconnectSocket();
+        };
+    }, []);
 
     // NOTE: Auto-activation removed to respect user's manual toggles
     // Event slides will only be activated/deactivated by explicit user action
@@ -533,96 +601,77 @@ const HomePage: React.FC = () => {
         });
     }, [employees]);
 
-    // Create event slides and process all slides
+    /**
+     * Process slides: Update employee data in event slides without changing their active state
+     * Event slides are now stored in the database like regular slides
+     */
     const processedSlides = useMemo(() => {
-        // Only remove the specific employee event slides we're about to recreate
-        // Keep any other event slides from the database
-        const nonEmployeeEventSlides = slides.filter(slide => {
-            // Keep all non-event slides
-            if (slide.type !== SLIDE_TYPES.EVENT) return true;
-
-            // Remove only birthday and anniversary event slides (we'll recreate them)
-            const isEmployeeEventSlide = slide.id === "birthday-event-slide" ||
-                slide.id === "anniversary-event-slide";
-            return !isEmployeeEventSlide;
-        });
-
-        // Create birthday event slide
         const birthdayEmployees = employees.filter(employee => employee.isBirthday === true);
-
-        // Check if birthday slide exists in database and use its active state
-        const existingBirthdaySlide = slides.find(s => s.id === "birthday-event-slide");
-        const birthdayEventSlide: EventSlideType = {
-            id: "birthday-event-slide",
-            name: "Birthday Celebrations",
-            type: SLIDE_TYPES.EVENT,
-            // Priority: database state > React state > default false
-            active: existingBirthdaySlide?.active ?? eventSlideStates["birthday-event-slide"],
-            duration: 10,
-            data: {
-                title: "Birthday Celebrations",
-                description: "Celebrating our team members' birthdays",
-                date: new Date().toISOString(),
-                isEmployeeSlide: true,
-                employees: birthdayEmployees,
-                eventType: "birthday",
-                hasEvents: birthdayEmployees.length > 0,
-                eventCount: birthdayEmployees.length
-            },
-            dataSource: "manual"
-        };
-
-        // Create anniversary event slide
         const anniversaryEmployees = employees.filter(employee => employee.isAnniversary === true);
 
-        // Check if anniversary slide exists in database and use its active state
-        const existingAnniversarySlide = slides.find(s => s.id === "anniversary-event-slide");
-        const anniversaryEventSlide: EventSlideType = {
-            id: "anniversary-event-slide",
-            name: "Work Anniversaries",
-            type: SLIDE_TYPES.EVENT,
-            // Priority: database state > React state > default false
-            active: existingAnniversarySlide?.active ?? eventSlideStates["anniversary-event-slide"],
-            duration: 10,
-            data: {
-                title: "Work Anniversaries",
-                description: "Celebrating our team members' work anniversaries",
-                date: new Date().toISOString(),
-                isEmployeeSlide: true,
-                employees: anniversaryEmployees,
-                eventType: "anniversary",
-                hasEvents: anniversaryEmployees.length > 0,
-                eventCount: anniversaryEmployees.length
-            },
-            dataSource: "manual"
-        };
-
-        // Combine all slides: non-employee-event slides + recreated employee event slides
-        const eventSlides: EventSlideType[] = [birthdayEventSlide, anniversaryEventSlide];
-        const allSlides = [...nonEmployeeEventSlides, ...eventSlides];
-
-        logger.data("HomePage - Processed slides:", {
-            nonEmployeeEventSlides: nonEmployeeEventSlides.length,
-            eventSlides: eventSlides.length,
-            totalSlides: allSlides.length,
-            birthdayEmployees: birthdayEmployees.length,
-            anniversaryEmployees: anniversaryEmployees.length,
-            birthdayEventSlide: {
-                id: birthdayEventSlide.id,
-                active: birthdayEventSlide.active,
-                hasEvents: birthdayEventSlide.data.hasEvents,
-                eventCount: birthdayEventSlide.data.eventCount
-            },
-            anniversaryEventSlide: {
-                id: anniversaryEventSlide.id,
-                active: anniversaryEventSlide.active,
-                hasEvents: anniversaryEventSlide.data.hasEvents,
-                eventCount: anniversaryEventSlide.data.eventCount
+        // Update slides: refresh employee data in event slides while preserving their active state
+        const updatedSlides = slides.map(slide => {
+            // Update birthday event slide with current employee data
+            if (slide.id === "birthday-event-slide" && slide.type === SLIDE_TYPES.EVENT) {
+                const eventSlide = slide as EventSlideType;
+                return {
+                    ...eventSlide,
+                    // Keep the active state from database! Don't change it!
+                    active: eventSlide.active,
+                    data: {
+                        ...eventSlide.data,
+                        employees: birthdayEmployees,
+                        hasEvents: birthdayEmployees.length > 0,
+                        eventCount: birthdayEmployees.length,
+                        date: new Date().toISOString()
+                    }
+                } as EventSlideType;
             }
+
+            // Update anniversary event slide with current employee data
+            if (slide.id === "anniversary-event-slide" && slide.type === SLIDE_TYPES.EVENT) {
+                const eventSlide = slide as EventSlideType;
+                return {
+                    ...eventSlide,
+                    // Keep the active state from database! Don't change it!
+                    active: eventSlide.active,
+                    data: {
+                        ...eventSlide.data,
+                        employees: anniversaryEmployees,
+                        hasEvents: anniversaryEmployees.length > 0,
+                        eventCount: anniversaryEmployees.length,
+                        date: new Date().toISOString()
+                    }
+                } as EventSlideType;
+            }
+
+            // Return all other slides unchanged
+            return slide;
         });
 
-        return allSlides;
-    }, [slides, employees, eventSlideStates]);
+        const birthdaySlide = updatedSlides.find(s => s.id === "birthday-event-slide");
+        const anniversarySlide = updatedSlides.find(s => s.id === "anniversary-event-slide");
+
+        logger.data("HomePage - Processed slides:", {
+            totalSlides: updatedSlides.length,
+            birthdayEmployees: birthdayEmployees.length,
+            anniversaryEmployees: anniversaryEmployees.length,
+            birthdaySlide: birthdaySlide ? {
+                id: birthdaySlide.id,
+                active: birthdaySlide.active,
+                hasEvents: (birthdaySlide as EventSlideType).data.hasEvents,
+                eventCount: (birthdaySlide as EventSlideType).data.eventCount
+            } : "NOT FOUND",
+            anniversarySlide: anniversarySlide ? {
+                id: anniversarySlide.id,
+                active: anniversarySlide.active,
+                hasEvents: (anniversarySlide as EventSlideType).data.hasEvents,
+                eventCount: (anniversarySlide as EventSlideType).data.eventCount
+            } : "NOT FOUND"
+        });
+
+        return updatedSlides;
+    }, [slides, employees]);
 
     // HomePage manages event slides locally for its own display
     // SlidesDisplay will create its own event slides based on the same logic
@@ -828,8 +877,13 @@ const HomePage: React.FC = () => {
         dispatchSlidesChange(newSlides, [`slide-reordered-from-${sourceIndex}-to-${destinationIndex}`], 'homepage');
 
         // Trigger unified display update (WebSocket-ready)
-        // TODO: Replace with socket.emit when WebSocket is enabled
+        // Send ALL slides to DisplayPage (including inactive ones so DisplayPage knows full state)
+        const activeCount = newSlides.filter(s => s.active).length;
+
+        logger.info(`📡 Broadcasting reordered slides to DisplayPage: ${newSlides.length} total slides (${activeCount} active, ${newSlides.length - activeCount} inactive)`);
+
         await triggerDisplayUpdate("slides", "HomePage/reorder", queryClient, {
+            slides: newSlides, // Send ALL slides (DisplayPage filters for display)
             sourceIndex,
             destinationIndex,
             slideId: removed.id
@@ -873,69 +927,8 @@ const HomePage: React.FC = () => {
                 timestamp: new Date().toISOString()
             });
 
-            // For event slides, update the local state and save to database
-            if (slideToUpdate.type === SLIDE_TYPES.EVENT) {
-                const eventSlide = slideToUpdate as EventSlideType;
-                const hasEvents = eventSlide.data.hasEvents;
-
-                logger.debug('HomePage - Event slide toggle:', {
-                    eventSlideId: eventSlide.id,
-                    eventSlideName: eventSlide.name,
-                    eventType: eventSlide.data.eventType,
-                    hasEvents: hasEvents,
-                    newActiveState: newActiveState
-                });
-
-                // Update the event slide in database
-                const updatedEventSlide = { ...eventSlide, active: newActiveState };
-
-                // Update local state (disable auto-save since we'll save explicitly)
-                updateSlide(updatedEventSlide, false);
-
-                // Update event slide states map
-                setEventSlideStates(prev => ({
-                    ...prev,
-                    [eventSlide.id]: newActiveState
-                }));
-
-                // Save to database FIRST (critical: must complete before display update)
-                logger.sync("💾 HomePage: Saving event slide to database:", {
-                    slideId: updatedEventSlide.id,
-                    slideName: updatedEventSlide.name,
-                    active: updatedEventSlide.active,
-                    eventType: updatedEventSlide.data.eventType
-                });
-                await saveToDatabase();
-                logger.success("✅ HomePage: Event slide saved to database successfully");
-
-                // Trigger unified display update (WebSocket-ready)
-                // TODO: Replace with socket.emit when WebSocket is enabled
-                await triggerDisplayUpdate("slides", "HomePage/eventToggle", queryClient, {
-                    slideId: updatedEventSlide.id,
-                    slideName: updatedEventSlide.name,
-                    eventType: updatedEventSlide.data.eventType,
-                    active: updatedEventSlide.active
-                });
-
-                // Trigger a display refresh to update the UI
-                logger.sync("HomePage: Event slide toggle - triggering display refresh...");
-                const reloadEvent = new CustomEvent('forceDisplayReload', {
-                    detail: {
-                        timestamp: new Date().toISOString(),
-                        reason: 'event_slide_toggle',
-                        slideId: eventSlide.id,
-                        slideName: eventSlide.name,
-                        active: newActiveState,
-                        eventType: eventSlide.data.eventType
-                    }
-                });
-                window.dispatchEvent(reloadEvent);
-                logger.success("HomePage: Display refresh triggered for event slide toggle");
-
-                return; // Event slide handling complete
-            }
-
-            // For regular slides, update in the database
+            // Event slides are now treated like regular slides - stored in database with persistent active state
+            // No special handling needed!
             const updatedSlide = { ...slideToUpdate, active: newActiveState };
 
             logger.sync('HomePage - Calling updateSlide with:', {
@@ -960,8 +953,14 @@ const HomePage: React.FC = () => {
             dispatchSlidesChange(processedSlides.map(s => s.id === slideId ? updatedSlide : s), [`slide-${slideId}-toggled-${newActiveState ? 'active' : 'inactive'}`], 'homepage');
 
             // Trigger unified display update (WebSocket-ready)
-            // TODO: Replace with socket.emit when WebSocket is enabled
+            // Send ALL slides to DisplayPage (including inactive ones so DisplayPage knows full state)
+            const allSlidesAfterUpdate = processedSlides.map(s => s.id === slideId ? updatedSlide : s);
+            const activeCount = allSlidesAfterUpdate.filter(s => s.active).length;
+
+            logger.info(`📡 Broadcasting to DisplayPage: ${allSlidesAfterUpdate.length} total slides (${activeCount} active, ${allSlidesAfterUpdate.length - activeCount} inactive)`);
+
             await triggerDisplayUpdate("slides", "HomePage/toggleActive", queryClient, {
+                slides: allSlidesAfterUpdate, // Send ALL slides (DisplayPage filters for display)
                 slideId: updatedSlide.id,
                 slideName: updatedSlide.name,
                 active: updatedSlide.active

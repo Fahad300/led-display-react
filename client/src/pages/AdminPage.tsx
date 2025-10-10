@@ -709,19 +709,6 @@ const EditModal: React.FC<EditModalProps> = ({ isOpen, onClose, slide, onSave })
                         )}
                     </div>
 
-                    {/* Active toggle */}
-                    <div>
-                        <label className="flex items-center space-x-2">
-                            <input
-                                type="checkbox"
-                                checked={editedSlide.active}
-                                onChange={(e) => setEditedSlide({ ...editedSlide, active: e.target.checked })}
-                                className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                            />
-                            <span className="text-sm font-medium text-gray-700">Active</span>
-                        </label>
-                    </div>
-
                     {/* Action buttons */}
                     <div className="flex flex-col space-y-4 mt-6">
                         {/* Progress bar for upload */}
@@ -934,30 +921,22 @@ const AdminPage: React.FC = () => {
             const existingSlide = slides.find(slide => slide.id === updatedSlide.id);
 
             if (existingSlide) {
-                // Update existing slide
-                updateSlide(updatedSlide);
+                // Update existing slide (disable auto-save, we'll save explicitly)
+                updateSlide(updatedSlide, false);
+
+                // Save to database FIRST
+                await saveToDatabase();
 
                 // Trigger unified display update (WebSocket-ready)
-                // TODO: Replace with socket.emit when WebSocket is enabled
+                // Send ALL slides so DisplayPage has full state
+                const allSlidesAfterUpdate = slides.map(s => s.id === updatedSlide.id ? updatedSlide : s);
+
                 await triggerDisplayUpdate("slides", "AdminPage/update", queryClient, {
+                    slides: allSlidesAfterUpdate, // Send ALL slides
                     slideId: updatedSlide.id,
                     slideName: updatedSlide.name,
                     action: "updated"
                 });
-
-                // Legacy event for backward compatibility
-                // TODO: Remove when WebSocket is enabled
-                console.log("🔄 AdminPage: Triggering display page refresh for updated slide...");
-                const reloadEvent = new CustomEvent('forceDisplayReload', {
-                    detail: {
-                        timestamp: new Date().toISOString(),
-                        reason: 'slide_updated',
-                        slideId: updatedSlide.id,
-                        slideName: updatedSlide.name
-                    }
-                });
-                window.dispatchEvent(reloadEvent);
-                console.log("✅ AdminPage: Display page refresh triggered for updated slide");
 
                 addToast("Slide updated successfully", "success");
             } else {
@@ -978,26 +957,15 @@ const AdminPage: React.FC = () => {
                     console.log("✅ AdminPage: New slide saved to database successfully");
 
                     // Trigger unified display update (WebSocket-ready)
-                    // TODO: Replace with socket.emit when WebSocket is enabled
+                    // Send ALL slides so DisplayPage has full state
                     await triggerDisplayUpdate("slides", "AdminPage/create", queryClient, {
+                        slides: newSlides, // Send ALL slides (DisplayPage filters for active ones)
                         slideId: updatedSlide.id,
                         slideName: updatedSlide.name,
                         action: "created"
                     });
 
-                    // Legacy event for backward compatibility
-                    // TODO: Remove when WebSocket is enabled
-                    console.log("🔄 AdminPage: Triggering display page refresh...");
-                    const reloadEvent = new CustomEvent('forceDisplayReload', {
-                        detail: {
-                            timestamp: new Date().toISOString(),
-                            reason: 'new_slide_added',
-                            slideId: updatedSlide.id,
-                            slideName: updatedSlide.name
-                        }
-                    });
-                    window.dispatchEvent(reloadEvent);
-                    console.log("✅ AdminPage: Display page refresh triggered");
+                    console.log("✅ AdminPage: Display update broadcasted");
                 } catch (error) {
                     console.error("❌ AdminPage: Failed to save new slide:", error);
                     addToast("Failed to save slide to database", "error");
@@ -1015,68 +983,35 @@ const AdminPage: React.FC = () => {
         }
     }, [slides, updateSlide, setSlides, addToast, setIsEditing, saveToDatabase, queryClient]);
 
-    const handleToggleActive = useCallback(async (id: string, active: boolean) => {
-        const slide = slides.find((s) => s.id === id);
-        if (slide) {
-            try {
-                updateSlide({ ...slide, active });
-
-                // Trigger unified display update (WebSocket-ready)
-                // TODO: Replace with socket.emit when WebSocket is enabled
-                await triggerDisplayUpdate("slides", "AdminPage/toggle", queryClient, {
-                    slideId: id,
-                    slideName: slide.name,
-                    active: active
-                });
-
-                // Legacy event for backward compatibility
-                // TODO: Remove when WebSocket is enabled
-                console.log("🔄 AdminPage: Triggering display page refresh for slide toggle...");
-                const reloadEvent = new CustomEvent('forceDisplayReload', {
-                    detail: {
-                        timestamp: new Date().toISOString(),
-                        reason: 'slide_toggle',
-                        slideId: slide.id,
-                        slideName: slide.name,
-                        active: active
-                    }
-                });
-                window.dispatchEvent(reloadEvent);
-                console.log("✅ AdminPage: Display page refresh triggered for slide toggle");
-
-                addToast(`Slide ${active ? "activated" : "deactivated"} successfully`, "success");
-            } catch (error) {
-                addToast(error instanceof Error ? error.message : "Failed to update slide status", "error");
-            }
-        }
-    }, [slides, updateSlide, addToast, queryClient]);
+    // Removed handleToggleActive - slide activation is now only done from HomePage
 
     const handleDeleteSlide = useCallback(async (id: string) => {
         const slide = slides.find((s) => s.id === id);
         if (slide) {
             try {
-                setSlides(prev => prev.filter(slide => slide.id !== id));
+                // Remove slide from state
+                const newSlides = slides.filter(s => s.id !== id);
+                setSlides(newSlides);
                 setDeleteConfirmId(null);
 
-                // Trigger display page refresh when slide is deleted
-                console.log("🔄 AdminPage: Triggering display page refresh for slide deletion...");
-                const reloadEvent = new CustomEvent('forceDisplayReload', {
-                    detail: {
-                        timestamp: new Date().toISOString(),
-                        reason: 'slide_deleted',
-                        slideId: slide.id,
-                        slideName: slide.name
-                    }
+                // Save to database
+                await saveToDatabase(newSlides);
+
+                // Trigger unified display update (WebSocket-ready)
+                // Send ALL remaining slides so DisplayPage has full state
+                await triggerDisplayUpdate("slides", "AdminPage/delete", queryClient, {
+                    slides: newSlides, // Send ALL remaining slides
+                    slideId: slide.id,
+                    slideName: slide.name,
+                    action: "deleted"
                 });
-                window.dispatchEvent(reloadEvent);
-                console.log("✅ AdminPage: Display page refresh triggered for slide deletion");
 
                 addToast("Slide deleted successfully", "success");
             } catch (error) {
                 addToast(error instanceof Error ? error.message : "Failed to delete slide", "error");
             }
         }
-    }, [slides, setSlides, setDeleteConfirmId, addToast]);
+    }, [slides, setSlides, setDeleteConfirmId, saveToDatabase, addToast, queryClient]);
 
     // Show loading state while slides are being loaded
     if (isLoading) {
@@ -1100,7 +1035,7 @@ const AdminPage: React.FC = () => {
                     <div>
                         <h1 className="text-2xl font-bold text-gray-900">Slide Management</h1>
                         <p className="text-sm text-gray-600 mt-1">
-                            Create and edit slides. New slides start as inactive and can be activated from the home page.
+                            Create and edit slide content. New slides start as inactive. Go to Home page to activate/deactivate slides for the display.
                         </p>
                     </div>
                     {isEditing && (
@@ -1153,7 +1088,6 @@ const AdminPage: React.FC = () => {
                                         setIsModalOpen(true);
                                     }}
                                     onDelete={handleDeleteSlide}
-                                    onToggleActive={handleToggleActive}
                                 />
                             ))}
                         </div>
@@ -1187,7 +1121,6 @@ const AdminPage: React.FC = () => {
                                     setIsModalOpen(true);
                                 }}
                                 onDelete={handleDeleteSlide}
-                                onToggleActive={handleToggleActive}
                             />
                         ))}
                     </div>

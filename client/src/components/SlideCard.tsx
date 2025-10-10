@@ -7,7 +7,7 @@ interface SlideCardProps {
     slide: Slide;
     onEdit: (slide: Slide) => void;
     onDelete: (id: string) => void;
-    onToggleActive: (id: string, active: boolean) => void;
+    onToggleActive?: (id: string, active: boolean) => void; // Optional - only shown in HomePage
 }
 
 /** Component for displaying a single slide card */
@@ -64,6 +64,7 @@ const SlideCard: React.FC<SlideCardProps> = ({ slide, onEdit, onDelete, onToggle
     }, [slide]);
 
     const handleToggleActive = useCallback(async (id: string, active: boolean) => {
+        if (!onToggleActive) return; // No-op if toggle handler not provided
         setIsProcessing(true);
         try {
             await onToggleActive(id, active);
@@ -88,16 +89,18 @@ const SlideCard: React.FC<SlideCardProps> = ({ slide, onEdit, onDelete, onToggle
                             <h3 className="text-lg font-semibold text-gray-900">{slide.name}</h3>
                             <p className="text-sm text-gray-500">Loading employees...</p>
                         </div>
-                        <div className="flex items-center gap-2">
-                            <button
-                                type="button"
-                                onClick={() => handleToggleActive(slide.id, !slide.active)}
-                                disabled={isProcessing}
-                                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${slide.active ? "bg-persivia-teal" : "bg-slate-200"} ${isProcessing ? "opacity-50 cursor-not-allowed" : ""}`}
-                            >
-                                <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${slide.active ? "translate-x-5" : "translate-x-1"}`} />
-                            </button>
-                        </div>
+                        {onToggleActive && (
+                            <div className="flex items-center gap-2">
+                                <button
+                                    type="button"
+                                    onClick={() => handleToggleActive(slide.id, !slide.active)}
+                                    disabled={isProcessing}
+                                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${slide.active ? "bg-persivia-teal" : "bg-slate-200"} ${isProcessing ? "opacity-50 cursor-not-allowed" : ""}`}
+                                >
+                                    <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${slide.active ? "translate-x-5" : "translate-x-1"}`} />
+                                </button>
+                            </div>
+                        )}
                     </div>
                 </div>
             );
@@ -111,16 +114,18 @@ const SlideCard: React.FC<SlideCardProps> = ({ slide, onEdit, onDelete, onToggle
                             <h3 className="text-lg font-semibold text-gray-900">{slide.name}</h3>
                             <p className="text-sm text-red-500">Error loading employees</p>
                         </div>
-                        <div className="flex items-center gap-2">
-                            <button
-                                type="button"
-                                onClick={() => handleToggleActive(slide.id, !slide.active)}
-                                disabled={isProcessing}
-                                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${slide.active ? "bg-persivia-teal" : "bg-slate-200"} ${isProcessing ? "opacity-50 cursor-not-allowed" : ""}`}
-                            >
-                                <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${slide.active ? "translate-x-5" : "translate-x-1"}`} />
-                            </button>
-                        </div>
+                        {onToggleActive && (
+                            <div className="flex items-center gap-2">
+                                <button
+                                    type="button"
+                                    onClick={() => handleToggleActive(slide.id, !slide.active)}
+                                    disabled={isProcessing}
+                                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${slide.active ? "bg-persivia-teal" : "bg-slate-200"} ${isProcessing ? "opacity-50 cursor-not-allowed" : ""}`}
+                                >
+                                    <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${slide.active ? "translate-x-5" : "translate-x-1"}`} />
+                                </button>
+                            </div>
+                        )}
                     </div>
                 </div>
             );
@@ -143,16 +148,18 @@ const SlideCard: React.FC<SlideCardProps> = ({ slide, onEdit, onDelete, onToggle
                                     ({filteredEmployees.length} {filteredEmployees.length === 1 ? "employee" : "employees"})
                                 </p>
                             </div>
-                            <div className="flex items-center gap-2">
-                                <button
-                                    type="button"
-                                    onClick={() => handleToggleActive(slide.id, !slide.active)}
-                                    disabled={isProcessing}
-                                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${slide.active ? "bg-persivia-teal" : "bg-slate-200"} ${isProcessing ? "opacity-50 cursor-not-allowed" : ""}`}
-                                >
-                                    <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${slide.active ? "translate-x-5" : "translate-x-1"}`} />
-                                </button>
-                            </div>
+                            {onToggleActive && (
+                                <div className="flex items-center gap-2">
+                                    <button
+                                        type="button"
+                                        onClick={() => handleToggleActive(slide.id, !slide.active)}
+                                        disabled={isProcessing}
+                                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${slide.active ? "bg-persivia-teal" : "bg-slate-200"} ${isProcessing ? "opacity-50 cursor-not-allowed" : ""}`}
+                                    >
+                                        <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${slide.active ? "translate-x-5" : "translate-x-1"}`} />
+                                    </button>
+                                </div>
+                            )}
                         </div>
 
                         {/* Footer */}
@@ -202,16 +209,18 @@ const SlideCard: React.FC<SlideCardProps> = ({ slide, onEdit, onDelete, onToggle
                                     No {eventSlide.data.eventType === "anniversary" ? "anniversaries" : "birthdays"} today
                                 </p>
                             </div>
-                            <div className="flex items-center gap-2">
-                                <button
-                                    type="button"
-                                    onClick={() => handleToggleActive(slide.id, !slide.active)}
-                                    disabled={isProcessing}
-                                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${slide.active ? "bg-persivia-teal" : "bg-slate-200"} ${isProcessing ? "opacity-50 cursor-not-allowed" : ""}`}
-                                >
-                                    <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${slide.active ? "translate-x-5" : "translate-x-1"}`} />
-                                </button>
-                            </div>
+                            {onToggleActive && (
+                                <div className="flex items-center gap-2">
+                                    <button
+                                        type="button"
+                                        onClick={() => handleToggleActive(slide.id, !slide.active)}
+                                        disabled={isProcessing}
+                                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${slide.active ? "bg-persivia-teal" : "bg-slate-200"} ${isProcessing ? "opacity-50 cursor-not-allowed" : ""}`}
+                                    >
+                                        <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${slide.active ? "translate-x-5" : "translate-x-1"}`} />
+                                    </button>
+                                </div>
+                            )}
                         </div>
                     </div>
                 );
@@ -226,16 +235,18 @@ const SlideCard: React.FC<SlideCardProps> = ({ slide, onEdit, onDelete, onToggle
                         <h3 className="text-lg font-semibold text-gray-900">{slide.name}</h3>
                         <p className="text-sm text-gray-500">Event Slide</p>
                     </div>
-                    <div className="flex items-center gap-2">
-                        <button
-                            type="button"
-                            onClick={() => handleToggleActive(slide.id, !slide.active)}
-                            disabled={isProcessing}
-                            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${slide.active ? "bg-persivia-teal" : "bg-slate-200"} ${isProcessing ? "opacity-50 cursor-not-allowed" : ""}`}
-                        >
-                            <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${slide.active ? "translate-x-5" : "translate-x-1"}`} />
-                        </button>
-                    </div>
+                    {onToggleActive && (
+                        <div className="flex items-center gap-2">
+                            <button
+                                type="button"
+                                onClick={() => handleToggleActive(slide.id, !slide.active)}
+                                disabled={isProcessing}
+                                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${slide.active ? "bg-persivia-teal" : "bg-slate-200"} ${isProcessing ? "opacity-50 cursor-not-allowed" : ""}`}
+                            >
+                                <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${slide.active ? "translate-x-5" : "translate-x-1"}`} />
+                            </button>
+                        </div>
+                    )}
                 </div>
 
                 {/* Footer */}
@@ -281,16 +292,18 @@ const SlideCard: React.FC<SlideCardProps> = ({ slide, onEdit, onDelete, onToggle
         <div className="bg-white rounded-lg shadow-md p-4">
             <div className="flex items-center justify-between mb-4">
                 <h3 className="text-lg font-semibold text-gray-900">{slide.name}</h3>
-                <div className="flex items-center gap-2">
-                    <button
-                        type="button"
-                        onClick={() => handleToggleActive(slide.id, !slide.active)}
-                        disabled={isProcessing}
-                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${slide.active ? "bg-persivia-teal" : "bg-slate-200"} ${isProcessing ? "opacity-50 cursor-not-allowed" : ""}`}
-                    >
-                        <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${slide.active ? "translate-x-5" : "translate-x-1"}`} />
-                    </button>
-                </div>
+                {onToggleActive && (
+                    <div className="flex items-center gap-2">
+                        <button
+                            type="button"
+                            onClick={() => handleToggleActive(slide.id, !slide.active)}
+                            disabled={isProcessing}
+                            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${slide.active ? "bg-persivia-teal" : "bg-slate-200"} ${isProcessing ? "opacity-50 cursor-not-allowed" : ""}`}
+                        >
+                            <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${slide.active ? "translate-x-5" : "translate-x-1"}`} />
+                        </button>
+                    </div>
+                )}
             </div>
 
             {/* Media Preview - Only for slides with media */}

@@ -2,13 +2,16 @@
  * Central Update Events System
  * 
  * This module provides a unified way to trigger display updates across all tabs/windows.
- * Currently uses BroadcastChannel for cross-tab communication.
+ * Uses both BroadcastChannel (same-browser tabs) and Socket.IO (network-wide).
  * 
- * TODO: When WebSocket is enabled, replace BroadcastChannel with socket.emit("broadcastUpdate", { type })
- * The rest of the app won't need changes - just swap the broadcast mechanism here.
+ * Architecture:
+ * - BroadcastChannel: Instant updates within same browser instance
+ * - Socket.IO: Network-wide updates to remote DisplayPages
+ * - Both systems work together for maximum reliability
  */
 
 import { QueryClient } from "@tanstack/react-query";
+import { broadcastUpdate as socketBroadcast, isSocketConnected } from "./socket";
 import { logger } from "./logger";
 
 /**
@@ -202,8 +205,19 @@ export const triggerDisplayUpdate = async (
         data
     };
 
-    // Broadcast to all tabs/windows
+    logger.info(`🚀 Triggering display update: type="${type}", source="${source}"`);
+
+    // 1. Broadcast via BroadcastChannel (same-browser tabs)
     updateEventsManager.broadcast(event);
+    logger.info("   ✅ BroadcastChannel: Event sent to local tabs");
+
+    // 2. Broadcast via Socket.IO (network-wide)
+    if (isSocketConnected()) {
+        socketBroadcast(type, data);
+        logger.success("   ✅ Socket.IO: Event broadcast to remote displays");
+    } else {
+        logger.warn("   ⚠️ Socket.IO: Not connected - skipping network broadcast");
+    }
 
     // Invalidate React Query cache if provided
     if (queryClient) {
