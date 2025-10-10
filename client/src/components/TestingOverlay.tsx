@@ -69,7 +69,6 @@ export const TestingOverlay: React.FC = () => {
             [SLIDE_TYPES.CURRENT_ESCALATIONS]: 'Current Escalations',
             [SLIDE_TYPES.TEAM_COMPARISON]: 'Team Comparison',
             [SLIDE_TYPES.GRAPH]: 'Graph',
-            [SLIDE_TYPES.DOCUMENT]: 'Document',
             [SLIDE_TYPES.TEXT]: 'Text'
         };
         return typeMap[slideType] || 'Unknown';

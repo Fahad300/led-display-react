@@ -5,10 +5,10 @@ import { useSettings } from '../contexts/SettingsContext';
 import { dispatchSlidesChange } from '../utils/realtimeSync';
 import { triggerDisplayUpdate } from '../utils/updateEvents';
 import { connectSocket, disconnectSocket, onSocketStateChange, ConnectionState } from '../utils/socket';
-import { Slide, SLIDE_TYPES, ImageSlide as ImageSlideType, VideoSlide as VideoSlideType, NewsSlide, EventSlide as EventSlideType, TeamComparisonSlide as TeamComparisonSlideType, GraphSlide as GraphSlideType, DocumentSlide as DocumentSlideType, TextSlide as TextSlideType, Employee } from '../types';
+import { Slide, SLIDE_TYPES, ImageSlide as ImageSlideType, VideoSlide as VideoSlideType, NewsSlide, EventSlide as EventSlideType, TeamComparisonSlide as TeamComparisonSlideType, GraphSlide as GraphSlideType, TextSlide as TextSlideType, Employee } from '../types';
 import { logger } from '../utils/logger';
 import { videoPreloadManager } from '../utils/videoPreloadManager';
-import { EventSlideComponent, ImageSlide, CurrentEscalationsSlideComponent, TeamComparisonSlideComponent, GraphSlide, DocumentSlide, TextSlide } from "../components/slides";
+import { EventSlideComponent, ImageSlide, CurrentEscalationsSlideComponent, TeamComparisonSlideComponent, GraphSlide, TextSlide } from "../components/slides";
 import {
     DndContext,
     closestCenter,
@@ -1048,8 +1048,6 @@ const HomePage: React.FC = () => {
                 return <TeamComparisonSlideComponent slide={slide as TeamComparisonSlideType} />;
             case SLIDE_TYPES.GRAPH:
                 return <GraphSlide slide={slide as GraphSlideType} />;
-            case SLIDE_TYPES.DOCUMENT:
-                return <DocumentSlide slide={slide as DocumentSlideType} />;
             case SLIDE_TYPES.TEXT:
                 return <TextSlide slide={slide as TextSlideType} />;
             default:
@@ -1069,8 +1067,9 @@ const HomePage: React.FC = () => {
             await updateDisplaySettings({ swiperEffect: effect });
 
             // Trigger unified display update (WebSocket-ready)
-            // TODO: Replace with socket.emit when WebSocket is enabled
+            const updatedSettings = { ...displaySettings, swiperEffect: effect };
             await triggerDisplayUpdate("settings", "HomePage/effectChange", queryClient, {
+                displaySettings: updatedSettings,  // Send full settings for instant sync
                 setting: "swiperEffect",
                 value: effect
             });
@@ -1097,8 +1096,9 @@ const HomePage: React.FC = () => {
         await updateDisplaySettings({ showDateStamp: newValue });
 
         // Trigger unified display update (WebSocket-ready)
-        // TODO: Replace with socket.emit when WebSocket is enabled
+        const updatedSettings = { ...displaySettings, showDateStamp: newValue };
         await triggerDisplayUpdate("settings", "HomePage/dateStamp", queryClient, {
+            displaySettings: updatedSettings,  // Send full settings for instant sync
             setting: "showDateStamp",
             value: newValue
         });
@@ -1121,8 +1121,9 @@ const HomePage: React.FC = () => {
         await updateDisplaySettings({ hidePagination: newValue });
 
         // Trigger unified display update (WebSocket-ready)
-        // TODO: Replace with socket.emit when WebSocket is enabled
+        const updatedSettings = { ...displaySettings, hidePagination: newValue };
         await triggerDisplayUpdate("settings", "HomePage/pagination", queryClient, {
+            displaySettings: updatedSettings,  // Send full settings for instant sync
             setting: "hidePagination",
             value: newValue
         });
@@ -1145,8 +1146,9 @@ const HomePage: React.FC = () => {
         await updateDisplaySettings({ hideArrows: newValue });
 
         // Trigger unified display update (WebSocket-ready)
-        // TODO: Replace with socket.emit when WebSocket is enabled
+        const updatedSettings = { ...displaySettings, hideArrows: newValue };
         await triggerDisplayUpdate("settings", "HomePage/arrows", queryClient, {
+            displaySettings: updatedSettings,  // Send full settings for instant sync
             setting: "hideArrows",
             value: newValue
         });
@@ -1169,8 +1171,9 @@ const HomePage: React.FC = () => {
         await updateDisplaySettings({ hidePersiviaLogo: newValue });
 
         // Trigger unified display update (WebSocket-ready)
-        // TODO: Replace with socket.emit when WebSocket is enabled
+        const updatedSettings = { ...displaySettings, hidePersiviaLogo: newValue };
         await triggerDisplayUpdate("settings", "HomePage/logo", queryClient, {
+            displaySettings: updatedSettings,  // Send full settings for instant sync
             setting: "hidePersiviaLogo",
             value: newValue
         });
@@ -1193,8 +1196,9 @@ const HomePage: React.FC = () => {
         await updateDisplaySettings({ developmentMode: newValue });
 
         // Trigger unified display update (WebSocket-ready)
-        // TODO: Replace with socket.emit when WebSocket is enabled
+        const updatedSettings = { ...displaySettings, developmentMode: newValue };
         await triggerDisplayUpdate("settings", "HomePage/devMode", queryClient, {
+            displaySettings: updatedSettings,  // Send full settings for instant sync
             setting: "developmentMode",
             value: newValue
         });

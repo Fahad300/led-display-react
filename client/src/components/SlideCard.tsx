@@ -398,8 +398,6 @@ const getSlideTypeLabel = (type: typeof SLIDE_TYPES[keyof typeof SLIDE_TYPES]) =
             return "News";
         case SLIDE_TYPES.EVENT:
             return "Event";
-        case SLIDE_TYPES.DOCUMENT:
-            return "Document";
         case SLIDE_TYPES.TEXT:
             return "Text";
         default:

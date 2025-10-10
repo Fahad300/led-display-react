@@ -37,10 +37,12 @@ export class File {
 
     /**
      * Get file URL for serving from file system
+     * Returns relative URL to work in any environment (dev/production)
      */
     getUrl(): string {
-        const backendUrl = process.env.SERVER_URL || "http://localhost:5000";
-        return `${backendUrl}/api/files/${this.id}`;
+        // Return relative URL - browser will use current origin
+        // This works in both development and production
+        return `/api/files/${this.id}`;
     }
 
     /**

@@ -2,9 +2,10 @@ import React, { useMemo, useState, useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useUnified } from "../contexts/UnifiedContext";
 import { useSettings } from "../contexts/SettingsContext";
+import { useUIStore } from "../stores/useUIStore";
 import { sessionService } from "../services/sessionService";
-import { Slide, SLIDE_TYPES, ImageSlide as ImageSlideType, VideoSlide as VideoSlideType, NewsSlide, EventSlide as EventSlideType, TeamComparisonSlide as TeamComparisonSlideType, GraphSlide as GraphSlideType, DocumentSlide as DocumentSlideType, TextSlide as TextSlideType } from "../types";
-import { EventSlideComponent, ImageSlide, CurrentEscalationsSlideComponent, TeamComparisonSlideComponent, GraphSlide, DocumentSlide, TextSlide } from "./slides";
+import { Slide, SLIDE_TYPES, ImageSlide as ImageSlideType, VideoSlide as VideoSlideType, NewsSlide, EventSlide as EventSlideType, TeamComparisonSlide as TeamComparisonSlideType, GraphSlide as GraphSlideType, TextSlide as TextSlideType } from "../types";
+import { EventSlideComponent, ImageSlide, CurrentEscalationsSlideComponent, TeamComparisonSlideComponent, GraphSlide, TextSlide } from "./slides";
 import { VideoSlide } from "./slides/VideoSlide";
 import SwiperSlideshow from "./SwiperSlideshow";
 import SlideLogoOverlay from "./SlideLogoOverlay";
@@ -114,6 +115,7 @@ const LoadingComponent: React.FC = () => {
 const SlidesDisplay: React.FC = () => {
     const { slides, isLoading, syncFromDatabase, setSlides } = useUnified();
     const { displaySettings, syncSettings } = useSettings();
+    const updateDisplaySettingsAction = useUIStore((state) => state.updateDisplaySettings);
     const queryClient = useQueryClient();
     const [isRefreshing, setIsRefreshing] = React.useState(false);
     const [lastUpdateTime, setLastUpdateTime] = React.useState<Date>(new Date());
@@ -175,8 +177,18 @@ const SlidesDisplay: React.FC = () => {
                     break;
 
                 case "settings":
-                    logger.info("🔄 Syncing settings from database...");
-                    await syncSettings();
+                    // If settings data is provided in the event, use it directly (faster, no database query)
+                    if (event.data?.displaySettings) {
+                        logger.info("🔄 Updating settings from Socket.IO data (instant sync)...");
+                        logger.debug("📦 Received settings data:", event.data.displaySettings);
+                        // Update settings directly using Zustand store (instant sync)
+                        await updateDisplaySettingsAction(event.data.displaySettings);
+                        logger.success("✅ Settings updated from Socket.IO data");
+                    } else {
+                        // Fallback to database sync if settings data not provided
+                        logger.info("🔄 Syncing settings from database (fallback)...");
+                        await syncSettings();
+                    }
                     break;
 
                 case "api-data":
@@ -204,7 +216,7 @@ const SlidesDisplay: React.FC = () => {
         } finally {
             setIsRefreshing(false);
         }
-    }, [syncFromDatabase, syncSettings, queryClient, setSlides]);
+    }, [syncFromDatabase, syncSettings, queryClient, setSlides, updateDisplaySettingsAction]);
 
     /**
      * Subscribe to display update events (BroadcastChannel - for same-browser tabs)
@@ -376,8 +388,6 @@ const SlidesDisplay: React.FC = () => {
                     return <TeamComparisonSlideComponent slide={slide as TeamComparisonSlideType} />;
                 case SLIDE_TYPES.GRAPH:
                     return <GraphSlide slide={slide as GraphSlideType} />;
-                case SLIDE_TYPES.DOCUMENT:
-                    return <DocumentSlide slide={slide as DocumentSlideType} />;
                 case SLIDE_TYPES.TEXT:
                     return <TextSlide slide={slide as TextSlideType} />;
                 default:
