@@ -18,7 +18,7 @@ export const TestingOverlay: React.FC = () => {
     const isDebugMode = process.env.REACT_APP_DEBUG_TESTING_OVERLAY === 'true';
 
     // Get slideshow data from unified context
-    const { slides } = useUnified();
+    const { slides, employees } = useUnified();
 
     // State for slideshow visual indicator
     const [currentSlideIndex, setCurrentSlideIndex] = useState(0);
@@ -26,10 +26,77 @@ export const TestingOverlay: React.FC = () => {
     const countdownIntervalRef = useRef<NodeJS.Timeout | null>(null);
     const [isSlideshowActive, setIsSlideshowActive] = useState(false);
 
+    // Create processed slides (same logic as SlidesDisplay) to include event slides
+    const processedSlides = useMemo(() => {
+        // Remove any existing event slides from the slides array
+        const nonEventSlides = slides.filter(slide => slide.type !== SLIDE_TYPES.EVENT);
+
+        // Create birthday event slide
+        const birthdayEmployees = employees.filter(employee => employee.isBirthday === true);
+        const birthdayEventSlide = {
+            id: "birthday-event-slide",
+            name: "Birthday Celebrations",
+            type: SLIDE_TYPES.EVENT,
+            active: birthdayEmployees.length > 0, // Auto-activate if there are events
+            duration: 10,
+            data: {
+                title: "Birthday Celebrations",
+                description: "Celebrating our team members' birthdays",
+                date: new Date().toISOString(),
+                isEmployeeSlide: true,
+                employees: birthdayEmployees,
+                eventType: "birthday",
+                hasEvents: birthdayEmployees.length > 0,
+                eventCount: birthdayEmployees.length
+            },
+            dataSource: "manual"
+        };
+
+        // Create anniversary event slide
+        const anniversaryEmployees = employees.filter(employee => employee.isAnniversary === true);
+        const anniversaryEventSlide = {
+            id: "anniversary-event-slide",
+            name: "Work Anniversaries",
+            type: SLIDE_TYPES.EVENT,
+            active: anniversaryEmployees.length > 0, // Auto-activate if there are events
+            duration: 10,
+            data: {
+                title: "Work Anniversaries",
+                description: "Celebrating our team members' work anniversaries",
+                date: new Date().toISOString(),
+                isEmployeeSlide: true,
+                employees: anniversaryEmployees,
+                eventType: "anniversary",
+                hasEvents: anniversaryEmployees.length > 0,
+                eventCount: anniversaryEmployees.length
+            },
+            dataSource: "manual"
+        };
+
+        // Combine all slides: non-event slides + event slides
+        const eventSlides = [birthdayEventSlide, anniversaryEventSlide];
+        return [...nonEventSlides, ...eventSlides];
+    }, [slides, employees]);
+
     // Memoize active slides to prevent unnecessary re-renders
     const activeSlides = useMemo(() => {
-        return slides.filter(slide => slide.active);
-    }, [slides]);
+        const active = processedSlides.filter(slide => slide.active);
+
+        if (isDebugMode) {
+            console.log('TestingOverlay - Processed slides:', {
+                totalProcessedSlides: processedSlides.length,
+                activeSlides: active.length,
+                slides: processedSlides.map(s => ({
+                    id: s.id,
+                    name: s.name,
+                    type: s.type,
+                    active: s.active
+                }))
+            });
+        }
+
+        return active;
+    }, [processedSlides, isDebugMode]);
 
     // Function to get slide type name
     const getSlideTypeName = (slideType: string): string => {

@@ -1,7 +1,9 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useQueryClient } from "@tanstack/react-query";
 import { useUnified } from "../contexts/UnifiedContext";
 import { useToast } from "../contexts/ToastContext";
+import { triggerDisplayUpdate } from "../utils/updateEvents";
 import SlideCard from "../components/SlideCard";
 import {
     Slide,
@@ -808,6 +810,7 @@ const getSlideTypeLabel = (type: typeof SLIDE_TYPES[keyof typeof SLIDE_TYPES]) =
 };
 
 const AdminPage: React.FC = () => {
+    const queryClient = useQueryClient();
     const { slides, setSlides, updateSlide, isLoading, isEditing, setIsEditing, saveToDatabase } = useUnified();
     const { addToast } = useToast();
     const [selectedSlide, setSelectedSlide] = useState<Slide | null>(null);
@@ -934,7 +937,16 @@ const AdminPage: React.FC = () => {
                 // Update existing slide
                 updateSlide(updatedSlide);
 
-                // Trigger display page refresh to show the updated slide
+                // Trigger unified display update (WebSocket-ready)
+                // TODO: Replace with socket.emit when WebSocket is enabled
+                await triggerDisplayUpdate("slides", "AdminPage/update", queryClient, {
+                    slideId: updatedSlide.id,
+                    slideName: updatedSlide.name,
+                    action: "updated"
+                });
+
+                // Legacy event for backward compatibility
+                // TODO: Remove when WebSocket is enabled
                 console.log("🔄 AdminPage: Triggering display page refresh for updated slide...");
                 const reloadEvent = new CustomEvent('forceDisplayReload', {
                     detail: {
@@ -965,7 +977,16 @@ const AdminPage: React.FC = () => {
                     await saveToDatabase(newSlides);
                     console.log("✅ AdminPage: New slide saved to database successfully");
 
-                    // Trigger display page refresh to show the new slide
+                    // Trigger unified display update (WebSocket-ready)
+                    // TODO: Replace with socket.emit when WebSocket is enabled
+                    await triggerDisplayUpdate("slides", "AdminPage/create", queryClient, {
+                        slideId: updatedSlide.id,
+                        slideName: updatedSlide.name,
+                        action: "created"
+                    });
+
+                    // Legacy event for backward compatibility
+                    // TODO: Remove when WebSocket is enabled
                     console.log("🔄 AdminPage: Triggering display page refresh...");
                     const reloadEvent = new CustomEvent('forceDisplayReload', {
                         detail: {
@@ -992,7 +1013,7 @@ const AdminPage: React.FC = () => {
         } finally {
             setIsProcessing(false);
         }
-    }, [slides, updateSlide, setSlides, addToast, setIsEditing, saveToDatabase]);
+    }, [slides, updateSlide, setSlides, addToast, setIsEditing, saveToDatabase, queryClient]);
 
     const handleToggleActive = useCallback(async (id: string, active: boolean) => {
         const slide = slides.find((s) => s.id === id);
@@ -1000,7 +1021,16 @@ const AdminPage: React.FC = () => {
             try {
                 updateSlide({ ...slide, active });
 
-                // Trigger display page refresh when slide active status changes
+                // Trigger unified display update (WebSocket-ready)
+                // TODO: Replace with socket.emit when WebSocket is enabled
+                await triggerDisplayUpdate("slides", "AdminPage/toggle", queryClient, {
+                    slideId: id,
+                    slideName: slide.name,
+                    active: active
+                });
+
+                // Legacy event for backward compatibility
+                // TODO: Remove when WebSocket is enabled
                 console.log("🔄 AdminPage: Triggering display page refresh for slide toggle...");
                 const reloadEvent = new CustomEvent('forceDisplayReload', {
                     detail: {
@@ -1019,7 +1049,7 @@ const AdminPage: React.FC = () => {
                 addToast(error instanceof Error ? error.message : "Failed to update slide status", "error");
             }
         }
-    }, [slides, updateSlide, addToast]);
+    }, [slides, updateSlide, addToast, queryClient]);
 
     const handleDeleteSlide = useCallback(async (id: string) => {
         const slide = slides.find((s) => s.id === id);

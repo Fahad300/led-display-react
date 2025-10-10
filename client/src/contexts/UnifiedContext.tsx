@@ -71,7 +71,7 @@ interface UnifiedContextType {
     // ==================== UI STATE (from Zustand) ====================
     slides: Slide[];
     setSlides: (slides: Slide[] | ((prev: Slide[]) => Slide[])) => void;
-    updateSlide: (slide: Slide) => void;
+    updateSlide: (slide: Slide, autoSave?: boolean) => void;
     reorderSlides: (slides: Slide[]) => void;
 
     // ==================== LOADING STATES ====================

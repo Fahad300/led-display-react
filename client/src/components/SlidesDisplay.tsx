@@ -1,4 +1,5 @@
 import React, { useMemo, useState, useEffect } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { useUnified } from "../contexts/UnifiedContext";
 import { useSettings } from "../contexts/SettingsContext";
 import { sessionService } from "../services/sessionService";
@@ -11,6 +12,8 @@ import { DigitalClock } from "./DigitalClock";
 import { TestingOverlay } from "./TestingOverlay";
 import NewsSlideComponent from "./NewsSlideComponent";
 import { motion } from "framer-motion";
+import { onDisplayUpdate, UpdateEvent } from "../utils/updateEvents";
+import { logger } from "../utils/logger";
 
 /**
  * Simple Animated Logo Component for LED Display with Video Background
@@ -108,17 +111,17 @@ const LoadingComponent: React.FC = () => {
  * SlidesDisplay component: shows only the active slides in a fullscreen/clean view.
  */
 const SlidesDisplay: React.FC = () => {
-    const { slides, employees, isLoading } = useUnified();
-    const { displaySettings } = useSettings();
+    const { slides, employees, isLoading, syncFromDatabase } = useUnified();
+    const { displaySettings, syncSettings } = useSettings();
+    const queryClient = useQueryClient();
     const [isRefreshing, setIsRefreshing] = React.useState(false);
-    const [eventSlideStates, setEventSlideStates] = useState<{ [key: string]: boolean }>({});
+    const [lastUpdateTime, setLastUpdateTime] = React.useState<Date>(new Date());
 
     console.log('📺 SlidesDisplay - Component rendered:', {
         slidesCount: slides.length,
         isLoading,
         isRefreshing,
         employeesCount: employees.length,
-        eventSlideStates,
         settings: {
             swiperEffect: displaySettings.swiperEffect,
             showDateStamp: displaySettings.showDateStamp,
@@ -129,97 +132,130 @@ const SlidesDisplay: React.FC = () => {
         timestamp: new Date().toISOString()
     });
 
-    // Load event slide states from database only
+    /**
+     * Unified Display Update Handler
+     * 
+     * This is the SINGLE listener for all display updates.
+     * Handles updates from:
+     * - HomePage (slides changed, settings changed)
+     * - Other tabs/windows (via BroadcastChannel)
+     * - Future: WebSocket server broadcasts
+     * 
+     * TODO: When WebSocket is enabled, this same handler will receive socket events.
+     * No other code changes needed - just add socket.on("displayUpdate", handleDisplayUpdate)
+     */
+    const handleDisplayUpdate = React.useCallback(async (event: UpdateEvent) => {
+        logger.info(`🔔 DisplayPage received update: ${event.type} from ${event.source}`, event);
+
+        setIsRefreshing(true);
+        setLastUpdateTime(new Date());
+
+        try {
+            // Handle different update types
+            switch (event.type) {
+                case "slides":
+                    logger.info("🔄 Syncing slides from database...");
+                    await syncFromDatabase();
+                    break;
+
+                case "settings":
+                    logger.info("🔄 Syncing settings from database...");
+                    await syncSettings();
+                    break;
+
+                case "api-data":
+                    logger.info("🔄 Refreshing API data via React Query...");
+                    await queryClient.refetchQueries({ queryKey: ["dashboardData"] });
+                    break;
+
+                case "all":
+                case "force-reload":
+                    logger.info("🔄 Full refresh: syncing everything...");
+                    await Promise.all([
+                        syncFromDatabase(),
+                        syncSettings(),
+                        queryClient.refetchQueries({ queryKey: ["dashboardData"] })
+                    ]);
+                    break;
+
+                default:
+                    logger.warn(`⚠️ Unknown update type: ${event.type}`);
+            }
+
+            logger.success(`✅ Display update completed: ${event.type}`);
+        } catch (error) {
+            logger.error(`❌ Failed to handle display update: ${event.type}`, error);
+        } finally {
+            setIsRefreshing(false);
+        }
+    }, [syncFromDatabase, syncSettings, queryClient]);
+
+    /**
+     * Subscribe to display update events
+     * This replaces all the scattered realtimeSync and custom event listeners
+     */
     useEffect(() => {
-        const loadEventSlideStates = async () => {
+        logger.info("🎧 DisplayPage: Subscribing to unified update events");
+
+        const unsubscribe = onDisplayUpdate(handleDisplayUpdate);
+
+        return () => {
+            logger.info("🔇 DisplayPage: Unsubscribing from update events");
+            unsubscribe();
+        };
+    }, [handleDisplayUpdate]);
+
+    /**
+     * Fallback Polling (5-minute intervals)
+     * 
+     * This provides reliability in case:
+     * - BroadcastChannel fails
+     * - Network issues prevent updates
+     * - WebSocket disconnects (future)
+     * 
+     * Ensures display never gets stale for more than 5 minutes.
+     */
+    useEffect(() => {
+        logger.info("⏰ DisplayPage: Starting 5-minute fallback polling");
+
+        const POLLING_INTERVAL = 5 * 60 * 1000; // 5 minutes
+
+        const pollInterval = setInterval(async () => {
+            const timeSinceLastUpdate = Date.now() - lastUpdateTime.getTime();
+            logger.info(`🔄 Fallback poll triggered (${Math.round(timeSinceLastUpdate / 1000)}s since last update)`);
+
             try {
-                console.log('🔄 SlidesDisplay - Loading event slide states from database');
+                setIsRefreshing(true);
 
-                // Event slide states are now managed through unified slideshow data
-                console.log('🔄 SlidesDisplay - Event slide states managed through unified data');
+                // Sync everything
+                await Promise.all([
+                    syncFromDatabase(),
+                    syncSettings(),
+                    queryClient.refetchQueries({ queryKey: ["dashboardData"] })
+                ]);
 
-                // Note: Event slide states are now managed through the unified slideshow data
-                // For now, we'll use default states since event slide states are no longer stored separately
-                // TODO: Integrate with unified slideshow data when event slide states are needed
-                if (false) { // Disabled until event slide states are integrated with unified data
-                    console.log('✅ SlidesDisplay - Event slide states loaded from database');
-                    setEventSlideStates({});
-                } else {
-                    // Default to inactive - user must manually activate event slides
-                    const defaultStates = {
-                        "birthday-event-slide": false,
-                        "anniversary-event-slide": false
-                    };
-                    console.log('⚠️ SlidesDisplay - Event slides default to inactive (user must manually activate):', defaultStates);
-                    setEventSlideStates(defaultStates);
-                }
+                setLastUpdateTime(new Date());
+                logger.success("✅ Fallback poll completed successfully");
             } catch (error) {
-                console.error("Failed to load event slide states:", error instanceof Error ? error.message : String(error));
-                // Fallback to inactive - user must manually activate
-                const defaultStates = {
-                    "birthday-event-slide": false,
-                    "anniversary-event-slide": false
-                };
-                setEventSlideStates(defaultStates);
+                logger.error("❌ Fallback poll failed", error);
+            } finally {
+                setIsRefreshing(false);
             }
+        }, POLLING_INTERVAL);
+
+        return () => {
+            logger.info("🛑 DisplayPage: Stopping fallback polling");
+            clearInterval(pollInterval);
         };
+    }, [lastUpdateTime, syncFromDatabase, syncSettings, queryClient]);
 
-        loadEventSlideStates();
-    }, [employees]); // Re-check when employees data updates
-
-    // Listen for event slide toggle events from HomePage
-    useEffect(() => {
-        const handleForceReload = async (event: Event) => {
-            const customEvent = event as CustomEvent;
-            const { reason, slideId, active, eventType } = customEvent.detail || {};
-
-            console.log('🔄 SlidesDisplay - Force reload event received:', {
-                reason,
-                slideId,
-                active,
-                eventType,
-                timestamp: new Date().toISOString()
-            });
-
-            // Handle event slide toggle events
-            if (reason === 'event_slide_toggle' && slideId && eventType) {
-                console.log('🎯 SlidesDisplay - Updating event slide state:', {
-                    slideId,
-                    active,
-                    eventType
-                });
-
-                setEventSlideStates(prevStates => ({
-                    ...prevStates,
-                    [slideId]: active
-                }));
-
-                console.log('✅ SlidesDisplay - Event slide state updated:', {
-                    slideId,
-                    active,
-                    eventType
-                });
-            }
-        };
-
-        window.addEventListener('forceDisplayReload', handleForceReload);
-        return () => window.removeEventListener('forceDisplayReload', handleForceReload);
-    }, []);
-
-    // SlidesDisplay no longer periodically reloads from database
-    // It relies on the context's auto-save mechanism and the HomePage as the source of truth
-    // The context will handle data persistence automatically
-
-    // Poll for event slide state updates (always active)
-    // Cross-device synchronization now handled by UnifiedContext
-
-    // Memoize processed slides to prevent unnecessary re-computations
+    // Create event slides locally in SlidesDisplay
+    // This ensures consistency with HomePage without circular dependencies
     const processedSlides = useMemo(() => {
         console.log('🔄 SlidesDisplay - Processing slides:', {
             isLoading,
             slidesCount: slides.length,
-            employeesCount: employees.length,
-            eventSlideStates
+            employeesCount: employees.length
         });
 
         if (isLoading) {
@@ -227,27 +263,17 @@ const SlidesDisplay: React.FC = () => {
             return [];
         }
 
-        // Remove any existing event slides
+        // Remove any existing event slides from the slides array
         const nonEventSlides = slides.filter(slide => slide.type !== SLIDE_TYPES.EVENT);
         console.log('📋 SlidesDisplay - Non-event slides:', nonEventSlides.length);
 
-
-        // Birthday event slide - Use API flags (API already does date checking)
+        // Create birthday event slide
         const birthdayEmployees = employees.filter(employee => employee.isBirthday === true);
-        const birthdayActiveState = eventSlideStates["birthday-event-slide"] ?? false;
-        console.log('🎂 SlidesDisplay - Birthday check:', {
-            totalEmployees: employees.length,
-            birthdayEmployees: birthdayEmployees.length,
-            birthdayActiveState,
-            birthdayEmployeeNames: birthdayEmployees.map(e => e.name),
-            employeesData: employees.map(e => ({ name: e.name, isBirthday: e.isBirthday }))
-        });
-
         const birthdayEventSlide: EventSlideType = {
             id: "birthday-event-slide",
             name: "Birthday Celebrations",
             type: SLIDE_TYPES.EVENT,
-            active: birthdayActiveState,
+            active: birthdayEmployees.length > 0, // Auto-activate if there are events
             duration: 10,
             data: {
                 title: "Birthday Celebrations",
@@ -262,22 +288,13 @@ const SlidesDisplay: React.FC = () => {
             dataSource: "manual"
         };
 
-        // Anniversary event slide - Use API flags (API already does date checking)
+        // Create anniversary event slide
         const anniversaryEmployees = employees.filter(employee => employee.isAnniversary === true);
-        const anniversaryActiveState = eventSlideStates["anniversary-event-slide"] ?? false;
-        console.log('🎉 SlidesDisplay - Anniversary check:', {
-            totalEmployees: employees.length,
-            anniversaryEmployees: anniversaryEmployees.length,
-            anniversaryActiveState,
-            anniversaryEmployeeNames: anniversaryEmployees.map(e => e.name),
-            employeesData: employees.map(e => ({ name: e.name, isAnniversary: e.isAnniversary }))
-        });
-
         const anniversaryEventSlide: EventSlideType = {
             id: "anniversary-event-slide",
             name: "Work Anniversaries",
             type: SLIDE_TYPES.EVENT,
-            active: anniversaryActiveState,
+            active: anniversaryEmployees.length > 0, // Auto-activate if there are events
             duration: 10,
             data: {
                 title: "Work Anniversaries",
@@ -292,7 +309,7 @@ const SlidesDisplay: React.FC = () => {
             dataSource: "manual"
         };
 
-        // Add event slides (always present, but may have 0 events)
+        // Combine all slides: non-event slides + event slides
         const eventSlides: EventSlideType[] = [birthdayEventSlide, anniversaryEventSlide];
         const allSlides = [...nonEventSlides, ...eventSlides];
 
@@ -300,29 +317,14 @@ const SlidesDisplay: React.FC = () => {
             nonEventSlides: nonEventSlides.length,
             eventSlides: eventSlides.length,
             totalSlides: allSlides.length,
-            birthdaySlideCreated: !!birthdayEventSlide,
-            anniversarySlideCreated: !!anniversaryEventSlide
+            birthdayActive: birthdayEventSlide.active,
+            anniversaryActive: anniversaryEventSlide.active,
+            birthdayCount: birthdayEmployees.length,
+            anniversaryCount: anniversaryEmployees.length
         });
 
-        // Debug logging for slide processing
-        console.log('🔍 SlidesDisplay - Total slides from context:', slides.length);
-        console.log('🔍 SlidesDisplay - Processed slides (allSlides):', allSlides.length);
-        console.log('🔍 SlidesDisplay - All slides details:', allSlides.map(s => ({
-            id: s.id,
-            name: s.name,
-            type: s.type,
-            active: s.active,
-            duration: s.duration
-        })));
-
-        const activeSlides = allSlides.filter(slide => slide.active && slide.duration > 0);
-        console.log('✅ SlidesDisplay - Active slides ready for display:', {
-            activeCount: activeSlides.length,
-            activeSlides: activeSlides.map(s => ({ id: s.id, name: s.name, type: s.type, duration: s.duration }))
-        });
-
-        return allSlides; // Let SwiperSlideshow handle the active filtering
-    }, [slides, isLoading, eventSlideStates, employees]);
+        return allSlides;
+    }, [slides, employees, isLoading]);
 
     // Memoize the render function to prevent unnecessary re-renders
     const renderSlideContent = useMemo(() => {
@@ -397,6 +399,13 @@ const SlidesDisplay: React.FC = () => {
     console.log('🎬 SlidesDisplay - Rendering slideshow with slides:', {
         slidesCount: processedSlides.length,
         activeSlidesCount: processedSlides.filter(s => s.active && s.duration > 0).length,
+        slides: processedSlides.map(s => ({
+            id: s.id,
+            name: s.name,
+            type: s.type,
+            active: s.active,
+            duration: s.duration
+        })),
         settings: {
             swiperEffect: displaySettings.swiperEffect,
             hidePagination: displaySettings.hidePagination,

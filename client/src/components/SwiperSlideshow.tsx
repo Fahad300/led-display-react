@@ -52,9 +52,18 @@ const SwiperSlideshow: React.FC<{
      * This ensures no buffering or black frames appear on the LED display
      */
     const activeSlides = useMemo(() => {
-        return slides.filter(slide => {
+        const filtered = slides.filter(slide => {
             // Must be active
-            if (!slide.active) return false;
+            if (!slide.active) {
+                logger.debug(`⏳ Skipping inactive slide: ${slide.name} (type: ${slide.type})`);
+                return false;
+            }
+
+            // Must have duration > 0
+            if (!slide.duration || slide.duration <= 0) {
+                logger.debug(`⏳ Skipping slide with no duration: ${slide.name} (duration: ${slide.duration})`);
+                return false;
+            }
 
             // For video slides, check if video is fully preloaded and ready
             if (slide.type === SLIDE_TYPES.VIDEO) {
@@ -71,6 +80,21 @@ const SwiperSlideshow: React.FC<{
             // All other slide types are always ready
             return true;
         });
+
+        logger.debug(`🎬 SwiperSlideshow - Slide filtering results:`, {
+            totalSlides: slides.length,
+            activeSlides: filtered.length,
+            slides: slides.map(s => ({
+                id: s.id,
+                name: s.name,
+                type: s.type,
+                active: s.active,
+                duration: s.duration,
+                filtered: filtered.includes(s)
+            }))
+        });
+
+        return filtered;
     }, [slides]);
 
     /**

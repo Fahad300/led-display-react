@@ -1,7 +1,9 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { useUnified } from '../contexts/UnifiedContext';
 import { useSettings } from '../contexts/SettingsContext';
 import { dispatchSlidesChange } from '../utils/realtimeSync';
+import { triggerDisplayUpdate } from '../utils/updateEvents';
 import { Slide, SLIDE_TYPES, ImageSlide as ImageSlideType, VideoSlide as VideoSlideType, NewsSlide, EventSlide as EventSlideType, TeamComparisonSlide as TeamComparisonSlideType, GraphSlide as GraphSlideType, DocumentSlide as DocumentSlideType, TextSlide as TextSlideType, Employee } from '../types';
 import { logger } from '../utils/logger';
 import { videoPreloadManager } from '../utils/videoPreloadManager';
@@ -444,6 +446,7 @@ const isVideoSlide = (slide: Slide): slide is VideoSlideType => {
 
 
 const HomePage: React.FC = () => {
+    const queryClient = useQueryClient();
     const {
         slides,
         reorderSlides,
@@ -462,13 +465,50 @@ const HomePage: React.FC = () => {
     } = useUnified();
 
     // State to track event slide toggle states
+    // Initialize from database slides if they exist
     const [eventSlideStates, setEventSlideStates] = useState<{
         "birthday-event-slide": boolean;
         "anniversary-event-slide": boolean;
-    }>({
-        "birthday-event-slide": false,
-        "anniversary-event-slide": false
+    }>(() => {
+        // Try to get initial state from database slides
+        const birthdaySlide = slides.find(s => s.id === "birthday-event-slide");
+        const anniversarySlide = slides.find(s => s.id === "anniversary-event-slide");
+
+        return {
+            "birthday-event-slide": birthdaySlide?.active ?? false,
+            "anniversary-event-slide": anniversarySlide?.active ?? false
+        };
     });
+
+    // Sync eventSlideStates when slides change (e.g., after loading from database)
+    useEffect(() => {
+        const birthdaySlide = slides.find(s => s.id === "birthday-event-slide");
+        const anniversarySlide = slides.find(s => s.id === "anniversary-event-slide");
+
+        logger.data("📊 HomePage - Event slides from database:", {
+            birthdaySlideFound: !!birthdaySlide,
+            birthdayActive: birthdaySlide?.active,
+            anniversarySlideFound: !!anniversarySlide,
+            anniversaryActive: anniversarySlide?.active,
+            totalSlidesInStore: slides.length,
+            previousBirthdayState: eventSlideStates["birthday-event-slide"],
+            previousAnniversaryState: eventSlideStates["anniversary-event-slide"]
+        });
+
+        if (birthdaySlide || anniversarySlide) {
+            const newStates = {
+                "birthday-event-slide": birthdaySlide?.active ?? eventSlideStates["birthday-event-slide"],
+                "anniversary-event-slide": anniversarySlide?.active ?? eventSlideStates["anniversary-event-slide"]
+            };
+
+            logger.sync("🔄 HomePage - Updating event slide states from database:", newStates);
+            setEventSlideStates(newStates);
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [slides]); // Run when slides change (e.g., after database load) - eventSlideStates intentionally omitted to prevent infinite loop
+
+    // NOTE: Auto-activation removed to respect user's manual toggles
+    // Event slides will only be activated/deactivated by explicit user action
 
     // Debug logging for slides
     useEffect(() => {
@@ -481,25 +521,43 @@ const HomePage: React.FC = () => {
 
     // Debug logging for employees
     useEffect(() => {
+        const birthdayEmployees = employees.filter(e => e.isBirthday === true);
+        const anniversaryEmployees = employees.filter(e => e.isAnniversary === true);
+
         logger.data("HomePage - Current employees:", {
             totalEmployees: employees.length,
-            anniversaryCount: employees.filter(e => e.isAnniversary).length,
-            birthdayCount: employees.filter(e => e.isBirthday).length
+            birthdayCount: birthdayEmployees.length,
+            anniversaryCount: anniversaryEmployees.length,
+            birthdayEmployees: birthdayEmployees.map(e => ({ name: e.name, isBirthday: e.isBirthday })),
+            anniversaryEmployees: anniversaryEmployees.map(e => ({ name: e.name, isAnniversary: e.isAnniversary }))
         });
     }, [employees]);
 
     // Create event slides and process all slides
     const processedSlides = useMemo(() => {
-        // Remove any existing event slides from the slides array
-        const nonEventSlides = slides.filter(slide => slide.type !== SLIDE_TYPES.EVENT);
+        // Only remove the specific employee event slides we're about to recreate
+        // Keep any other event slides from the database
+        const nonEmployeeEventSlides = slides.filter(slide => {
+            // Keep all non-event slides
+            if (slide.type !== SLIDE_TYPES.EVENT) return true;
+
+            // Remove only birthday and anniversary event slides (we'll recreate them)
+            const isEmployeeEventSlide = slide.id === "birthday-event-slide" ||
+                slide.id === "anniversary-event-slide";
+            return !isEmployeeEventSlide;
+        });
 
         // Create birthday event slide
         const birthdayEmployees = employees.filter(employee => employee.isBirthday === true);
+
+        // Check if birthday slide exists in database and use its active state
+        const existingBirthdaySlide = slides.find(s => s.id === "birthday-event-slide");
         const birthdayEventSlide: EventSlideType = {
             id: "birthday-event-slide",
             name: "Birthday Celebrations",
             type: SLIDE_TYPES.EVENT,
-            active: eventSlideStates["birthday-event-slide"], // Use state from eventSlideStates
+            // Priority: database state > React state > default false
+            active: existingBirthdaySlide?.active ?? eventSlideStates["birthday-event-slide"],
             duration: 10,
             data: {
                 title: "Birthday Celebrations",
@@ -516,11 +574,15 @@ const HomePage: React.FC = () => {
 
         // Create anniversary event slide
         const anniversaryEmployees = employees.filter(employee => employee.isAnniversary === true);
+
+        // Check if anniversary slide exists in database and use its active state
+        const existingAnniversarySlide = slides.find(s => s.id === "anniversary-event-slide");
         const anniversaryEventSlide: EventSlideType = {
             id: "anniversary-event-slide",
             name: "Work Anniversaries",
             type: SLIDE_TYPES.EVENT,
-            active: eventSlideStates["anniversary-event-slide"], // Use state from eventSlideStates
+            // Priority: database state > React state > default false
+            active: existingAnniversarySlide?.active ?? eventSlideStates["anniversary-event-slide"],
             duration: 10,
             data: {
                 title: "Work Anniversaries",
@@ -535,20 +597,36 @@ const HomePage: React.FC = () => {
             dataSource: "manual"
         };
 
-        // Combine all slides: non-event slides + event slides
+        // Combine all slides: non-employee-event slides + recreated employee event slides
         const eventSlides: EventSlideType[] = [birthdayEventSlide, anniversaryEventSlide];
-        const allSlides = [...nonEventSlides, ...eventSlides];
+        const allSlides = [...nonEmployeeEventSlides, ...eventSlides];
 
         logger.data("HomePage - Processed slides:", {
-            nonEventSlides: nonEventSlides.length,
+            nonEmployeeEventSlides: nonEmployeeEventSlides.length,
             eventSlides: eventSlides.length,
             totalSlides: allSlides.length,
             birthdayEmployees: birthdayEmployees.length,
-            anniversaryEmployees: anniversaryEmployees.length
+            anniversaryEmployees: anniversaryEmployees.length,
+            birthdayEventSlide: {
+                id: birthdayEventSlide.id,
+                active: birthdayEventSlide.active,
+                hasEvents: birthdayEventSlide.data.hasEvents,
+                eventCount: birthdayEventSlide.data.eventCount
+            },
+            anniversaryEventSlide: {
+                id: anniversaryEventSlide.id,
+                active: anniversaryEventSlide.active,
+                hasEvents: anniversaryEventSlide.data.hasEvents,
+                eventCount: anniversaryEventSlide.data.eventCount
+            }
         });
 
         return allSlides;
     }, [slides, employees, eventSlideStates]);
+
+    // HomePage manages event slides locally for its own display
+    // SlidesDisplay will create its own event slides based on the same logic
+    // This prevents infinite loops and circular dependencies
 
     const { displaySettings, updateDisplaySettings, lastSynced } = useSettings();
     const { addToast } = useToast();
@@ -729,7 +807,7 @@ const HomePage: React.FC = () => {
 
 
     // Handle slide reordering
-    const handleReorder = ({ sourceIndex, destinationIndex }: ReorderResult) => {
+    const handleReorder = async ({ sourceIndex, destinationIndex }: ReorderResult) => {
         if (sourceIndex === destinationIndex) return;
 
         // Use original slides for reordering to maintain data integrity
@@ -737,10 +815,25 @@ const HomePage: React.FC = () => {
         const [removed] = newSlides.splice(sourceIndex, 1);
         newSlides.splice(destinationIndex, 0, removed);
 
+        // Update local state
         reorderSlides(newSlides);
 
+        // Save to database FIRST (critical: must complete before display update)
+        logger.sync("HomePage: Saving slide reorder to database...");
+        await saveToDatabase();
+        logger.success("HomePage: Slide reorder saved to database");
+
         // Dispatch real-time sync event to notify DisplayPage immediately
+        // TODO: Remove dispatchSlidesChange when WebSocket is enabled - triggerDisplayUpdate will handle it
         dispatchSlidesChange(newSlides, [`slide-reordered-from-${sourceIndex}-to-${destinationIndex}`], 'homepage');
+
+        // Trigger unified display update (WebSocket-ready)
+        // TODO: Replace with socket.emit when WebSocket is enabled
+        await triggerDisplayUpdate("slides", "HomePage/reorder", queryClient, {
+            sourceIndex,
+            destinationIndex,
+            slideId: removed.id
+        });
 
         // Trigger display page refresh when slides are reordered
         logger.sync("HomePage: Triggering display page refresh for slide reorder...");
@@ -780,7 +873,7 @@ const HomePage: React.FC = () => {
                 timestamp: new Date().toISOString()
             });
 
-            // For event slides, update the local state and trigger display refresh
+            // For event slides, update the local state and save to database
             if (slideToUpdate.type === SLIDE_TYPES.EVENT) {
                 const eventSlide = slideToUpdate as EventSlideType;
                 const hasEvents = eventSlide.data.hasEvents;
@@ -793,11 +886,36 @@ const HomePage: React.FC = () => {
                     newActiveState: newActiveState
                 });
 
-                // Update the event slide state
+                // Update the event slide in database
+                const updatedEventSlide = { ...eventSlide, active: newActiveState };
+
+                // Update local state (disable auto-save since we'll save explicitly)
+                updateSlide(updatedEventSlide, false);
+
+                // Update event slide states map
                 setEventSlideStates(prev => ({
                     ...prev,
                     [eventSlide.id]: newActiveState
                 }));
+
+                // Save to database FIRST (critical: must complete before display update)
+                logger.sync("💾 HomePage: Saving event slide to database:", {
+                    slideId: updatedEventSlide.id,
+                    slideName: updatedEventSlide.name,
+                    active: updatedEventSlide.active,
+                    eventType: updatedEventSlide.data.eventType
+                });
+                await saveToDatabase();
+                logger.success("✅ HomePage: Event slide saved to database successfully");
+
+                // Trigger unified display update (WebSocket-ready)
+                // TODO: Replace with socket.emit when WebSocket is enabled
+                await triggerDisplayUpdate("slides", "HomePage/eventToggle", queryClient, {
+                    slideId: updatedEventSlide.id,
+                    slideName: updatedEventSlide.name,
+                    eventType: updatedEventSlide.data.eventType,
+                    active: updatedEventSlide.active
+                });
 
                 // Trigger a display refresh to update the UI
                 logger.sync("HomePage: Event slide toggle - triggering display refresh...");
@@ -813,7 +931,8 @@ const HomePage: React.FC = () => {
                 });
                 window.dispatchEvent(reloadEvent);
                 logger.success("HomePage: Display refresh triggered for event slide toggle");
-                return; // Don't save event slides to database
+
+                return; // Event slide handling complete
             }
 
             // For regular slides, update in the database
@@ -828,10 +947,25 @@ const HomePage: React.FC = () => {
                 timestamp: new Date().toISOString()
             });
 
-            updateSlide(updatedSlide);
+            // Update local state (disable auto-save since we'll save explicitly)
+            updateSlide(updatedSlide, false);
+
+            // Save to database FIRST (critical: must complete before display update)
+            logger.sync("HomePage: Saving slide toggle to database...");
+            await saveToDatabase();
+            logger.success("HomePage: Slide toggle saved to database");
 
             // Dispatch real-time sync event to notify DisplayPage immediately
+            // TODO: Remove dispatchSlidesChange when WebSocket is enabled - triggerDisplayUpdate will handle it
             dispatchSlidesChange(processedSlides.map(s => s.id === slideId ? updatedSlide : s), [`slide-${slideId}-toggled-${newActiveState ? 'active' : 'inactive'}`], 'homepage');
+
+            // Trigger unified display update (WebSocket-ready)
+            // TODO: Replace with socket.emit when WebSocket is enabled
+            await triggerDisplayUpdate("slides", "HomePage/toggleActive", queryClient, {
+                slideId: updatedSlide.id,
+                slideName: updatedSlide.name,
+                active: updatedSlide.active
+            });
 
             // Trigger display page refresh when slide active status changes
             logger.sync("HomePage: Triggering display page refresh for slide toggle...");
@@ -934,6 +1068,14 @@ const HomePage: React.FC = () => {
 
         try {
             await updateDisplaySettings({ swiperEffect: effect });
+
+            // Trigger unified display update (WebSocket-ready)
+            // TODO: Replace with socket.emit when WebSocket is enabled
+            await triggerDisplayUpdate("settings", "HomePage/effectChange", queryClient, {
+                setting: "swiperEffect",
+                value: effect
+            });
+
             logger.success('HomePage - Effect change successful:', {
                 newEffect: effect,
                 timestamp: new Date().toISOString()
@@ -954,6 +1096,14 @@ const HomePage: React.FC = () => {
         });
 
         await updateDisplaySettings({ showDateStamp: newValue });
+
+        // Trigger unified display update (WebSocket-ready)
+        // TODO: Replace with socket.emit when WebSocket is enabled
+        await triggerDisplayUpdate("settings", "HomePage/dateStamp", queryClient, {
+            setting: "showDateStamp",
+            value: newValue
+        });
+
         logger.success('HomePage - Date stamp toggle successful:', {
             newValue: newValue,
             timestamp: new Date().toISOString()
@@ -970,6 +1120,14 @@ const HomePage: React.FC = () => {
         });
 
         await updateDisplaySettings({ hidePagination: newValue });
+
+        // Trigger unified display update (WebSocket-ready)
+        // TODO: Replace with socket.emit when WebSocket is enabled
+        await triggerDisplayUpdate("settings", "HomePage/pagination", queryClient, {
+            setting: "hidePagination",
+            value: newValue
+        });
+
         logger.success('HomePage - Pagination toggle successful:', {
             newValue: newValue,
             timestamp: new Date().toISOString()
@@ -986,6 +1144,14 @@ const HomePage: React.FC = () => {
         });
 
         await updateDisplaySettings({ hideArrows: newValue });
+
+        // Trigger unified display update (WebSocket-ready)
+        // TODO: Replace with socket.emit when WebSocket is enabled
+        await triggerDisplayUpdate("settings", "HomePage/arrows", queryClient, {
+            setting: "hideArrows",
+            value: newValue
+        });
+
         logger.success('HomePage - Arrows toggle successful:', {
             newValue: newValue,
             timestamp: new Date().toISOString()
@@ -1002,6 +1168,14 @@ const HomePage: React.FC = () => {
         });
 
         await updateDisplaySettings({ hidePersiviaLogo: newValue });
+
+        // Trigger unified display update (WebSocket-ready)
+        // TODO: Replace with socket.emit when WebSocket is enabled
+        await triggerDisplayUpdate("settings", "HomePage/logo", queryClient, {
+            setting: "hidePersiviaLogo",
+            value: newValue
+        });
+
         logger.success('HomePage - Logo visibility toggle successful:', {
             newValue: newValue,
             timestamp: new Date().toISOString()
@@ -1018,6 +1192,14 @@ const HomePage: React.FC = () => {
         });
 
         await updateDisplaySettings({ developmentMode: newValue });
+
+        // Trigger unified display update (WebSocket-ready)
+        // TODO: Replace with socket.emit when WebSocket is enabled
+        await triggerDisplayUpdate("settings", "HomePage/devMode", queryClient, {
+            setting: "developmentMode",
+            value: newValue
+        });
+
         logger.success('HomePage - Development mode toggle successful:', {
             newValue: newValue,
             timestamp: new Date().toISOString()
