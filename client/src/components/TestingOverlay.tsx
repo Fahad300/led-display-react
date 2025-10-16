@@ -18,7 +18,7 @@ export const TestingOverlay: React.FC = () => {
     const isDebugMode = process.env.REACT_APP_DEBUG_TESTING_OVERLAY === 'true';
 
     // Get slideshow data from unified context
-    const { slides, employees } = useUnified();
+    const { slides } = useUnified();
 
     // State for slideshow visual indicator
     const [currentSlideIndex, setCurrentSlideIndex] = useState(0);

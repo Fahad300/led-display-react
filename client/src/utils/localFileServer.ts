@@ -5,6 +5,8 @@
  * Supports videos, images, and other file types
  */
 
+import { getFileUrl as getBackendFileUrl } from "../api/backendApi";
+
 export interface FileCache {
     url: string;
     blob?: Blob;
@@ -266,26 +268,13 @@ export const getOptimizedVideoUrl = async (originalUrl: string): Promise<string>
 
 /**
  * Enhanced file URL resolver for any file type (images, videos, documents)
- * Uses static file serving when available, with fallback to API
+ * Simply converts any URL to an absolute backend URL
  */
 export const getOptimizedFileUrl = async (originalUrl: string): Promise<string> => {
     if (!originalUrl) return '';
 
-    // Extract file ID from URL
-    const fileIdMatch = originalUrl.match(/\/api\/files\/([^\/\?]+)/);
-    if (!fileIdMatch) {
-        return originalUrl;
-    }
-
-    const fileId = fileIdMatch[1];
-
-    try {
-        const optimizedUrl = await optimizedVideoLoader.getOptimizedVideoUrl(fileId, originalUrl);
-        return optimizedUrl;
-    } catch (error) {
-        console.warn('Optimized file loading failed, using original URL:', error);
-        return originalUrl;
-    }
+    // Use the simple backend URL resolver
+    return getBackendFileUrl(originalUrl);
 };
 
 /**

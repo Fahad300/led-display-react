@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { useToast } from "../contexts/ToastContext";
 import MediaModal from "./MediaModal";
-import { backendApi } from "../api/backendApi";
+import { backendApi, getFileUrl } from "../api/backendApi";
 
 interface MediaFile {
     name: string;
@@ -48,10 +48,10 @@ export const MediaSelector: React.FC<MediaSelectorProps> = ({
 
             const response = await backendApi.get(`/api/files`);
 
-            // Ensure file URLs are properly formatted
+            // Use the URL returned by the server and ensure it's absolute
             const processedFiles = response.data.files.map((file: any) => ({
                 ...file,
-                url: file.url || file.getUrl?.() || `${backendApi.defaults.baseURL}/api/files/${file.id}`
+                url: getFileUrl(file.url) // Ensure URL is absolute and points to backend
             }));
 
             const filteredFiles = processedFiles.filter((file: MediaFile) =>
@@ -240,6 +240,14 @@ export const MediaSelector: React.FC<MediaSelectorProps> = ({
                                                                 src={file.url}
                                                                 alt={file.name}
                                                                 className="w-full h-32 object-cover"
+                                                                onError={(e) => {
+                                                                    console.error("Failed to load image:", file.url, e);
+                                                                    const target = e.target as HTMLImageElement;
+                                                                    target.src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%23999999'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z'%3E%3C/path%3E%3C/svg%3E";
+                                                                }}
+                                                                onLoad={() => {
+                                                                    // Image loaded successfully
+                                                                }}
                                                             />
                                                         ) : (
                                                             <div className="w-full h-32 bg-gray-100 flex items-center justify-center">

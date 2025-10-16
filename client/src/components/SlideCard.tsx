@@ -1,6 +1,8 @@
 import React, { useState, useCallback } from "react";
 import { Slide, SLIDE_TYPES, ImageSlide, VideoSlide, NewsSlide, EventSlide, TextSlide } from "../types";
 import { useUnified } from "../contexts/UnifiedContext";
+import { getFileUrl } from "../api/backendApi";
+
 
 /** Props for the slide card component */
 interface SlideCardProps {
@@ -17,20 +19,27 @@ const SlideCard: React.FC<SlideCardProps> = ({ slide, onEdit, onDelete, onToggle
     const { employees } = useUnified();
 
     const getMediaUrl = useCallback(() => {
+        let url = "";
         switch (slide.type) {
             case SLIDE_TYPES.IMAGE:
-                return (slide as ImageSlide).data.imageUrl;
+                url = (slide as ImageSlide).data.imageUrl;
+                break;
             case SLIDE_TYPES.VIDEO:
-                return (slide as VideoSlide).data.videoUrl;
+                url = (slide as VideoSlide).data.videoUrl;
+                break;
             case SLIDE_TYPES.NEWS: {
                 const news = slide as NewsSlide;
-                return news.data.newsImage || news.data.backgroundImage;
+                url = news.data.newsImage || news.data.backgroundImage;
+                break;
             }
             case SLIDE_TYPES.TEXT:
                 return ""; // Text slides don't have media URLs
             default:
                 return "";
         }
+
+        // Convert relative URLs to absolute backend URLs
+        return url ? getFileUrl(url) : "";
     }, [slide]);
 
     const getTitle = useCallback(() => {

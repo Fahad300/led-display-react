@@ -205,14 +205,43 @@ export const getBackendBaseUrl = (): string => {
 
 /**
  * Helper to construct full file URLs
+ * Handles both old and new URL formats automatically
  * 
- * @param path - Relative file path (e.g., "/uploads/file.jpg")
- * @returns Full URL to the file
+ * @param path - File path (can be relative, absolute, or full URL)
+ * @returns Full URL to the file on the backend server
  */
 export const getFileUrl = (path: string): string => {
+    if (!path) return "";
+
     const baseUrl = getBackendUrl();
-    const cleanPath = path.startsWith("/") ? path : `/${path}`;
-    return `${baseUrl}${cleanPath}`;
+
+    // If already a full URL with backend domain, return as-is
+    if (path.startsWith(baseUrl)) {
+        return path;
+    }
+
+    // If it's a full URL to a different domain (shouldn't happen, but handle it)
+    if (path.startsWith("http://") || path.startsWith("https://")) {
+        return path;
+    }
+
+    // If it's /static/uploads/filename - already correct relative path
+    if (path.startsWith("/static/uploads/")) {
+        return `${baseUrl}${path}`;
+    }
+
+    // If it's /api/files/id - old format, but still works via backend
+    if (path.startsWith("/api/files/")) {
+        return `${baseUrl}${path}`;
+    }
+
+    // If it's just a filename, assume it's in /static/uploads/
+    if (!path.startsWith("/")) {
+        return `${baseUrl}/static/uploads/${path}`;
+    }
+
+    // Default: add baseUrl to whatever path we have
+    return `${baseUrl}${path}`;
 };
 
 /**

@@ -1,6 +1,6 @@
 import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn } from "typeorm";
 import { User } from "./User";
-import { getFileUrl } from "../utils/urlUtils";
+import { getFileUrl, getBackendUrl } from "../utils/urlUtils";
 
 @Entity("files")
 export class File {
@@ -37,12 +37,16 @@ export class File {
 
     /**
      * Get file URL for serving from file system
-     * Returns relative URL to work in any environment (dev/production)
+     * Returns ABSOLUTE static file URL based on filename
+     * Files are served via /static/uploads/ directory on the backend server
+     * Returns absolute URL to ensure files are loaded from backend, not frontend
      */
     getUrl(): string {
-        // Return relative URL - browser will use current origin
-        // This works in both development and production
-        return `/api/files/${this.id}`;
+        // Return ABSOLUTE URL with backend server address
+        // This ensures files are loaded from the backend server (port 5000)
+        // instead of the frontend server (port 3000)
+        const backendUrl = getBackendUrl();
+        return `${backendUrl}/static/uploads/${this.filename}`;
     }
 
     /**

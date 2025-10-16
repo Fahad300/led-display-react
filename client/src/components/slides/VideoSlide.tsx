@@ -1,7 +1,7 @@
 import React, { useRef, useEffect, useState, useCallback } from "react";
 import { VideoSlide as VideoSlideType } from "../../types";
 import { MediaSelector } from "../MediaSelector";
-import { getOptimizedVideoUrl, isVideoCached, extractFileId } from "../../utils/localFileServer";
+import { getOptimizedVideoUrl, isVideoCached } from "../../utils/localFileServer";
 
 interface VideoSlideProps {
     slide: VideoSlideType;
@@ -18,7 +18,7 @@ export const VideoSlide: React.FC<VideoSlideProps> = ({ slide, onUpdate, onVideo
     const [isLoading, setIsLoading] = useState(false);
     const [hasError, setHasError] = useState(false);
     const [loadingProgress, setLoadingProgress] = useState(0);
-    const [isPreloading, setIsPreloading] = useState(false);
+    const [isPreloading] = useState(false);
     const [currentVideoUrl, setCurrentVideoUrl] = useState<string>('');
     const [playAttempts, setPlayAttempts] = useState(0);
 

@@ -3,7 +3,6 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useUnified } from "../contexts/UnifiedContext";
 import { useSettings } from "../contexts/SettingsContext";
 import { useUIStore } from "../stores/useUIStore";
-import { sessionService } from "../services/sessionService";
 import { Slide, SLIDE_TYPES, ImageSlide as ImageSlideType, VideoSlide as VideoSlideType, NewsSlide, EventSlide as EventSlideType, TeamComparisonSlide as TeamComparisonSlideType, GraphSlide as GraphSlideType, TextSlide as TextSlideType } from "../types";
 import { EventSlideComponent, ImageSlide, CurrentEscalationsSlideComponent, TeamComparisonSlideComponent, GraphSlide, TextSlide } from "./slides";
 import { VideoSlide } from "./slides/VideoSlide";
