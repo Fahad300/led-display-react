@@ -42,7 +42,7 @@ export const DEFAULT_SLIDE_CONFIGS: DefaultSlideConfig[] = [
         dataSource: "api"
     },
     {
-        id: "event-birthday-1",
+        id: "birthday-event-slide",
         name: "Birthday Celebrations",
         type: "event",
         active: false, // User can activate this slide if needed
@@ -50,7 +50,7 @@ export const DEFAULT_SLIDE_CONFIGS: DefaultSlideConfig[] = [
         dataSource: "api"
     },
     {
-        id: "event-anniversary-1",
+        id: "anniversary-event-slide",
         name: "Work Anniversaries",
         type: "event",
         active: false, // User can activate this slide if needed

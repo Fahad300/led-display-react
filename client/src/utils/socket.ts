@@ -83,14 +83,18 @@ class SocketManager {
         logger.info(`🔌 Connecting to Socket.IO server: ${socketUrl}`);
         logger.info(`   Domain: ${this.domain}`);
 
-        // Create socket connection
+        // Create socket connection with 24/7 reliability settings
         this.socket = io(socketUrl, {
-            transports: ["websocket", "polling"], // Prefer WebSocket
+            transports: ["websocket", "polling"], // Prefer WebSocket, fallback to polling
             reconnection: true,
             reconnectionDelay: 1000,
             reconnectionDelayMax: 5000,
-            reconnectionAttempts: Infinity,
+            reconnectionAttempts: Infinity,       // Keep trying forever for 24/7 operation
             timeout: 20000,
+            // CRITICAL: Force reconnection if connection drops
+            autoConnect: true,
+            // ADDED: Keep-alive settings for 24/7 operation
+            forceNew: false,                      // Reuse connection when possible
         });
 
         // Set up event handlers

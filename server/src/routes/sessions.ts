@@ -148,13 +148,25 @@ router.post("/slideshow-data", isAuthenticated, async (req, res) => {
             return res.status(400).json({ error: "Slideshow data is required" });
         }
 
-        // Find the current active session
-        const session = await AppDataSource.getRepository(Session).findOne({
+        // Find the current active session OR create one if it doesn't exist
+        let session = await AppDataSource.getRepository(Session).findOne({
             where: { userId, isActive: true }
         });
 
         if (!session) {
-            return res.status(404).json({ error: "No active session found" });
+            logger.info(`No active session found for user ${userId}, creating one...`);
+
+            // Create a new session automatically
+            session = AppDataSource.getRepository(Session).create({
+                sessionToken: crypto.randomBytes(32).toString("hex"),
+                userId,
+                deviceInfo: req.headers["user-agent"] || "Unknown Device",
+                ipAddress: req.ip || "Unknown IP",
+                lastActivity: new Date(),
+                isActive: true
+            });
+
+            logger.info(`Created new session for user ${userId}`);
         }
 
         // Update slideshow data

@@ -1,5 +1,5 @@
-import React from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import React, { useEffect, useState } from 'react';
+import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ToastProvider } from './contexts/ToastContext';
 import { UnifiedProvider } from './contexts/UnifiedContext';
@@ -15,6 +15,8 @@ import MediaPage from './pages/MediaPage';
 import DisplayPage from "./pages/DisplayPage";
 import { useInitializeApp } from "./hooks/useInitializeApp";
 import { logger } from "./utils/logger";
+import { connectSocket, onSocketUpdate, disconnectSocket } from "./utils/socket";
+import { ForceLogoutModal } from "./components/ForceLogoutModal";
 
 /**
  * React Query Client Configuration
@@ -65,6 +67,93 @@ const AppInitializer: React.FC<{ children: React.ReactNode }> = ({ children }) =
   return <>{children}</>;
 };
 
+/**
+ * Force Logout Listener Component
+ * 
+ * CRITICAL: Handles single-session enforcement
+ * When another user logs in, this component:
+ * 1. Receives force-logout event via Socket.IO
+ * 2. Shows a graceful modal with options
+ * 3. Clears local authentication
+ * 4. Allows user to choose to login again or cancel
+ * 
+ * This ensures only ONE user has control at any time.
+ */
+const ForceLogoutListener: React.FC = () => {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
+  const [newUserUsername, setNewUserUsername] = useState<string>("");
+
+  useEffect(() => {
+    // Skip force-logout handling on display page (display should always be accessible)
+    const isDisplayPage = location.pathname === "/display";
+    if (isDisplayPage) {
+      logger.info("📺 Display page detected - skipping force-logout listener");
+      return;
+    }
+
+    // Skip force-logout handling on login page (no active session to logout from)
+    const isLoginPage = location.pathname === "/login";
+    if (isLoginPage) {
+      logger.info("🔐 Login page detected - skipping force-logout listener");
+      return;
+    }
+
+    logger.info("🔒 Setting up force-logout listener for single-session enforcement");
+
+    // Connect to socket for real-time events
+    connectSocket();
+
+    // Listen for force-logout events
+    const unsubscribe = onSocketUpdate((event) => {
+      // Check if this is a force-logout event
+      if (event.type === "force-reload" && event.data?.reason === "new_login") {
+        // CRITICAL: Check if this force-logout is for the current session
+        // If the newSessionToken matches our current session, ignore it (we're the new login)
+        const currentSessionToken = localStorage.getItem("sessionToken");
+        const newSessionToken = event.data.newSessionToken;
+
+        if (currentSessionToken && newSessionToken && currentSessionToken === newSessionToken) {
+          logger.info("✅ Force-logout event is for current session - ignoring (we're the new login)");
+          return;
+        }
+
+        logger.warn("⚠️ FORCE LOGOUT: Another user has logged in");
+        logger.info(`   Message: ${event.data.message}`);
+        logger.info(`   New user: ${event.data.username}`);
+
+        // Clear authentication
+        localStorage.removeItem("token");
+        localStorage.removeItem("sessionToken");
+
+        // Show graceful logout modal
+        setNewUserUsername(event.data.username || "Unknown User");
+        setShowLogoutModal(true);
+      }
+    });
+
+    return () => {
+      logger.info("🔇 Cleaning up force-logout listener");
+      unsubscribe();
+      // Note: We don't disconnect socket here as other components may be using it
+    };
+  }, [navigate, location.pathname]);
+
+  const handleCloseModal = () => {
+    setShowLogoutModal(false);
+    // Modal will handle navigation to login page
+  };
+
+  return (
+    <ForceLogoutModal
+      isOpen={showLogoutModal}
+      newUserUsername={newUserUsername}
+      onClose={handleCloseModal}
+    />
+  );
+};
+
 const App: React.FC = () => {
   return (
     <QueryClientProvider client={queryClient}>
@@ -85,6 +174,9 @@ const App: React.FC = () => {
             <SettingsProvider>
               <UnifiedProvider>
                 <AppInitializer>
+                  {/* Global Force-Logout Listener for Single-Session Enforcement */}
+                  <ForceLogoutListener />
+
                   <Routes>
                     {/* Public Routes */}
                     <Route path="/login" element={<Login />} />

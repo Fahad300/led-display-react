@@ -252,7 +252,14 @@ export const useUIStore = create<UIState>()(
                     // Save to localStorage immediately
                     localStorage.setItem("displaySettings", JSON.stringify(updatedSettings));
 
-                    // Save to database and sync to all devices
+                    // Only save to database if user is authenticated
+                    const token = localStorage.getItem("token");
+                    if (!token) {
+                        logger.info("⏭️ Display settings updated locally (not saved to database - display-only mode)");
+                        return; // Settings are already saved to localStorage, which is sufficient for display page
+                    }
+
+                    // Save to database and sync to all devices (authenticated users only)
                     try {
                         // Load current slideshow data to preserve existing slides
                         const currentData = await sessionService.loadSlideshowData();
@@ -299,6 +306,14 @@ export const useUIStore = create<UIState>()(
                     const state = get();
                     const slidesToUse = slidesToSave || state.slides;
 
+                    // Check if user is authenticated before attempting to save
+                    const token = localStorage.getItem("token");
+                    if (!token) {
+                        logger.info("⏭️ Skipping database save - user not authenticated (display-only mode)");
+                        set({ isSyncing: false });
+                        return; // Silent return - this is expected behavior for display page
+                    }
+
                     try {
                         set({ isSyncing: true });
 
@@ -343,6 +358,9 @@ export const useUIStore = create<UIState>()(
 
                         logger.sync("Syncing from database...");
                         const slideshowData = await sessionService.loadSlideshowData();
+
+                        // Note: loadSlideshowData handles both authenticated and public access
+                        // It falls back to public endpoint if user is not authenticated
 
                         if (slideshowData) {
                             // Update slides if available

@@ -24,6 +24,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     const logout = useCallback(() => {
         localStorage.removeItem("token");
+        localStorage.removeItem("sessionToken");
         setToken(null);
         setUser(null);
         delete backendApi.defaults.headers.common["Authorization"];
@@ -53,8 +54,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                 password
             });
 
-            const { token } = response.data;
+            const { token, sessionToken } = response.data;
             localStorage.setItem("token", token);
+
+            // Store session token to identify this specific session
+            // Used to ignore force-logout events for the newly logged-in user
+            if (sessionToken) {
+                localStorage.setItem("sessionToken", sessionToken);
+            }
+
             setToken(token);
             navigate("/");
         } catch (error) {

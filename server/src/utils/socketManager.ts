@@ -61,10 +61,13 @@ class SocketManager {
                 methods: ["GET", "POST"],
                 credentials: true
             },
-            // Connection options
-            pingTimeout: 60000,      // 60s before considering connection dead
-            pingInterval: 25000,     // Ping every 25s
+            // Connection options for 24/7 reliability
+            pingTimeout: 120000,     // 120s before considering connection dead (increased for reliability)
+            pingInterval: 25000,     // Ping every 25s to keep connection alive
             transports: ["websocket", "polling"], // Prefer WebSocket, fallback to polling
+            allowEIO3: true,         // Allow Engine.IO v3 clients (compatibility)
+            // CRITICAL: Ensure reconnection works properly
+            connectTimeout: 45000,   // 45s connection timeout
         });
 
         // Set up event handlers
@@ -153,15 +156,36 @@ class SocketManager {
 
         logger.info(`📡 Broadcasting update: type="${type}", domain="${domain}", source="${source}"`);
 
-        // Emit to all sockets in the domain room
-        this.io.to(domain).emit("update", {
-            type,
-            timestamp: timestamp || Date.now(),
-            source,
-            data
-        });
+        // Check if broadcasting to all domains (special case for system-wide events like force-logout)
+        if (domain === "all") {
+            logger.info(`   🌐 Broadcasting to ALL domains (system-wide event)`);
+            
+            // Emit to all connected sockets regardless of domain
+            this.io.emit("update", {
+                type,
+                timestamp: timestamp || Date.now(),
+                source,
+                data
+            });
 
-        logger.info(`   ✅ Update broadcast to domain "${domain}" (${this.connectedDisplays.get(domain)?.size || 0} displays)`);
+            // Count total displays across all domains
+            let totalDisplays = 0;
+            this.connectedDisplays.forEach((socketSet) => {
+                totalDisplays += socketSet.size;
+            });
+
+            logger.info(`   ✅ System-wide update broadcast to ALL domains (${totalDisplays} total displays)`);
+        } else {
+            // Emit to all sockets in the specific domain room
+            this.io.to(domain).emit("update", {
+                type,
+                timestamp: timestamp || Date.now(),
+                source,
+                data
+            });
+
+            logger.info(`   ✅ Update broadcast to domain "${domain}" (${this.connectedDisplays.get(domain)?.size || 0} displays)`);
+        }
     }
 
     /**

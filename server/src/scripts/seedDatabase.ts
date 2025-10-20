@@ -5,8 +5,19 @@ import { logger } from "../utils/logger";
 import crypto from "crypto";
 
 /**
- * Clean database seeding script
- * Adds basic sample data for development - only necessary tables
+ * Production Database Seeding Script
+ * 
+ * Seeds the database with production-ready user accounts:
+ * - admin@persivia.com (System Administrator)
+ * - hr@persivia.com (HR Administrator)
+ * 
+ * This script should be run once during initial setup.
+ * It will skip seeding if users already exist.
+ * 
+ * Usage:
+ *   npm run seed
+ *   OR
+ *   npx ts-node src/scripts/seedDatabase.ts
  */
 const seedDatabase = async (): Promise<void> => {
     try {
@@ -35,7 +46,14 @@ const seedDatabase = async (): Promise<void> => {
 };
 
 /**
- * Seed users table with sample data
+ * Seed users table with production accounts
+ * 
+ * PRODUCTION USERS:
+ * - admin@persivia.com (Admin account for system management)
+ * - hr@persivia.com (HR account for HR admin tasks)
+ * 
+ * Both accounts use the same secure password for initial setup.
+ * Users should change their passwords after first login.
  */
 const seedUsers = async (): Promise<void> => {
     const userRepository = AppDataSource.getRepository(User);
@@ -47,31 +65,36 @@ const seedUsers = async (): Promise<void> => {
         return;
     }
 
-    // Create sample users
+    // Create production users
     const users = [
         {
             id: "550e8400-e29b-41d4-a716-446655440001",
-            username: "admin",
-            password: "admin123"
+            username: "admin@persivia.com",
+            password: "Persivia@2296"
         },
         {
             id: "550e8400-e29b-41d4-a716-446655440002",
-            username: "user1",
-            password: "password123"
+            username: "hr@persivia.com",
+            password: "Persivia@2296"
         }
     ];
 
     for (const userData of users) {
         const user = userRepository.create(userData);
         await userRepository.save(user);
-        logger.info(`Created user: ${user.username}`);
+        logger.info(`✅ Created production user: ${user.username}`);
     }
 
-    logger.info("User seeding completed");
+    logger.info("✅ Production user seeding completed");
+    logger.info("📧 Admin account: admin@persivia.com");
+    logger.info("📧 HR account: hr@persivia.com");
 };
 
 /**
- * Seed sessions table with sample data (optional)
+ * Seed sessions table with initial session for admin user
+ * 
+ * Creates a default session with initial slide configuration.
+ * This ensures the display has slides to show on first run.
  */
 const seedSessions = async (): Promise<void> => {
     const sessionRepository = AppDataSource.getRepository(Session);
@@ -85,7 +108,7 @@ const seedSessions = async (): Promise<void> => {
 
     // Get the admin user
     const userRepository = AppDataSource.getRepository(User);
-    const adminUser = await userRepository.findOne({ where: { username: "admin" } });
+    const adminUser = await userRepository.findOne({ where: { username: "admin@persivia.com" } });
 
     if (!adminUser) {
         logger.warn("Admin user not found, skipping session seeding");

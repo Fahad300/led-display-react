@@ -281,9 +281,25 @@ class SessionService {
                 timestamp: slideshowData.lastUpdated,
                 version: slideshowData.version
             });
-        } catch (error) {
+        } catch (error: any) {
+            // Check if it's an authentication error
+            if (error.response?.status === 401) {
+                console.warn("⚠️ Authentication failed - token may be expired. Clearing token.");
+                localStorage.removeItem("token");
+                // Don't throw - let the app continue, user will be redirected to login if needed
+                return;
+            }
+
+            // Check if it's a 404 error (endpoint not found or no active session)
+            if (error.response?.status === 404) {
+                console.warn("⚠️ No active session found or endpoint not available. Skipping save.");
+                // Don't throw - this is expected for display-only mode
+                return;
+            }
+
             console.error("Error saving slideshow data:", error);
-            throw error;
+            // Don't throw - failing to save shouldn't break the app
+            // User can continue working, changes are in memory
         }
     }
 

@@ -121,9 +121,14 @@ const fetchDashboardData = async (): Promise<DashboardData> => {
  * - queryFn: fetchDashboardData - function to fetch the data
  * - refetchInterval: 60000 (60 seconds) - automatic refetch interval
  * - staleTime: 30000 (30 seconds) - how long data is considered fresh
- * - refetchOnWindowFocus: false - don't refetch when window gains focus
- * - retry: 3 - retry failed requests up to 3 times
+ * - refetchOnWindowFocus: true - refetch when window gains focus to ensure fresh data
+ * - retry: infinite - keep retrying forever to ensure 24/7 operation
  * - retryDelay: exponential backoff - 1s, 2s, 4s between retries
+ * 
+ * CRITICAL FOR 24/7 OPERATION:
+ * - refetchInterval keeps polling even when tab is hidden
+ * - refetchOnWindowFocus ensures data is fresh when display becomes visible
+ * - Infinite retry ensures temporary network issues don't stop the display
  * 
  * @returns UseQueryResult with dashboard data, loading state, and error
  */
@@ -133,6 +138,7 @@ export const useDashboardData = (): UseQueryResult<DashboardData, Error> => {
         queryFn: fetchDashboardData,
 
         // Refetch every 60 seconds (backend cache is 60s, so this aligns perfectly)
+        // CRITICAL: This keeps polling even when tab is in background (24/7 operation)
         refetchInterval: 60 * 1000,
 
         // Consider data stale after 30 seconds
@@ -140,19 +146,29 @@ export const useDashboardData = (): UseQueryResult<DashboardData, Error> => {
         // automatically refetching in the background if data is stale
         staleTime: 30 * 1000,
 
-        // Don't refetch when window regains focus
-        // This prevents excessive requests when users switch between tabs
-        refetchOnWindowFocus: false,
+        // CHANGED: Refetch when window gains focus to ensure fresh data
+        // This is critical for displays that may go to sleep or be hidden
+        refetchOnWindowFocus: true,
 
-        // Retry failed requests with exponential backoff
-        retry: 3,
+        // CHANGED: Infinite retry to ensure 24/7 operation
+        // Temporary network issues should not stop the display
+        retry: Infinity,
         retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
 
         // Keep previous data while refetching to prevent flickering (v5 uses placeholderData)
         placeholderData: (previousData) => previousData,
 
-        // Enable background refetch even when component is not focused
+        // CRITICAL: Enable background refetch even when component is not focused
+        // This ensures polling continues even when tab is in background (24/7 operation)
         refetchIntervalInBackground: true,
+
+        // ADDED: Network mode to control query behavior
+        // 'always' ensures queries run even when offline (using cached data)
+        networkMode: "always",
+
+        // ADDED: gcTime (garbage collection time) - keep data in cache for 10 minutes
+        // This ensures data is available even after brief disconnections
+        gcTime: 10 * 60 * 1000,
     });
 };
 

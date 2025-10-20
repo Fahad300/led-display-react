@@ -15,6 +15,7 @@ import { motion } from "framer-motion";
 import { onDisplayUpdate, UpdateEvent } from "../utils/updateEvents";
 import { connectSocket, disconnectSocket, onSocketUpdate, onSocketStateChange, ConnectionState } from "../utils/socket";
 import { logger } from "../utils/logger";
+import { ForceLogoutModal } from "./ForceLogoutModal";
 
 /**
  * Simple Animated Logo Component for LED Display with Video Background
@@ -119,6 +120,8 @@ const SlidesDisplay: React.FC = () => {
     const [isRefreshing, setIsRefreshing] = React.useState(false);
     const [lastUpdateTime, setLastUpdateTime] = React.useState<Date>(new Date());
     const [socketState, setSocketState] = React.useState<ConnectionState>("disconnected");
+    const [showLogoutModal, setShowLogoutModal] = React.useState(false);
+    const [newUserUsername, setNewUserUsername] = React.useState<string>("");
 
     console.log('📺 SlidesDisplay - Component rendered (DISPLAY-ONLY MODE):', {
         slidesCount: slides.length,
@@ -198,6 +201,46 @@ const SlidesDisplay: React.FC = () => {
                 case "all":
                 case "force-reload":
                     logger.info("🔄 Full refresh: syncing everything...");
+
+                    // Check if this is a force-logout event (another user logged in)
+                    if (event.data?.reason === "new_login") {
+                        // CRITICAL: Display page should NEVER be disrupted by force-logout
+                        // Display page is non-interactive and public - no one logs in there
+                        const isDisplayPage = window.location.pathname === "/display";
+
+                        if (isDisplayPage) {
+                            logger.info("📺 Display page detected - ignoring force-logout, continuing with refresh");
+                            // On display page: just continue with normal refresh (no logout, no redirect)
+                            // This ensures display continues showing updated data without disruption
+                        } else {
+                            // On authenticated pages (HomePage, AdminPage, etc.):
+                            // Check if this force-logout is for the current session
+                            // If the newSessionToken matches our current session, ignore it (we're the new login)
+                            const currentSessionToken = localStorage.getItem("sessionToken");
+                            const newSessionToken = event.data.newSessionToken;
+
+                            if (currentSessionToken && newSessionToken && currentSessionToken === newSessionToken) {
+                                logger.info("✅ Force-logout event is for current session - ignoring (we're the new login)");
+                                // Continue with normal refresh
+                            } else {
+                                // This is a force-logout for an old session - show graceful logout modal
+                                logger.warn("⚠️ Force logout: Another user has logged in");
+                                logger.info(`   Message: ${event.data.message}`);
+                                logger.info(`   New user: ${event.data.username}`);
+
+                                // Clear authentication tokens
+                                localStorage.removeItem("token");
+                                localStorage.removeItem("sessionToken");
+
+                                // Show graceful logout modal
+                                setNewUserUsername(event.data.username || "Unknown User");
+                                setShowLogoutModal(true);
+                                return; // Don't continue with refresh (modal will handle navigation)
+                            }
+                        }
+                    }
+
+                    // Sync everything (for display page or non-force-logout events)
                     await Promise.all([
                         syncFromDatabase(),
                         syncSettings(),
@@ -325,6 +368,64 @@ const SlidesDisplay: React.FC = () => {
             clearInterval(pollInterval);
         };
     }, [lastUpdateTime, syncFromDatabase, syncSettings, queryClient]);
+
+    /**
+     * Visibility Change Detection (CRITICAL FOR 24/7 OPERATION)
+     * 
+     * Handles page visibility changes to ensure display stays fresh:
+     * - When tab becomes visible after being hidden, immediately refresh data
+     * - Prevents stale data from being displayed
+     * - Critical for LED displays that may be switched between inputs
+     * 
+     * This solves the "blank display after 5-10 minutes" issue by ensuring
+     * fresh data is loaded whenever the display becomes visible.
+     */
+    useEffect(() => {
+        logger.info("👁️ DisplayPage: Setting up visibility change detection");
+
+        const handleVisibilityChange = async () => {
+            if (document.visibilityState === "visible") {
+                logger.info("👁️ Page became visible - refreshing data immediately");
+
+                try {
+                    setIsRefreshing(true);
+
+                    // Immediately sync all data when page becomes visible
+                    await Promise.all([
+                        syncFromDatabase(),
+                        syncSettings(),
+                        queryClient.refetchQueries({ queryKey: ["dashboardData"] })
+                    ]);
+
+                    setLastUpdateTime(new Date());
+                    logger.success("✅ Visibility refresh completed successfully");
+                } catch (error) {
+                    logger.error("❌ Visibility refresh failed", error);
+                } finally {
+                    setIsRefreshing(false);
+                }
+            } else {
+                logger.info("👁️ Page became hidden - polling will continue in background");
+            }
+        };
+
+        // Listen for visibility changes
+        document.addEventListener("visibilitychange", handleVisibilityChange);
+
+        // Also handle page focus/blur for additional reliability
+        const handleFocus = () => {
+            logger.info("🎯 Window gained focus - ensuring fresh data");
+            handleVisibilityChange();
+        };
+
+        window.addEventListener("focus", handleFocus);
+
+        return () => {
+            logger.info("🔇 DisplayPage: Removing visibility change listeners");
+            document.removeEventListener("visibilitychange", handleVisibilityChange);
+            window.removeEventListener("focus", handleFocus);
+        };
+    }, [syncFromDatabase, syncSettings, queryClient]);
 
     /**
      * ✅ DISPLAY-ONLY APPROACH
@@ -462,8 +563,20 @@ const SlidesDisplay: React.FC = () => {
         }
     });
 
+    const handleCloseLogoutModal = () => {
+        setShowLogoutModal(false);
+        // Modal will handle navigation to login page
+    };
+
     return (
         <div className="relative w-full h-screen bg-black">
+            {/* Force Logout Modal */}
+            <ForceLogoutModal
+                isOpen={showLogoutModal}
+                newUserUsername={newUserUsername}
+                onClose={handleCloseLogoutModal}
+            />
+
             <SwiperSlideshow
                 key={`swiper-${displaySettings.swiperEffect}`}
                 slides={activeSlides}

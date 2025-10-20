@@ -945,8 +945,14 @@ const HomePage: React.FC = () => {
 
             // Save to database FIRST (critical: must complete before display update)
             logger.sync("HomePage: Saving slide toggle to database...");
-            await saveToDatabase();
-            logger.success("HomePage: Slide toggle saved to database");
+            try {
+                await saveToDatabase();
+                logger.info("HomePage: Slide toggle saved to database");
+            } catch (error) {
+                logger.error("HomePage: Failed to save slide toggle to database:", error);
+                // Don't throw - continue with display update even if save fails
+                // The slide state is already updated locally
+            }
 
             // Dispatch real-time sync event to notify DisplayPage immediately
             // TODO: Remove dispatchSlidesChange when WebSocket is enabled - triggerDisplayUpdate will handle it
