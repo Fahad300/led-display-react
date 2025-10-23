@@ -140,7 +140,6 @@ export const TeamComparisonSlideComponent: React.FC<{ slide: TeamComparisonSlide
                         <thead>
                             <tr className="bg-persivia-blue/90">
                                 <th className="px-4 py-3 text-base md:text-lg font-bold text-white text-left">Team</th>
-                                <th className="px-4 py-3 text-base md:text-lg font-bold text-white text-center">Total</th>
                                 <th className="px-3 py-3 text-sm md:text-base font-bold text-white text-center">Disaster</th>
                                 <th className="px-3 py-3 text-sm md:text-base font-bold text-white text-center">Code Blue</th>
                                 <th className="px-3 py-3 text-sm md:text-base font-bold text-white text-center">C-Level</th>
@@ -150,6 +149,7 @@ export const TeamComparisonSlideComponent: React.FC<{ slide: TeamComparisonSlide
                                 <th className="px-3 py-3 text-sm md:text-base font-bold text-white text-center">P3</th>
                                 <th className="px-3 py-3 text-sm md:text-base font-bold text-white text-center">P4</th>
                                 <th className="px-3 py-3 text-sm md:text-base font-bold text-white text-center">P5</th>
+                                <th className="px-4 py-3 text-base md:text-lg font-bold text-white text-center">Total</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -159,7 +159,6 @@ export const TeamComparisonSlideComponent: React.FC<{ slide: TeamComparisonSlide
                                     className={`${index % 2 === 0 ? "bg-white/10" : "bg-white/5"} hover:bg-white/20 transition-colors`}
                                 >
                                     <td className="px-4 py-3 text-lg text-white font-medium border-r border-white/10">{team.teamName}</td>
-                                    <td className="px-4 py-3 text-lg text-white text-center font-bold border-r border-white/10">{team.totalTickets}</td>
                                     <td className="px-3 py-3 text-base text-white text-center font-medium border-r border-white/10 bg-red-900/60">{team.disasterEscalations}</td>
                                     <td className="px-3 py-3 text-base text-white text-center font-medium border-r border-white/10 bg-purple-900/60">{team.codeBlueEscalations}</td>
                                     <td className="px-3 py-3 text-base text-white text-center font-medium border-r border-white/10 bg-red-500/40">{team.cLevelEscalations}</td>
@@ -168,7 +167,8 @@ export const TeamComparisonSlideComponent: React.FC<{ slide: TeamComparisonSlide
                                     <td className="px-3 py-3 text-base text-white text-center font-medium border-r border-white/10 bg-yellow-500/40">{team.p2Escalations}</td>
                                     <td className="px-3 py-3 text-base text-white text-center font-medium border-r border-white/10 bg-blue-500/40">{team.p3Escalations}</td>
                                     <td className="px-3 py-3 text-base text-white text-center font-medium border-r border-white/10 bg-green-500/40">{team.p4Escalations}</td>
-                                    <td className="px-3 py-3 text-base text-white text-center font-medium bg-teal-500/40">{team.p5Escalations}</td>
+                                    <td className="px-3 py-3 text-base text-white text-center font-medium border-r border-white/10 bg-teal-500/40">{team.p5Escalations}</td>
+                                    <td className="px-4 py-3 text-lg text-white text-center font-bold">{team.totalTickets}</td>
                                 </tr>
                             ))}
                         </tbody>
