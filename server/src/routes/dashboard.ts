@@ -45,6 +45,7 @@ interface CachedData {
     data: {
         employees: any[];
         graphData: any;
+        teamComparisonData: any;
         escalations: any[];
         failures?: ApiFailure[];
     };
@@ -138,20 +139,143 @@ const transformJiraChartData = (rawData: any): any => {
 };
 
 /**
+ * Transform ssr-team-wise API response to GraphSlideData format
+ * 
+ * New API structure:
+ * {
+ *   from_month: "2025-09-01",
+ *   to_month: "2025-09-30 23:59:59",
+ *   data: [
+ *     {
+ *       Team: "MOBILE TEAM",
+ *       Disaster: 0,
+ *       "Code Blue": 2,
+ *       "C-Level": 0,
+ *       Omega: 0,
+ *       P1: 0,
+ *       P2: 1,
+ *       P3: 0,
+ *       P4: 0,
+ *       P5: 0,
+ *       Total: 3,
+ *       "Not an Issue": 1,
+ *       "Overall Total With \"Not an Issue\"": 4
+ *     },
+ *     ...
+ *   ]
+ * }
+ */
+const transformSsrTeamWiseData = (rawData: any): any => {
+    if (!rawData || !rawData.data || !Array.isArray(rawData.data)) {
+        logger.warn("Invalid ssr-team-wise data structure, returning null");
+        return null;
+    }
+
+    try {
+        // Define priority categories in display order
+        const priorityCategories = [
+            { key: "Disaster", label: "Disaster" },
+            { key: "Code Blue", label: "Code Blue" },
+            { key: "C-Level", label: "C-Level (Top Priority: fix immediately)" },
+            { key: "Omega", label: "Omega" },
+            { key: "P1", label: "P1 - Blocker (fix immediately)" },
+            { key: "P2", label: "P2 - Critical (must fix)" },
+            { key: "P3", label: "P3 - Major (really should fix)" },
+            { key: "P4", label: "P4 - Minor (should fix)" },
+            { key: "P5", label: "P5 - Trivial (should fix)" }
+        ];
+
+        // Transform each team's data
+        const transformedData = rawData.data.map((teamData: any) => {
+            const dataPoints = priorityCategories.map((priority) => ({
+                date: rawData.from_month || new Date().toISOString(),
+                value: teamData[priority.key] || 0,
+                category: priority.label
+            }));
+
+            return {
+                teamName: teamData.Team || "Unknown Team",
+                dataPoints: dataPoints
+            };
+        });
+
+        // Format date range for title
+        const formatDateRange = (fromDateStr: string, toDateStr: string): string => {
+            if (!fromDateStr || !toDateStr) {
+                const currentYear = new Date().getFullYear();
+                return ` ${currentYear}`;
+            }
+
+            const fromDate = new Date(fromDateStr);
+            const toDate = new Date(toDateStr);
+
+            const fromMonth = fromDate.getMonth();
+            const fromYear = fromDate.getFullYear();
+            const toMonth = toDate.getMonth();
+            const toYear = toDate.getFullYear();
+
+            // If same month and year, show just "September 2025"
+            if (fromMonth === toMonth && fromYear === toYear) {
+                return ` (${fromDate.toLocaleDateString("en-US", {
+                    month: "long",
+                    year: "numeric"
+                })})`;
+            }
+
+            // If different months but same year, show "Sep - Oct 2025"
+            if (fromYear === toYear) {
+                const fromMonthShort = fromDate.toLocaleDateString("en-US", { month: "short" });
+                const toMonthShort = toDate.toLocaleDateString("en-US", { month: "short" });
+                return ` (${fromMonthShort} - ${toMonthShort} ${fromYear})`;
+            }
+
+            // If different years, show "Dec 2024 - Jan 2025"
+            const fromFormatted = fromDate.toLocaleDateString("en-US", {
+                month: "short",
+                year: "numeric"
+            });
+            const toFormatted = toDate.toLocaleDateString("en-US", {
+                month: "short",
+                year: "numeric"
+            });
+            return ` (${fromFormatted} - ${toFormatted})`;
+        };
+
+        const dateRange = formatDateRange(rawData.from_month, rawData.to_month);
+
+        return {
+            title: "Team Performance Comparison",
+            description: "",
+            graphType: "bar" as const,
+            data: transformedData,
+            timeRange: "monthly",
+            lastUpdated: rawData.to_month || new Date().toISOString(),
+            categories: priorityCategories.map((p) => p.label),
+            dateRange: dateRange.trim().replace(/^\(|\)$/g, "") // Remove parentheses for separate display
+        };
+    } catch (error) {
+        logger.error("Error transforming ssr-team-wise data:", error);
+        return null;
+    }
+};
+
+/**
  * Fetch all dashboard data from external APIs
  */
 const fetchAllDashboardData = async (): Promise<{
     employees: any[];
     graphData: any;
+    teamComparisonData: any;
     escalations: any[];
     failures: ApiFailure[];
 }> => {
     logger.info("Fetching all dashboard data from external APIs");
 
     // Fetch all endpoints in parallel for better performance
-    const [employeesResult, graphDataResult, escalationsResult] = await Promise.allSettled([
+    const [employeesResult, graphDataResult, teamComparisonResult, escalationsResult] = await Promise.allSettled([
         fetchFromExternalApi("celebrations", "employees data"),
         fetchFromExternalApi("jira-chart", "graph data"),
+        fetchFromExternalApi("ssr-team-wise", "team comparison data"),
         fetchFromExternalApi("ongoing-escalations", "escalations data")
     ]);
 
@@ -179,6 +303,10 @@ const fetchAllDashboardData = async (): Promise<{
     // Transform jira-chart data to GraphSlideData format
     const rawGraphData = graphDataResult.status === "fulfilled" ? graphDataResult.value : null;
     const graphData = rawGraphData ? transformJiraChartData(rawGraphData) : null;
+
+    // Transform team comparison data using the new ssr-team-wise format
+    const rawTeamComparisonData = teamComparisonResult.status === "fulfilled" ? teamComparisonResult.value : null;
+    const teamComparisonData = rawTeamComparisonData ? transformSsrTeamWiseData(rawTeamComparisonData) : null;
 
     const escalations = escalationsResult.status === "fulfilled" ? escalationsResult.value : [];
 
@@ -213,6 +341,15 @@ const fetchAllDashboardData = async (): Promise<{
         logger.info("✅ Successfully fetched graph data (jira-chart)");
     }
 
+    if (teamComparisonResult.status === "rejected") {
+        const errorMsg = teamComparisonResult.reason?.message || String(teamComparisonResult.reason);
+        logger.error("❌ Failed to fetch team comparison data:", errorMsg);
+        logger.error("   Endpoint: /api/proxy/ssr-team-wise (team comparison)");
+        failures.push({ endpoint: "ssr-team-wise", error: errorMsg });
+    } else {
+        logger.info("✅ Successfully fetched team comparison data");
+    }
+
     if (escalationsResult.status === "rejected") {
         const errorMsg = escalationsResult.reason?.message || String(escalationsResult.reason);
         logger.error("❌ Failed to fetch escalations data:", errorMsg);
@@ -226,7 +363,7 @@ const fetchAllDashboardData = async (): Promise<{
         logger.warn(`⚠️  ${failures.length} API endpoint(s) failed. Returning partial data.`);
     }
 
-    return { employees, graphData, escalations, failures };
+    return { employees, graphData, teamComparisonData, escalations, failures };
 };
 
 /**
@@ -247,7 +384,8 @@ const isCacheFresh = (): boolean => {
  * 
  * Consolidated endpoint that returns all dashboard data in a single response:
  * - employees: Array of employee data (birthdays, anniversaries, etc.)
- * - graphData: Chart/graph data for visualizations
+ * - graphData: Chart/graph data for visualizations (Team Wise Data)
+ * - teamComparisonData: Team performance comparison data
  * - escalations: Current escalations/tickets data
  * 
  * Caching Strategy (ZERO DOWNTIME):
@@ -262,6 +400,7 @@ const isCacheFresh = (): boolean => {
  *   data: {
  *     employees: any[],
  *     graphData: any,
+ *     teamComparisonData: any,
  *     escalations: any[],
  *     failures?: Array<{ endpoint: string, error: string }>
  *   },
@@ -360,6 +499,7 @@ router.get("/", async (req, res) => {
                 data: {
                     employees: [],
                     graphData: null,
+                    teamComparisonData: null,
                     escalations: []
                 }
             });
@@ -391,6 +531,7 @@ router.get("/", async (req, res) => {
             data: {
                 employees: [],
                 graphData: null,
+                teamComparisonData: null,
                 escalations: []
             }
         });

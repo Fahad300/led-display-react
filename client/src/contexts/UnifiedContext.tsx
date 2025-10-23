@@ -66,6 +66,7 @@ interface UnifiedContextType {
     // ==================== DATA (from React Query) ====================
     employees: Employee[];
     graphData: GraphSlideData | null;
+    teamComparisonData: GraphSlideData | null;
     escalations: any[];
 
     // ==================== UI STATE (from Zustand) ====================
@@ -158,6 +159,7 @@ export const UnifiedProvider: React.FC<UnifiedProviderProps> = ({ children }) =>
     // Extract data from React Query response
     const employees = useMemo(() => dashboardData?.employees || [], [dashboardData]);
     const graphData = useMemo(() => dashboardData?.graphData || null, [dashboardData]);
+    const teamComparisonData = useMemo(() => dashboardData?.teamComparisonData || null, [dashboardData]);
     const escalations = useMemo(() => dashboardData?.escalations || [], [dashboardData]);
 
     // Check if on display page
@@ -220,6 +222,7 @@ export const UnifiedProvider: React.FC<UnifiedProviderProps> = ({ children }) =>
         // Data from React Query
         employees,
         graphData,
+        teamComparisonData,
         escalations,
 
         // UI state from Zustand

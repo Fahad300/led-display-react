@@ -36,8 +36,10 @@ import { logger } from "../utils/logger";
 export interface DashboardData {
     /** Employee data including birthdays and anniversaries */
     employees: any[];
-    /** Chart and graph data for visualizations */
+    /** Chart and graph data for visualizations (Team Wise Data) */
     graphData: any;
+    /** Team performance comparison data */
+    teamComparisonData: any;
     /** Current escalations and tickets data */
     escalations: any[];
 }
@@ -187,6 +189,7 @@ export const getLegacyCachedData = (): DashboardData => {
     return {
         employees: [],
         graphData: null,
+        teamComparisonData: null,
         escalations: []
     };
 };
@@ -207,7 +210,7 @@ export const useEmployeesData = () => {
 };
 
 /**
- * Hook for accessing only graph data
+ * Hook for accessing only graph data (Team Wise Data)
  * Convenience wrapper around useDashboardData
  */
 export const useGraphData = () => {
@@ -215,6 +218,21 @@ export const useGraphData = () => {
 
     return {
         graphData: data?.graphData || null,
+        isLoading,
+        error,
+        refetch
+    };
+};
+
+/**
+ * Hook for accessing only team comparison data
+ * Convenience wrapper around useDashboardData
+ */
+export const useTeamComparisonData = () => {
+    const { data, isLoading, error, refetch } = useDashboardData();
+
+    return {
+        teamComparisonData: data?.teamComparisonData || null,
         isLoading,
         error,
         refetch
