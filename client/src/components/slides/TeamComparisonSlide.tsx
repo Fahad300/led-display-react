@@ -108,63 +108,62 @@ export const TeamComparisonSlideComponent: React.FC<{ slide: TeamComparisonSlide
     const slideTitle = "Team Performance Comparison";
 
     return (
-        <div className="w-full h-full flex flex-col items-center justify-center bg-persivia-white p-6 pb-16 rounded-lg shadow animated-gradient-bg overflow-hidden relative">
+        <div className="w-full h-full flex flex-col items-center justify-center bg-persivia-white px-4 sm:px-6 md:px-8 lg:px-10 xl:px-12 2xl:px-16 py-2 sm:py-3 md:py-4 pb-4 sm:pb-6 md:pb-8 rounded-lg shadow animated-gradient-bg overflow-hidden relative">
 
-            <div className="flex flex-col items-center justify-space-between">
-                <h2 className="text-3xl md:text-4xl font-bold text-persivia-white mb-6">
+            <div className="flex flex-col items-center justify-space-between mb-1 sm:mb-2 md:mb-3">
+                <h2 className="text-lg sm:text-xl md:text-2xl lg:text-3xl xl:text-4xl 2xl:text-5xl font-bold text-persivia-white mb-1 sm:mb-2">
                     {slideTitle}
-                    <span className="text-lg md:text-xl font-normal ml-2">({getDateRange()})</span>
+                    <span className="text-xs sm:text-sm md:text-base lg:text-lg xl:text-xl font-normal ml-1 sm:ml-2">({getDateRange()})</span>
                 </h2>
             </div>
-            <div className="w-[98%] max-w-none rounded-2xl backdrop-blur-md bg-white/20 bg-opacity-70 shadow-lg p-3 overflow-hidden">
+            <div className={`w-[88%] sm:w-[89%] md:w-[90%] lg:w-[91%] xl:w-[92%] 2xl:w-[93%] max-w-none rounded-2xl backdrop-blur-md bg-white/20 bg-opacity-70 shadow-lg overflow-hidden ${hasData ? "block h-auto p-1 sm:p-1.5 md:p-2 lg:p-2.5 xl:p-3" : "flex-1 flex flex-col min-h-0"}`}>
                 {loading ? (
-                    <div className="flex items-center justify-center h-48">
+                    <div className="flex items-center justify-center flex-1 min-h-[200px] sm:min-h-[300px] md:min-h-[400px] p-1 sm:p-1.5 md:p-2 lg:p-3">
                         <div className="text-center">
-                            <div className="w-16 h-16 
-                            border-2 border-yellow-400 border-t-transparent rounded-full animate-spin"></div>
-                            <p className="text-white/70 text-lg font-medium">Loading team data...</p>
-                            <p className="text-white/50 text-sm mt-2">Fetching live data from API</p>
+                            <div className="w-12 h-12 sm:w-16 sm:h-16 md:w-20 md:h-20 border-2 border-yellow-400 border-t-transparent rounded-full animate-spin mx-auto"></div>
+                            <p className="text-white/70 text-xs sm:text-sm md:text-base lg:text-lg font-medium mt-2 sm:mt-4">Loading team data...</p>
+                            <p className="text-white/50 text-[10px] sm:text-xs md:text-sm mt-1 sm:mt-2">Fetching live data from API</p>
                         </div>
                     </div>
                 ) : error ? (
-                    <div className="flex items-center justify-center h-48">
+                    <div className="flex items-center justify-center flex-1 min-h-[200px] sm:min-h-[300px] md:min-h-[400px] p-1 sm:p-1.5 md:p-2 lg:p-3">
                         <div className="text-center">
-                            <div className="w-16 h-16 bg-white/10 rounded-full flex items-center justify-center mx-auto mb-4">
-                                <svg className="w-8 h-8 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <div className="w-12 h-12 sm:w-16 sm:h-16 md:w-20 md:h-20 bg-white/10 rounded-full flex items-center justify-center mx-auto mb-2 sm:mb-4">
+                                <svg className="w-6 h-6 sm:w-8 sm:h-8 md:w-10 md:h-10 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                                 </svg>
                             </div>
-                            <p className="text-white/70 text-lg font-medium">Error loading team data</p>
-                            <p className="text-red-300 text-sm mt-2">{error}</p>
+                            <p className="text-white/70 text-xs sm:text-sm md:text-base lg:text-lg font-medium">Error loading team data</p>
+                            <p className="text-red-300 text-[10px] sm:text-xs md:text-sm mt-1 sm:mt-2">{error}</p>
                         </div>
                     </div>
                 ) : !hasData ? (
-                    <div className="flex items-center justify-center h-48">
+                    <div className="flex items-center justify-center flex-1 min-h-[200px] sm:min-h-[300px] md:min-h-[400px] p-1 sm:p-1.5 md:p-2 lg:p-3">
                         <div className="text-center">
-                            <div className="w-16 h-16 bg-white/10 rounded-full flex items-center justify-center mx-auto mb-4">
-                                <svg className="w-8 h-8 text-white/50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <div className="w-12 h-12 sm:w-16 sm:h-16 md:w-20 md:h-20 bg-white/10 rounded-full flex items-center justify-center mx-auto mb-2 sm:mb-4">
+                                <svg className="w-6 h-6 sm:w-8 sm:h-8 md:w-10 md:h-10 text-white/50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                                 </svg>
                             </div>
-                            <p className="text-white/70 text-lg font-medium">No team data available</p>
+                            <p className="text-white/70 text-xs sm:text-sm md:text-base lg:text-lg font-medium">No team data available</p>
                         </div>
                     </div>
                 ) : (
-                    <div className="rounded-lg overflow-hidden w-full">
-                        <table className="w-full">
-                            <thead>
+                    <div className="w-full">
+                        <table className="w-full border-collapse table-auto">
+                            <thead className="sticky top-0 z-10">
                                 <tr className="bg-persivia-blue/90">
-                                    <th className="px-3 py-2 text-sm font-bold text-white text-left w-28">Team</th>
-                                    <th className="px-2 py-2 text-sm font-bold text-white text-center w-16">Disaster</th>
-                                    <th className="px-2 py-2 text-sm font-bold text-white text-center w-16">Code Blue</th>
-                                    <th className="px-2 py-2 text-sm font-bold text-white text-center w-16">C-Level</th>
-                                    <th className="px-2 py-2 text-sm font-bold text-white text-center w-16">Omega</th>
-                                    <th className="px-2 py-2 text-sm font-bold text-white text-center w-16">P1</th>
-                                    <th className="px-2 py-2 text-sm font-bold text-white text-center w-16">P2</th>
-                                    <th className="px-2 py-2 text-sm font-bold text-white text-center w-16">P3</th>
-                                    <th className="px-2 py-2 text-sm font-bold text-white text-center w-16">P4</th>
-                                    <th className="px-2 py-2 text-sm font-bold text-white text-center w-16">P5</th>
-                                    <th className="px-3 py-2 text-sm font-bold text-white text-center w-20">Total</th>
+                                    <th className="px-0.5 sm:px-1 md:px-1.5 lg:px-2 xl:px-2.5 2xl:px-3 py-0.5 sm:py-1 md:py-1.5 lg:py-2 text-[10px] sm:text-xs md:text-sm lg:text-base xl:text-lg 2xl:text-xl font-bold text-white text-left min-w-[70px] sm:min-w-[85px] md:min-w-[100px] lg:min-w-[115px] xl:min-w-[130px] 2xl:min-w-[145px]">Team</th>
+                                    <th className="px-0 sm:px-0.5 md:px-1 lg:px-1 xl:px-1.5 2xl:px-2 py-0.5 sm:py-1 md:py-1.5 lg:py-2 text-[10px] sm:text-xs md:text-sm lg:text-base xl:text-lg 2xl:text-xl font-bold text-white text-center min-w-[40px] sm:min-w-[45px] md:min-w-[50px] lg:min-w-[55px] xl:min-w-[60px] 2xl:min-w-[65px]">Disaster</th>
+                                    <th className="px-0 sm:px-0.5 md:px-1 lg:px-1 xl:px-1.5 2xl:px-2 py-0.5 sm:py-1 md:py-1.5 lg:py-2 text-[10px] sm:text-xs md:text-sm lg:text-base xl:text-lg 2xl:text-xl font-bold text-white text-center min-w-[40px] sm:min-w-[45px] md:min-w-[50px] lg:min-w-[55px] xl:min-w-[60px] 2xl:min-w-[65px]">Code Blue</th>
+                                    <th className="px-0 sm:px-0.5 md:px-1 lg:px-1 xl:px-1.5 2xl:px-2 py-0.5 sm:py-1 md:py-1.5 lg:py-2 text-[10px] sm:text-xs md:text-sm lg:text-base xl:text-lg 2xl:text-xl font-bold text-white text-center min-w-[40px] sm:min-w-[45px] md:min-w-[50px] lg:min-w-[55px] xl:min-w-[60px] 2xl:min-w-[65px]">C-Level</th>
+                                    <th className="px-0 sm:px-0.5 md:px-1 lg:px-1 xl:px-1.5 2xl:px-2 py-0.5 sm:py-1 md:py-1.5 lg:py-2 text-[10px] sm:text-xs md:text-sm lg:text-base xl:text-lg 2xl:text-xl font-bold text-white text-center min-w-[40px] sm:min-w-[45px] md:min-w-[50px] lg:min-w-[55px] xl:min-w-[60px] 2xl:min-w-[65px]">Omega</th>
+                                    <th className="px-0 sm:px-0.5 md:px-0.5 lg:px-1 xl:px-1.5 2xl:px-2 py-0.5 sm:py-1 md:py-1.5 lg:py-2 text-[10px] sm:text-xs md:text-sm lg:text-base xl:text-lg 2xl:text-xl font-bold text-white text-center min-w-[30px] sm:min-w-[35px] md:min-w-[40px] lg:min-w-[45px] xl:min-w-[50px] 2xl:min-w-[55px]">P1</th>
+                                    <th className="px-0 sm:px-0.5 md:px-0.5 lg:px-1 xl:px-1.5 2xl:px-2 py-0.5 sm:py-1 md:py-1.5 lg:py-2 text-[10px] sm:text-xs md:text-sm lg:text-base xl:text-lg 2xl:text-xl font-bold text-white text-center min-w-[30px] sm:min-w-[35px] md:min-w-[40px] lg:min-w-[45px] xl:min-w-[50px] 2xl:min-w-[55px]">P2</th>
+                                    <th className="px-0 sm:px-0.5 md:px-0.5 lg:px-1 xl:px-1.5 2xl:px-2 py-0.5 sm:py-1 md:py-1.5 lg:py-2 text-[10px] sm:text-xs md:text-sm lg:text-base xl:text-lg 2xl:text-xl font-bold text-white text-center min-w-[30px] sm:min-w-[35px] md:min-w-[40px] lg:min-w-[45px] xl:min-w-[50px] 2xl:min-w-[55px]">P3</th>
+                                    <th className="px-0 sm:px-0.5 md:px-0.5 lg:px-1 xl:px-1.5 2xl:px-2 py-0.5 sm:py-1 md:py-1.5 lg:py-2 text-[10px] sm:text-xs md:text-sm lg:text-base xl:text-lg 2xl:text-xl font-bold text-white text-center min-w-[30px] sm:min-w-[35px] md:min-w-[40px] lg:min-w-[45px] xl:min-w-[50px] 2xl:min-w-[55px]">P4</th>
+                                    <th className="px-0 sm:px-0.5 md:px-0.5 lg:px-1 xl:px-1.5 2xl:px-2 py-0.5 sm:py-1 md:py-1.5 lg:py-2 text-[10px] sm:text-xs md:text-sm lg:text-base xl:text-lg 2xl:text-xl font-bold text-white text-center min-w-[30px] sm:min-w-[35px] md:min-w-[40px] lg:min-w-[45px] xl:min-w-[50px] 2xl:min-w-[55px]">P5</th>
+                                    <th className="px-0.5 sm:px-1 md:px-1.5 lg:px-2 xl:px-2.5 2xl:px-3 py-0.5 sm:py-1 md:py-1.5 lg:py-2 text-[10px] sm:text-xs md:text-sm lg:text-base xl:text-lg 2xl:text-xl font-bold text-white text-center min-w-[40px] sm:min-w-[45px] md:min-w-[50px] lg:min-w-[55px] xl:min-w-[60px] 2xl:min-w-[65px]">Total</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -173,17 +172,17 @@ export const TeamComparisonSlideComponent: React.FC<{ slide: TeamComparisonSlide
                                         key={team.teamName}
                                         className={`${index % 2 === 0 ? "bg-white/10" : "bg-white/5"} hover:bg-white/20 transition-colors`}
                                     >
-                                        <td className="px-3 py-2 text-sm text-white font-medium border-r border-white/10">{team.teamName}</td>
-                                        <td className="px-2 py-2 text-sm text-white text-center font-medium border-r border-white/10 bg-red-900/60">{team.disasterEscalations}</td>
-                                        <td className="px-2 py-2 text-sm text-white text-center font-medium border-r border-white/10 bg-purple-900/60">{team.codeBlueEscalations}</td>
-                                        <td className="px-2 py-2 text-sm text-white text-center font-medium border-r border-white/10 bg-red-500/40">{team.cLevelEscalations}</td>
-                                        <td className="px-2 py-2 text-sm text-white text-center font-medium border-r border-white/10 bg-pink-600/40">{team.omegaEscalations}</td>
-                                        <td className="px-2 py-2 text-sm text-white text-center font-medium border-r border-white/10 bg-orange-500/40">{team.p1Escalations}</td>
-                                        <td className="px-2 py-2 text-sm text-white text-center font-medium border-r border-white/10 bg-yellow-500/40">{team.p2Escalations}</td>
-                                        <td className="px-2 py-2 text-sm text-white text-center font-medium border-r border-white/10 bg-blue-500/40">{team.p3Escalations}</td>
-                                        <td className="px-2 py-2 text-sm text-white text-center font-medium border-r border-white/10 bg-green-500/40">{team.p4Escalations}</td>
-                                        <td className="px-2 py-2 text-sm text-white text-center font-medium border-r border-white/10 bg-teal-500/40">{team.p5Escalations}</td>
-                                        <td className="px-3 py-2 text-sm text-white text-center font-bold">{team.totalTickets}</td>
+                                        <td className="px-0.5 sm:px-1 md:px-1.5 lg:px-2 xl:px-2.5 2xl:px-3 py-0.5 sm:py-1 md:py-1.5 lg:py-2 text-[10px] sm:text-xs md:text-sm lg:text-base xl:text-lg 2xl:text-xl text-white font-medium border-r border-white/10">{team.teamName}</td>
+                                        <td className="px-0 sm:px-0.5 md:px-1 lg:px-1 xl:px-1.5 2xl:px-2 py-0.5 sm:py-1 md:py-1.5 lg:py-2 text-[10px] sm:text-xs md:text-sm lg:text-base xl:text-lg 2xl:text-xl text-white text-center font-medium border-r border-white/10 bg-red-900/60">{team.disasterEscalations}</td>
+                                        <td className="px-0 sm:px-0.5 md:px-1 lg:px-1 xl:px-1.5 2xl:px-2 py-0.5 sm:py-1 md:py-1.5 lg:py-2 text-[10px] sm:text-xs md:text-sm lg:text-base xl:text-lg 2xl:text-xl text-white text-center font-medium border-r border-white/10 bg-purple-900/60">{team.codeBlueEscalations}</td>
+                                        <td className="px-0 sm:px-0.5 md:px-1 lg:px-1 xl:px-1.5 2xl:px-2 py-0.5 sm:py-1 md:py-1.5 lg:py-2 text-[10px] sm:text-xs md:text-sm lg:text-base xl:text-lg 2xl:text-xl text-white text-center font-medium border-r border-white/10 bg-red-500/40">{team.cLevelEscalations}</td>
+                                        <td className="px-0 sm:px-0.5 md:px-1 lg:px-1 xl:px-1.5 2xl:px-2 py-0.5 sm:py-1 md:py-1.5 lg:py-2 text-[10px] sm:text-xs md:text-sm lg:text-base xl:text-lg 2xl:text-xl text-white text-center font-medium border-r border-white/10 bg-pink-600/40">{team.omegaEscalations}</td>
+                                        <td className="px-0 sm:px-0.5 md:px-0.5 lg:px-1 xl:px-1.5 2xl:px-2 py-0.5 sm:py-1 md:py-1.5 lg:py-2 text-[10px] sm:text-xs md:text-sm lg:text-base xl:text-lg 2xl:text-xl text-white text-center font-medium border-r border-white/10 bg-orange-500/40">{team.p1Escalations}</td>
+                                        <td className="px-0 sm:px-0.5 md:px-0.5 lg:px-1 xl:px-1.5 2xl:px-2 py-0.5 sm:py-1 md:py-1.5 lg:py-2 text-[10px] sm:text-xs md:text-sm lg:text-base xl:text-lg 2xl:text-xl text-white text-center font-medium border-r border-white/10 bg-yellow-500/40">{team.p2Escalations}</td>
+                                        <td className="px-0 sm:px-0.5 md:px-0.5 lg:px-1 xl:px-1.5 2xl:px-2 py-0.5 sm:py-1 md:py-1.5 lg:py-2 text-[10px] sm:text-xs md:text-sm lg:text-base xl:text-lg 2xl:text-xl text-white text-center font-medium border-r border-white/10 bg-blue-500/40">{team.p3Escalations}</td>
+                                        <td className="px-0 sm:px-0.5 md:px-0.5 lg:px-1 xl:px-1.5 2xl:px-2 py-0.5 sm:py-1 md:py-1.5 lg:py-2 text-[10px] sm:text-xs md:text-sm lg:text-base xl:text-lg 2xl:text-xl text-white text-center font-medium border-r border-white/10 bg-green-500/40">{team.p4Escalations}</td>
+                                        <td className="px-0 sm:px-0.5 md:px-0.5 lg:px-1 xl:px-1.5 2xl:px-2 py-0.5 sm:py-1 md:py-1.5 lg:py-2 text-[10px] sm:text-xs md:text-sm lg:text-base xl:text-lg 2xl:text-xl text-white text-center font-medium border-r border-white/10 bg-teal-500/40">{team.p5Escalations}</td>
+                                        <td className="px-0.5 sm:px-1 md:px-1.5 lg:px-2 xl:px-2.5 2xl:px-3 py-0.5 sm:py-1 md:py-1.5 lg:py-2 text-[10px] sm:text-xs md:text-sm lg:text-base xl:text-lg 2xl:text-xl text-white text-center font-bold">{team.totalTickets}</td>
                                     </tr>
                                 ))}
                             </tbody>
