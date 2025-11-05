@@ -187,12 +187,13 @@ export interface TeamComparisonSlideData {
 }
 
 /**
- * Team comparison slide type
+ * Team comparison slide type (Part 1 - Top half)
  */
 export interface TeamComparisonSlide extends BaseSlide {
     type: typeof SLIDE_TYPES.TEAM_COMPARISON;
     data: TeamComparisonSlideData;
 }
+
 
 /**
  * Graph data point interface

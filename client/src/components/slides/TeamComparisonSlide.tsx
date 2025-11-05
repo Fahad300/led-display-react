@@ -8,6 +8,8 @@ import { useUnified } from "../../contexts/UnifiedContext";
  * 
  * NOTE: This component now uses teamComparisonData instead of graphData.
  * The Team Wise Data slide uses graphData, while Team Performance Comparison uses teamComparisonData.
+ * 
+ * Shows all teams in a single comprehensive table with all priority levels
  */
 export const TeamComparisonSlideComponent: React.FC<{ slide: TeamComparisonSlide }> = ({ slide }) => {
     const { teamComparisonData } = useUnified();
@@ -39,6 +41,19 @@ export const TeamComparisonSlideComponent: React.FC<{ slide: TeamComparisonSlide
         return "N/A";
     };
 
+    // Format team name - remove "TEAM" suffix and capitalize properly
+    const formatTeamName = (teamName: string): string => {
+        if (!teamName) return "UNKNOWN";
+
+        // Remove "TEAM" suffix (case insensitive)
+        let formatted = teamName.replace(/\s+TEAM\s*$/i, "");
+
+        // Convert to ALL CAPS
+        formatted = formatted.toUpperCase();
+
+        return formatted;
+    };
+
     // Transform graph data to team comparison format
     const transformGraphDataToTeams = () => {
         if (!teamWiseData || !teamWiseData.data || !Array.isArray(teamWiseData.data) || teamWiseData.data.length === 0) {
@@ -65,13 +80,11 @@ export const TeamComparisonSlideComponent: React.FC<{ slide: TeamComparisonSlide
 
             const totalTickets = disasterCount + codeBlueCount + cLevelCount + omegaCount + p1Count + p2Count + p3Count + p4Count + p5Count;
 
-            // Only include teams with actual data
-            if (totalTickets === 0) {
-                return null;
-            }
+            // Include all teams, even those with zero data
+            // This ensures we see the complete picture of all teams
 
             return {
-                teamName: team.teamName || "Unknown Team",
+                teamName: formatTeamName(team.teamName || "Unknown Team"),
                 totalTickets: totalTickets,
                 disasterEscalations: disasterCount,
                 codeBlueEscalations: codeBlueCount,
@@ -85,24 +98,25 @@ export const TeamComparisonSlideComponent: React.FC<{ slide: TeamComparisonSlide
             };
         }).filter(team => team !== null); // Remove null entries
 
-        // Sort by total tickets (descending) and return top 10
+        // Sort by total tickets (descending) and return all teams
         return allTeams
-            .sort((a: any, b: any) => b.totalTickets - a.totalTickets)
-            .slice(0, 10);
+            .sort((a: any, b: any) => b.totalTickets - a.totalTickets);
     };
 
-    const teams = transformGraphDataToTeams();
-    const hasData = teams.length > 0;
+    const allTeams = transformGraphDataToTeams();
+    const hasData = allTeams.length > 0;
+    const slideTitle = "Team Performance Comparison";
 
     return (
-        <div className="w-full h-full flex flex-col items-center justify-center bg-persivia-white p-6 pb-16 rounded-lg shadow animated-gradient-bg overflow-hidden">
+        <div className="w-full h-full flex flex-col items-center justify-center bg-persivia-white p-6 pb-16 rounded-lg shadow animated-gradient-bg overflow-hidden relative">
+
             <div className="flex flex-col items-center justify-space-between">
                 <h2 className="text-3xl md:text-4xl font-bold text-persivia-white mb-6">
-                    Team Performance Comparison
+                    {slideTitle}
                     <span className="text-lg md:text-xl font-normal ml-2">({getDateRange()})</span>
                 </h2>
             </div>
-            <div className="w-[90%] max-w-6xl rounded-2xl backdrop-blur-md bg-white/20 bg-opacity-70 shadow-lg p-6 overflow-hidden">
+            <div className="w-[98%] max-w-none rounded-2xl backdrop-blur-md bg-white/20 bg-opacity-70 shadow-lg p-3 overflow-hidden">
                 {loading ? (
                     <div className="flex items-center justify-center h-48">
                         <div className="text-center">
@@ -136,43 +150,45 @@ export const TeamComparisonSlideComponent: React.FC<{ slide: TeamComparisonSlide
                         </div>
                     </div>
                 ) : (
-                    <table className="min-w-full rounded-lg">
-                        <thead>
-                            <tr className="bg-persivia-blue/90">
-                                <th className="px-4 py-3 text-base md:text-lg font-bold text-white text-left">Team</th>
-                                <th className="px-3 py-3 text-sm md:text-base font-bold text-white text-center">Disaster</th>
-                                <th className="px-3 py-3 text-sm md:text-base font-bold text-white text-center">Code Blue</th>
-                                <th className="px-3 py-3 text-sm md:text-base font-bold text-white text-center">C-Level</th>
-                                <th className="px-3 py-3 text-sm md:text-base font-bold text-white text-center">Omega</th>
-                                <th className="px-3 py-3 text-sm md:text-base font-bold text-white text-center">P1</th>
-                                <th className="px-3 py-3 text-sm md:text-base font-bold text-white text-center">P2</th>
-                                <th className="px-3 py-3 text-sm md:text-base font-bold text-white text-center">P3</th>
-                                <th className="px-3 py-3 text-sm md:text-base font-bold text-white text-center">P4</th>
-                                <th className="px-3 py-3 text-sm md:text-base font-bold text-white text-center">P5</th>
-                                <th className="px-4 py-3 text-base md:text-lg font-bold text-white text-center">Total</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {teams.map((team: any, index: number) => (
-                                <tr
-                                    key={team.teamName}
-                                    className={`${index % 2 === 0 ? "bg-white/10" : "bg-white/5"} hover:bg-white/20 transition-colors`}
-                                >
-                                    <td className="px-4 py-3 text-lg text-white font-medium border-r border-white/10">{team.teamName}</td>
-                                    <td className="px-3 py-3 text-base text-white text-center font-medium border-r border-white/10 bg-red-900/60">{team.disasterEscalations}</td>
-                                    <td className="px-3 py-3 text-base text-white text-center font-medium border-r border-white/10 bg-purple-900/60">{team.codeBlueEscalations}</td>
-                                    <td className="px-3 py-3 text-base text-white text-center font-medium border-r border-white/10 bg-red-500/40">{team.cLevelEscalations}</td>
-                                    <td className="px-3 py-3 text-base text-white text-center font-medium border-r border-white/10 bg-pink-600/40">{team.omegaEscalations}</td>
-                                    <td className="px-3 py-3 text-base text-white text-center font-medium border-r border-white/10 bg-orange-500/40">{team.p1Escalations}</td>
-                                    <td className="px-3 py-3 text-base text-white text-center font-medium border-r border-white/10 bg-yellow-500/40">{team.p2Escalations}</td>
-                                    <td className="px-3 py-3 text-base text-white text-center font-medium border-r border-white/10 bg-blue-500/40">{team.p3Escalations}</td>
-                                    <td className="px-3 py-3 text-base text-white text-center font-medium border-r border-white/10 bg-green-500/40">{team.p4Escalations}</td>
-                                    <td className="px-3 py-3 text-base text-white text-center font-medium border-r border-white/10 bg-teal-500/40">{team.p5Escalations}</td>
-                                    <td className="px-4 py-3 text-lg text-white text-center font-bold">{team.totalTickets}</td>
+                    <div className="rounded-lg overflow-hidden w-full">
+                        <table className="w-full">
+                            <thead>
+                                <tr className="bg-persivia-blue/90">
+                                    <th className="px-3 py-2 text-sm font-bold text-white text-left w-28">Team</th>
+                                    <th className="px-2 py-2 text-sm font-bold text-white text-center w-16">Disaster</th>
+                                    <th className="px-2 py-2 text-sm font-bold text-white text-center w-16">Code Blue</th>
+                                    <th className="px-2 py-2 text-sm font-bold text-white text-center w-16">C-Level</th>
+                                    <th className="px-2 py-2 text-sm font-bold text-white text-center w-16">Omega</th>
+                                    <th className="px-2 py-2 text-sm font-bold text-white text-center w-16">P1</th>
+                                    <th className="px-2 py-2 text-sm font-bold text-white text-center w-16">P2</th>
+                                    <th className="px-2 py-2 text-sm font-bold text-white text-center w-16">P3</th>
+                                    <th className="px-2 py-2 text-sm font-bold text-white text-center w-16">P4</th>
+                                    <th className="px-2 py-2 text-sm font-bold text-white text-center w-16">P5</th>
+                                    <th className="px-3 py-2 text-sm font-bold text-white text-center w-20">Total</th>
                                 </tr>
-                            ))}
-                        </tbody>
-                    </table>
+                            </thead>
+                            <tbody>
+                                {allTeams.map((team: any, index: number) => (
+                                    <tr
+                                        key={team.teamName}
+                                        className={`${index % 2 === 0 ? "bg-white/10" : "bg-white/5"} hover:bg-white/20 transition-colors`}
+                                    >
+                                        <td className="px-3 py-2 text-sm text-white font-medium border-r border-white/10">{team.teamName}</td>
+                                        <td className="px-2 py-2 text-sm text-white text-center font-medium border-r border-white/10 bg-red-900/60">{team.disasterEscalations}</td>
+                                        <td className="px-2 py-2 text-sm text-white text-center font-medium border-r border-white/10 bg-purple-900/60">{team.codeBlueEscalations}</td>
+                                        <td className="px-2 py-2 text-sm text-white text-center font-medium border-r border-white/10 bg-red-500/40">{team.cLevelEscalations}</td>
+                                        <td className="px-2 py-2 text-sm text-white text-center font-medium border-r border-white/10 bg-pink-600/40">{team.omegaEscalations}</td>
+                                        <td className="px-2 py-2 text-sm text-white text-center font-medium border-r border-white/10 bg-orange-500/40">{team.p1Escalations}</td>
+                                        <td className="px-2 py-2 text-sm text-white text-center font-medium border-r border-white/10 bg-yellow-500/40">{team.p2Escalations}</td>
+                                        <td className="px-2 py-2 text-sm text-white text-center font-medium border-r border-white/10 bg-blue-500/40">{team.p3Escalations}</td>
+                                        <td className="px-2 py-2 text-sm text-white text-center font-medium border-r border-white/10 bg-green-500/40">{team.p4Escalations}</td>
+                                        <td className="px-2 py-2 text-sm text-white text-center font-medium border-r border-white/10 bg-teal-500/40">{team.p5Escalations}</td>
+                                        <td className="px-3 py-2 text-sm text-white text-center font-bold">{team.totalTickets}</td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
                 )}
             </div>
         </div>
