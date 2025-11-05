@@ -188,8 +188,9 @@ const SlidesDisplay: React.FC = () => {
                         logger.success("✅ Settings updated from Socket.IO data");
                     } else {
                         // Fallback to database sync if settings data not provided
+                        // Use skipSlides=true to only sync settings, not slides
                         logger.info("🔄 Syncing settings from database (fallback)...");
-                        await syncSettings();
+                        await syncFromDatabase(true);
                     }
                     break;
 
@@ -241,9 +242,9 @@ const SlidesDisplay: React.FC = () => {
                     }
 
                     // Sync everything (for display page or non-force-logout events)
+                    // Note: syncFromDatabase() already syncs settings, so syncSettings() is redundant
                     await Promise.all([
                         syncFromDatabase(),
-                        syncSettings(),
                         queryClient.refetchQueries({ queryKey: ["dashboardData"] })
                     ]);
                     break;
@@ -347,10 +348,11 @@ const SlidesDisplay: React.FC = () => {
             try {
                 setIsRefreshing(true);
 
-                // Sync everything
+                // Sync data and settings only (skip slides to prevent overwriting manual changes)
+                // Slides should only sync from explicit update events, not from periodic polling
+                // Note: syncFromDatabase(true) already syncs settings, so we don't need syncSettings() here
                 await Promise.all([
-                    syncFromDatabase(),
-                    syncSettings(),
+                    syncFromDatabase(true), // skipSlides = true: only sync settings/data, not slides
                     queryClient.refetchQueries({ queryKey: ["dashboardData"] })
                 ]);
 
@@ -391,9 +393,9 @@ const SlidesDisplay: React.FC = () => {
                     setIsRefreshing(true);
 
                     // Immediately sync all data when page becomes visible
+                    // Note: syncFromDatabase() already syncs settings, so syncSettings() is redundant
                     await Promise.all([
                         syncFromDatabase(),
-                        syncSettings(),
                         queryClient.refetchQueries({ queryKey: ["dashboardData"] })
                     ]);
 

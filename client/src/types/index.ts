@@ -187,7 +187,7 @@ export interface TeamComparisonSlideData {
 }
 
 /**
- * Team comparison slide type (Part 1 - Top half)
+ * Team comparison slide type
  */
 export interface TeamComparisonSlide extends BaseSlide {
     type: typeof SLIDE_TYPES.TEAM_COMPARISON;

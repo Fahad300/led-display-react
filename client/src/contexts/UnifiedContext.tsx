@@ -95,7 +95,7 @@ interface UnifiedContextType {
 
     // ==================== ACTIONS ====================
     saveToDatabase: (slidesToSave?: Slide[]) => Promise<void>;
-    syncFromDatabase: () => Promise<void>;
+    syncFromDatabase: (skipSlides?: boolean) => Promise<void>;
     /** @deprecated React Query handles this automatically */
     refreshApiData: () => Promise<void>;
     syncToRemoteDisplays: () => Promise<void>;

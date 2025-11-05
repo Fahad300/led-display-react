@@ -78,14 +78,11 @@ router.post("/login", (req, res, next) => {
         try {
             logger.info(`Login successful for user: ${user.username}`);
 
-            // ==================== SINGLE SESSION ENFORCEMENT ====================
-            // CRITICAL: Invalidate ALL other active sessions for this user
-            // This ensures only ONE user can have control at a time
-            logger.info(`🔒 Enforcing single-session policy for user: ${user.username}`);
-
-            const existingSessions = await sessionRepository.find({
-                where: { userId: user.id, isActive: true }
-            });
+            // ==================== SINGLE USER ENFORCEMENT ====================
+            // CRITICAL: This is a single-user app - when ANY new user logs in,
+            // ALL other active sessions (from ALL users) must be invalidated
+            // This ensures only ONE user can be logged in at a time
+            logger.info(`🔒 Enforcing single-user policy: ${user.username} is logging in - invalidating all other sessions`);
 
             // ==================== CREATE NEW DATABASE SESSION FIRST ====================
             // CRITICAL: Create the new session BEFORE invalidating old ones
@@ -104,14 +101,25 @@ router.post("/login", (req, res, next) => {
             await sessionRepository.save(newSession);
             logger.info(`✅ New database session created: ${newSession.id} (token: ${newSessionToken.substring(0, 8)}...)`);
 
-            if (existingSessions.length > 0) {
-                logger.warn(`⚠️ Found ${existingSessions.length} active session(s) for user ${user.username} - invalidating all`);
+            // Find ALL active sessions from ALL users (not just this user)
+            // This ensures complete single-user enforcement
+            const allActiveSessions = await sessionRepository.find({
+                where: { isActive: true }
+            });
 
-                // Invalidate all existing sessions
-                for (const session of existingSessions) {
+            // Filter out the new session we just created
+            const sessionsToInvalidate = allActiveSessions.filter(
+                session => session.id !== newSession.id
+            );
+
+            if (sessionsToInvalidate.length > 0) {
+                logger.warn(`⚠️ Found ${sessionsToInvalidate.length} active session(s) from other users - invalidating all for single-user enforcement`);
+
+                // Invalidate all other active sessions (from all users)
+                for (const session of sessionsToInvalidate) {
                     session.isActive = false;
                     await sessionRepository.save(session);
-                    logger.info(`   ❌ Invalidated session: ${session.id}`);
+                    logger.info(`   ❌ Invalidated session: ${session.id} (user: ${session.userId})`);
                 }
 
                 // Broadcast force-logout event to all connected displays via Socket.IO
@@ -132,9 +140,9 @@ router.post("/login", (req, res, next) => {
                     }
                 });
 
-                logger.info(`✅ All previous sessions invalidated - single session enforced`);
+                logger.info(`✅ All other sessions invalidated - single-user enforcement complete`);
             } else {
-                logger.info(`✅ No existing sessions found - proceeding with new session`);
+                logger.info(`✅ No other active sessions found - proceeding with new session`);
             }
 
             // Generate JWT token for the new session

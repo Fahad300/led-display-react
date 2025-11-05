@@ -116,12 +116,13 @@ const seedSessions = async (): Promise<void> => {
     }
 
     // Create default slides for the seeded session
+    // All slides start as inactive (active: false) - user must manually activate them
     const defaultSlides = [
         {
             id: "current-escalations-1",
             name: "Current Escalations",
             type: "current-esc-slide",
-            active: true,
+            active: false, // User must manually activate this slide
             duration: 10,
             dataSource: "api", // Using API data
             data: {
@@ -132,7 +133,7 @@ const seedSessions = async (): Promise<void> => {
             id: "team-comparison-1",
             name: "Team Performance Comparison",
             type: "comparison-slide",
-            active: true,
+            active: false, // User must manually activate this slide
             duration: 15,
             dataSource: "api",
             data: {
@@ -144,7 +145,7 @@ const seedSessions = async (): Promise<void> => {
             id: "graph-1",
             name: "Team Wise Data",
             type: "graph-slide",
-            active: false,
+            active: false, // User must manually activate this slide
             duration: 12,
             dataSource: "api",
             data: {

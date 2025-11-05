@@ -146,8 +146,9 @@ interface UIState {
 
     /**
      * Load state from database
+     * @param skipSlides - If true, only sync settings/data, not slides (prevents overwriting manual slide changes)
      */
-    syncFromDatabase: () => Promise<void>;
+    syncFromDatabase: (skipSlides?: boolean) => Promise<void>;
 
     /**
      * Force sync to remote displays
@@ -352,25 +353,30 @@ export const useUIStore = create<UIState>()(
                     }
                 },
 
-                syncFromDatabase: async () => {
+                syncFromDatabase: async (skipSlides = false) => {
                     try {
                         set({ isSyncing: true });
 
-                        logger.sync("Syncing from database...");
+                        logger.sync(`Syncing from database... (skipSlides: ${skipSlides})`);
                         const slideshowData = await sessionService.loadSlideshowData();
 
                         // Note: loadSlideshowData handles both authenticated and public access
                         // It falls back to public endpoint if user is not authenticated
 
                         if (slideshowData) {
-                            // Update slides if available
-                            if (slideshowData.slides && slideshowData.slides.length > 0) {
+                            // Update slides if available (and not skipping)
+                            // CRITICAL: Skip slides sync when on HomePage to prevent overwriting manual changes
+                            // Slides should only sync from explicit update events, not from periodic polling
+                            if (!skipSlides && slideshowData.slides && slideshowData.slides.length > 0) {
+                                logger.sync("Updating slides from database...");
                                 set({
                                     slides: slideshowData.slides,
                                     _lastSavedStateHash: JSON.stringify({
                                         slides: slideshowData.slides
                                     })
                                 });
+                            } else if (skipSlides) {
+                                logger.sync("Skipping slides sync (manual changes preserved)");
                             }
 
                             // Update display settings if available
@@ -384,7 +390,7 @@ export const useUIStore = create<UIState>()(
                             }
 
                             set({ lastSynced: new Date() });
-                            logger.success("Synced from database successfully");
+                            logger.success(`Synced from database successfully (slides: ${skipSlides ? "skipped" : "updated"})`);
                         }
 
                         set({ isSyncing: false });
