@@ -5,8 +5,8 @@
  * Replaces manual polling with automatic refetching and caching.
  * 
  * Features:
- * - Automatic refetch every 60 seconds
- * - Stale time of 30 seconds for optimal caching
+ * - Automatic refetch every 60 minutes (hourly)
+ * - Stale time of 30 minutes for optimal caching
  * - No refetch on window focus to reduce unnecessary requests
  * - Error handling with retry logic
  * - TypeScript support with proper typing
@@ -121,8 +121,8 @@ const fetchDashboardData = async (): Promise<DashboardData> => {
  * Configuration:
  * - queryKey: ["dashboardData"] - unique identifier for this query
  * - queryFn: fetchDashboardData - function to fetch the data
- * - refetchInterval: 60000 (60 seconds) - automatic refetch interval
- * - staleTime: 30000 (30 seconds) - how long data is considered fresh
+ * - refetchInterval: 3600000 (60 minutes / 1 hour) - automatic refetch interval
+ * - staleTime: 1800000 (30 minutes) - how long data is considered fresh
  * - refetchOnWindowFocus: true - refetch when window gains focus to ensure fresh data
  * - retry: infinite - keep retrying forever to ensure 24/7 operation
  * - retryDelay: exponential backoff - 1s, 2s, 4s between retries
@@ -139,14 +139,14 @@ export const useDashboardData = (): UseQueryResult<DashboardData, Error> => {
         queryKey: ["dashboardData"],
         queryFn: fetchDashboardData,
 
-        // Refetch every 60 seconds (backend cache is 60s, so this aligns perfectly)
+        // Refetch every 60 minutes (1 hour)
         // CRITICAL: This keeps polling even when tab is in background (24/7 operation)
-        refetchInterval: 60 * 1000,
+        refetchInterval: 60 * 60 * 1000,
 
-        // Consider data stale after 30 seconds
+        // Consider data stale after 30 minutes
         // This allows React Query to serve cached data quickly while
         // automatically refetching in the background if data is stale
-        staleTime: 30 * 1000,
+        staleTime: 30 * 60 * 1000,
 
         // CHANGED: Refetch when window gains focus to ensure fresh data
         // This is critical for displays that may go to sleep or be hidden

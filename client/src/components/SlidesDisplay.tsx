@@ -327,19 +327,19 @@ const SlidesDisplay: React.FC = () => {
     }, [handleDisplayUpdate]);
 
     /**
-     * Fallback Polling (5-minute intervals)
+     * Fallback Polling (2-hour intervals)
      * 
      * This provides reliability in case:
      * - BroadcastChannel fails
      * - Network issues prevent updates
      * - WebSocket disconnects (future)
      * 
-     * Ensures display never gets stale for more than 5 minutes.
+     * Ensures display never gets stale for more than 2 hours.
      */
     useEffect(() => {
-        logger.info("⏰ DisplayPage: Starting 5-minute fallback polling");
+        logger.info("⏰ DisplayPage: Starting 2-hour fallback polling");
 
-        const POLLING_INTERVAL = 5 * 60 * 1000; // 5 minutes
+        const POLLING_INTERVAL = 2 * 60 * 60 * 1000; // 2 hours
 
         const pollInterval = setInterval(async () => {
             const timeSinceLastUpdate = Date.now() - lastUpdateTime.getTime();
