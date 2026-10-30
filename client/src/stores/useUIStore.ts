@@ -47,6 +47,9 @@ export interface DisplaySettings {
     developmentMode: boolean;
 }
 
+/** The display page is read-only: it must never write slides/settings back to the database */
+const isDisplayRoute = (): boolean => window.location.pathname.startsWith("/display");
+
 /**
  * Default display settings
  */
@@ -253,9 +256,9 @@ export const useUIStore = create<UIState>()(
                     // Save to localStorage immediately
                     localStorage.setItem("displaySettings", JSON.stringify(updatedSettings));
 
-                    // Only save to database if user is authenticated
+                    // Only save to database if user is authenticated and not on the read-only display page
                     const token = localStorage.getItem("token");
-                    if (!token) {
+                    if (!token || isDisplayRoute()) {
                         logger.info("⏭️ Display settings updated locally (not saved to database - display-only mode)");
                         return; // Settings are already saved to localStorage, which is sufficient for display page
                     }
@@ -309,7 +312,7 @@ export const useUIStore = create<UIState>()(
 
                     // Check if user is authenticated before attempting to save
                     const token = localStorage.getItem("token");
-                    if (!token) {
+                    if (!token || isDisplayRoute()) {
                         logger.info("⏭️ Skipping database save - user not authenticated (display-only mode)");
                         set({ isSyncing: false });
                         return; // Silent return - this is expected behavior for display page

@@ -348,11 +348,11 @@ const SlidesDisplay: React.FC = () => {
             try {
                 setIsRefreshing(true);
 
-                // Sync data and settings only (skip slides to prevent overwriting manual changes)
-                // Slides should only sync from explicit update events, not from periodic polling
-                // Note: syncFromDatabase(true) already syncs settings, so we don't need syncSettings() here
+                // The display page is read-only, so syncing slides here cannot overwrite manual changes.
+                // This lets a display that missed a socket event (or loaded before slides existed) recover by itself.
+                // Note: syncFromDatabase() already syncs settings, so we don't need syncSettings() here
                 await Promise.all([
-                    syncFromDatabase(true), // skipSlides = true: only sync settings/data, not slides
+                    syncFromDatabase(),
                     queryClient.refetchQueries({ queryKey: ["dashboardData"] })
                 ]);
 
