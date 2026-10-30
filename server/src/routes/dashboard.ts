@@ -6,7 +6,7 @@
  * 
  * Features:
  * - Single endpoint for all dashboard data (employees, graphData, escalations)
- * - 60-second in-memory caching to reduce backend API load
+ * - Per-endpoint in-memory caching (escalations 1h, celebrations 00:05 and 12:00, others 12h) to limit external API calls
  * - Error handling with fallback to last cached data
  * - Backward compatible with existing data structure
  * 
@@ -84,6 +84,95 @@ const fetchFromExternalApi = async (endpoint: string, description: string): Prom
         logger.error(`Error fetching ${description}:`, error);
         throw error;
     }
+};
+
+/**
+ * Per-endpoint cache lifetimes for the external API.
+ * The dashboard response is re-assembled from these, so frequent client polling
+ * never reaches the external API.
+ */
+const ENDPOINT_TTL: Record<string, number> = {
+    "ongoing-escalations": 60 * 60 * 1000,       // 1 hour
+    "jira-chart": 12 * 60 * 60 * 1000,           // 12 hours (twice a day)
+    "ssr-team-wise": 12 * 60 * 60 * 1000         // 12 hours (twice a day)
+};
+// celebrations (birthdays/anniversaries) refresh at fixed server-local times so a new day's
+// events appear right after midnight instead of up to 12 hours later
+const CELEBRATIONS_REFRESH_TIMES = [{ hour: 0, minute: 5 }, { hour: 12, minute: 0 }];
+
+const getLastScheduledRefresh = (now: number): number => {
+    const date = new Date(now);
+    const slots: number[] = [];
+    for (const dayOffset of [-1, 0]) {
+        for (const { hour, minute } of CELEBRATIONS_REFRESH_TIMES) {
+            slots.push(new Date(date.getFullYear(), date.getMonth(), date.getDate() + dayOffset, hour, minute).getTime());
+        }
+    }
+    return Math.max(...slots.filter((slot) => slot <= now));
+};
+
+const isEndpointFresh = (endpoint: string, fetchedAt: number, now: number): boolean => {
+    if (endpoint === "celebrations") {
+        return fetchedAt >= getLastScheduledRefresh(now);
+    }
+    return now - fetchedAt < (ENDPOINT_TTL[endpoint] ?? 60 * 60 * 1000);
+};
+
+const FAILED_RETRY_DELAY = 5 * 60 * 1000; // retry a failed endpoint after 5 minutes
+
+interface EndpointCacheEntry {
+    data: any;
+    fetchedAt: number;
+}
+
+const endpointCache = new Map<string, EndpointCacheEntry>();
+const endpointLastFailure = new Map<string, number>();
+const endpointInFlight = new Map<string, Promise<any>>();
+
+/**
+ * Get an external endpoint's data, calling the external API only when its own TTL has expired.
+ * If a refresh fails, the previous data is served and the retry waits FAILED_RETRY_DELAY.
+ * Throws only when there is no data at all.
+ */
+const getEndpointData = async (endpoint: string, description: string): Promise<any> => {
+    const now = Date.now();
+    const cached = endpointCache.get(endpoint);
+
+    if (cached && isEndpointFresh(endpoint, cached.fetchedAt, now)) {
+        return cached.data;
+    }
+
+    const lastFailure = endpointLastFailure.get(endpoint);
+    if (cached && lastFailure && now - lastFailure < FAILED_RETRY_DELAY) {
+        return cached.data;
+    }
+
+    // Share one request between concurrent callers
+    const inFlight = endpointInFlight.get(endpoint);
+    if (inFlight) {
+        return inFlight;
+    }
+
+    const request = fetchFromExternalApi(endpoint, description)
+        .then((data) => {
+            endpointCache.set(endpoint, { data, fetchedAt: Date.now() });
+            endpointLastFailure.delete(endpoint);
+            return data;
+        })
+        .catch((error) => {
+            endpointLastFailure.set(endpoint, Date.now());
+            if (cached) {
+                logger.warn(`Using stale ${description} (refresh failed, retry in 5 minutes)`);
+                return cached.data;
+            }
+            throw error;
+        })
+        .finally(() => {
+            endpointInFlight.delete(endpoint);
+        });
+
+    endpointInFlight.set(endpoint, request);
+    return request;
 };
 
 /**
@@ -273,10 +362,10 @@ const fetchAllDashboardData = async (): Promise<{
 
     // Fetch all endpoints in parallel for better performance
     const [employeesResult, graphDataResult, teamComparisonResult, escalationsResult] = await Promise.allSettled([
-        fetchFromExternalApi("celebrations", "employees data"),
-        fetchFromExternalApi("jira-chart", "graph data"),
-        fetchFromExternalApi("ssr-team-wise", "team comparison data"),
-        fetchFromExternalApi("ongoing-escalations", "escalations data")
+        getEndpointData("celebrations", "employees data"),
+        getEndpointData("jira-chart", "graph data"),
+        getEndpointData("ssr-team-wise", "team comparison data"),
+        getEndpointData("ongoing-escalations", "escalations data")
     ]);
 
     const failures: ApiFailure[] = [];
@@ -549,6 +638,8 @@ router.get("/", async (req, res) => {
 router.post("/clear-cache", (req, res) => {
     logger.info("Manually clearing dashboard cache");
     dashboardCache = null;
+    endpointCache.clear();
+    endpointLastFailure.clear();
 
     res.json({
         success: true,

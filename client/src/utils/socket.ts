@@ -60,11 +60,11 @@ class SocketManager {
     }
 
     /**
-     * Get current domain/hostname for room joining
+     * Get the room name used for joining and broadcasting.
+     * Fixed value so admin and displays share a room regardless of the URL/hostname they were opened from.
      */
     private getDomain(): string {
-        // Use hostname as domain identifier
-        return window.location.hostname || "localhost";
+        return "led-displays";
     }
 
     /**

@@ -1,4 +1,5 @@
 import express from "express";
+import { IsNull, Not } from "typeorm";
 import { AppDataSource } from "../config/database";
 import { Session } from "../models/Session";
 import { User } from "../models/User";
@@ -7,6 +8,17 @@ import { logger } from "../utils/logger";
 import crypto from "crypto";
 
 const router = express.Router();
+
+/**
+ * Find the most recently used session that holds slideshow data.
+ * Intentionally ignores isActive so LED displays keep working after the admin logs out.
+ */
+const findLatestSlideshowSession = (): Promise<Session | null> => {
+    return AppDataSource.getRepository(Session).findOne({
+        where: { slideshowData: Not(IsNull()) },
+        order: { lastActivity: "DESC" }
+    });
+};
 
 /**
  * Generate a secure session token
@@ -227,14 +239,11 @@ router.get("/slideshow-data", isAuthenticated, async (req, res) => {
  */
 router.get("/slideshow-data/latest", async (req, res) => {
     try {
-        // Get the most recent active session from any user
-        const latestSession = await AppDataSource.getRepository(Session).findOne({
-            where: { isActive: true },
-            order: { lastActivity: "DESC" }
-        });
+        // Get the most recent session with slideshow data (active or not)
+        const latestSession = await findLatestSlideshowSession();
 
         if (!latestSession) {
-            return res.status(404).json({ error: "No active sessions found" });
+            return res.status(404).json({ error: "No slideshow data found" });
         }
 
         const slideshowData = latestSession.getSlideshowData();
@@ -257,14 +266,11 @@ router.get("/slideshow-data/latest", async (req, res) => {
  */
 router.get("/latest", async (req, res) => {
     try {
-        // Get the most recent active session from any user
-        const latestSession = await AppDataSource.getRepository(Session).findOne({
-            where: { isActive: true },
-            order: { lastActivity: "DESC" }
-        });
+        // Get the most recent session with slideshow data (active or not)
+        const latestSession = await findLatestSlideshowSession();
 
         if (!latestSession) {
-            return res.status(404).json({ error: "No active sessions found" });
+            return res.status(404).json({ error: "No slideshow data found" });
         }
 
         const slideshowData = latestSession.getSlideshowData();
