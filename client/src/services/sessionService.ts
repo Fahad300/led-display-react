@@ -374,7 +374,7 @@ class SessionService {
 
             const response = await backendApi.post("/api/sessions/trigger-refresh", {
                 refreshType
-            });
+            }, { headers: { Authorization: `Bearer ${token}` } });
 
             console.debug(`Remote refresh triggered: ${refreshType}`, response.data);
             return response.data;
